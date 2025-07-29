@@ -1,0 +1,550 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+网站爬虫脚本 - Selenium版本
+功能：从首页获取详情页链接，然后提取每个详情页的标题和磁力链接
+"""
+
+import re
+import time
+import csv
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.chrome.options import Options
+from selenium.common.exceptions import TimeoutException, WebDriverException
+from urllib.parse import urljoin
+import logging
+from pymongo import MongoClient
+from datetime import datetime
+import random
+import logging
+from logging.handlers import RotatingFileHandler
+import os
+
+# 配置日志
+# 创建日志目录
+log_dir = 'logs'
+if not osgitsts(log_dir):
+    os.makedirs(log_dir)
+
+# 配置日志格式
+log_format = '%(asctime)s - %(levelname)s - %(message)s'
+
+# 配置日志记录器
+logging.basicConfig(
+    level=logging.INFO,
+    format=log_format,
+    handlers=[
+        # 控制台输出
+        logging.StreamHandler(),
+        # 文件输出（带轮转）
+        RotatingFileHandler(
+            os.path.join(log_dir, 'crawler.log'),
+            maxBytes=10*1024*1024,  # 10MB
+            backupCount=5,
+            encoding='utf-8'
+        )
+    ]
+)
+ 
+logger = logging.getLogger(__name__)
+
+class SeleniumWebCrawler:
+    def __init__(self, base_url="https://sehuatang.org", delay=10, mongo_uri="mongodb://xx", headless=True):
+        self.base_url = base_url
+        self.delay = delay
+        self.mongo_uri = mongo_uri
+        self.headless = headless
+        self.default_forum_url = "https://sehuatang.org/forum.php?mod=forumdisplay&fid=103&filter=typeid&typeid=480"
+        self.driver = None
+        
+        # 初始化MongoDB连接
+        self.mongo_client = None
+        self.db = None
+        self.collection = None
+        self.init_mongodb()
+        
+        # 初始化Selenium WebDriver
+        self.init_webdriver()
+    
+    def init_webdriver(self):
+        """初始化Selenium WebDriver"""
+        try:
+            chrome_options = Options()
+            
+            # 基本配置
+            if self.headless:
+                chrome_options.add_argument('--headless')
+            chrome_options.add_argument('--no-sandbox')
+            chrome_options.add_argument('--disable-dev-shm-usage')
+            chrome_options.add_argument('--disable-gpu')
+            chrome_options.add_argument('--window-size=1920,1080')
+            
+            # 网络相关配置
+            chrome_options.add_argument('--disable-web-security')
+            chrome_options.add_argument('--disable-features=VizDisplayCompositor')
+            chrome_options.add_argument('--disable-extensions')
+            chrome_options.add_argument('--disable-plugins')
+            chrome_options.add_argument('--disable-images')  # 禁用图片加载
+            
+            # 反检测配置
+            chrome_options.add_argument('--disable-blink-features=AutomationControlled')
+            chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
+            chrome_options.add_experimental_option('useAutomationExtension', False)
+            
+            # 用户代理（使用更常见的用户代理）
+            user_agents = [
+                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+            ]
+            selected_ua = random.choice(user_agents)
+            chrome_options.add_argument(f'--user-agent={selected_ua}')
+            
+            # 禁用图片和CSS加载以提高速度
+            prefs = {
+                "profile.managed_default_content_settings.images": 2,
+                "profile.default_content_setting_values.notifications": 2,
+                "profile.managed_default_content_settings.stylesheets": 2
+            }
+            chrome_options.add_experimental_option("prefs", prefs)
+            
+            self.driver = webdriver.Chrome(options=chrome_options)
+            
+            # 执行反检测脚本
+            self.driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+            
+            # 设置页面加载超时
+            self.driver.set_page_load_timeout(60)
+            self.driver.implicitly_wait(15)
+            
+            logger.info("Selenium WebDriver初始化成功")
+            
+        except Exception as e:
+            logger.error(f"Selenium WebDriver初始化失败: {e}")
+            self.driver = None
+    
+    def init_mongodb(self):
+        """初始化MongoDB连接"""
+        try:
+            self.mongo_client = MongoClient(self.mongo_uri, serverSelectionTimeoutMS=5000)
+            # 测试连接
+            self.mongo_client.admin.command('ping')
+            self.db = self.mongo_client['sehuatang_crawler']
+            self.collection = self.db['thread_details']
+            logger.info(f"MongoDB连接成功: {self.mongo_uri}")
+        except Exception as e:
+            logger.error(f"MongoDB连接失败: {e}")
+            self.mongo_client = None
+    
+    def save_to_mongodb(self, data):
+        """保存数据到MongoDB"""
+        if not self.mongo_client:
+            logger.warning("MongoDB未连接，跳过数据保存")
+            return False
+        
+        try:
+            # 添加时间戳
+
+            data['crawl_time'] = datetime.now() 
+            data['tid'] = self.extract_tid_id(data['url'])
+            # 检查是否已存在
+            existing = self.collection.find_one({'tid': data['tid']})
+            if existing:
+                # 更新现有记录
+                self.collection.update_one(
+                    {'tid': data['tid']},
+
+                    {'$set': data}
+                )
+                logger.info(f"更新MongoDB记录: {data['title']}")
+            else:
+                # 插入新记录
+                self.collection.insert_one(data)
+                logger.info(f"保存到MongoDB: {data['title']}")
+            return True
+        except Exception as e:
+            logger.error(f"保存到MongoDB失败: {e}")
+            return False
+    
+
+    # url=https://sehuatang.org/forum.php?mod=viewthread&tid=2921619&extra=page%3D1%26filter%3Dtypeid%26typeid%3D480%253Fpage%253D1
+    
+    def extract_tid_id(self, url):
+        """从URL中提取thread ID"""
+        # 支持新格式: tid=数字
+        match = re.search(r'tid=(\d+)', url)
+        if match:
+            return match.group(1)
+        
+        # 支持旧格式: tid-数字-
+        match = re.search(r'tid-(\d+)-', url)
+        return match.group(1) if match else None
+
+ 
+    def get_page_content(self, url, max_retries=3):
+        """使用Selenium获取页面内容，支持重试机制"""
+        if not self.driver:
+            logger.error("WebDriver未初始化")
+            return None
+            
+        for attempt in range(max_retries):
+            try:
+                # 随机延时，避免被检测
+                if attempt > 0:
+                    wait_time = (attempt + 1) * 5 + random.uniform(2, 5)  # 增加等待时间
+                    logger.info(f"第{attempt + 1}次重试，等待{wait_time:.1f}秒...")
+                    time.sleep(wait_time)
+                
+                logger.info(f"正在访问: {url}")
+                
+                # 设置页面加载超时
+                self.driver.set_page_load_timeout(60)  # 增加超时时间
+                
+                self.driver.get(url)
+                
+                # 等待页面加载完成
+                WebDriverWait(self.driver, 20).until(
+                    EC.presence_of_element_located((By.TAG_NAME, "body"))
+                )
+                
+                # 检查是否遇到验证页面
+                page_source = self.driver.page_source
+                if '验证您是否是真人' in page_source or 'security check' in page_source.lower():
+                    logger.warning(f"遇到安全验证页面: {url}")
+                    if attempt < max_retries - 1:
+                        # 尝试等待更长时间
+                        time.sleep(random.uniform(10, 20))
+                        continue
+                
+                # 模拟人类行为，如果处理了年龄确认页面，重新获取页面源码
+                handled_age_check = self.simulate_human_behavior()
+                if handled_age_check:
+                    # 重新获取页面源码
+                    page_source = self.driver.page_source 
+                    logger.info("已获取年龄确认后的新页面数据")
+                
+                return page_source
+                
+            except TimeoutException:
+                logger.error(f"页面加载超时: {url} (尝试{attempt + 1}/{max_retries})")
+            except WebDriverException as e:
+                if "ERR_CONNECTION_REFUSED" in str(e):
+                    logger.error(f"连接被拒绝: {url} (尝试{attempt + 1}/{max_retries})")
+                    if attempt < max_retries - 1:
+                        logger.info("可能是网络问题或反爬虫机制，等待更长时间后重试...")
+                        time.sleep(random.uniform(30, 60))  # 等待30-60秒
+                        continue
+                else:
+                    logger.error(f"WebDriver异常: {url} (尝试{attempt + 1}/{max_retries}): {e}")
+            except Exception as e:
+                logger.error(f"获取页面失败: {url} (尝试{attempt + 1}/{max_retries}): {e}")
+                
+            if attempt == max_retries - 1:
+                return None
+                
+        return None
+    
+    def simulate_human_behavior(self):
+        """模拟人类浏览行为"""
+        try:
+            # 检查是否遇到年龄确认页面
+            page_source = self.driver.page_source
+            if '满18岁，请点此进入' in page_source or 'If you are over 18，please click here' in page_source:
+                logger.info("检测到年龄确认页面，正在点击确认按钮...")
+                try:
+                    # 尝试点击年龄确认按钮
+                    enter_btn = WebDriverWait(self.driver, 5).until(
+                        EC.element_to_be_clickable((By.CLASS_NAME, "enter-btn"))
+                    )
+                    enter_btn.click()
+                    logger.info("已点击年龄确认按钮")
+                    
+                    # 等待页面跳转
+                    time.sleep(random.uniform(2, 4))
+                    return True
+                except Exception as e:
+                    logger.warning(f"点击年龄确认按钮失败: {e}")
+            
+            # 随机滚动页面
+            scroll_height = self.driver.execute_script("return document.body.scrollHeight")
+            scroll_position = random.randint(0, min(scroll_height, 1000))
+            self.driver.execute_script(f"window.scrollTo(0, {scroll_position});")
+            
+            # 随机停留时间
+            time.sleep(random.uniform(1, 3))
+            
+        except Exception as e:
+            logger.debug(f"模拟人类行为失败: {e}")
+        return False
+    
+    def extract_thread_links_from_html(self, html_content):
+        """从HTML内容中提取详情页链接"""
+        thread_links = []
+        # 使用正则表达式匹配 thread-数字-1-1.html 格式的链接
+        pattern1 = r'<em>\[.*?\]</em>\s*<a href="(forum\.php\?mod=viewthread&amp;tid=(\d+)[^"]*)"[^>]*class="s xst"[^>]*>'
+        matches = re.findall(pattern1, html_content)
+        print(f"最精确匹配（em后的标题链接）: 找到 {len(matches)} 个链接")
+        processed_links = []
+        for match in matches:
+            link = match[0].replace('&amp;', '&')
+            tid = self.extract_tid_id(link)
+            
+            # 检查数据库中是否已存在该thread_id的记录
+            if self.mongo_client is not None and self.collection is not None:
+                existing_record = self.collection.find_one({'tid': tid})
+                if existing_record:
+                    logger.info(f"跳过已存在的记录: tid={tid}")
+                    continue  # 跳过已存在的记录
+                else:
+                    logger.info(f"新记录: tid={tid}")
+            
+ 
+            processed_links.append(link)
+        print(f"处理后的链接: {processed_links}")
+
+        for match in processed_links:
+            full_url = urljoin(self.base_url, match)
+            thread_links.append(full_url)
+        
+        # 去重
+        thread_links = list(set(thread_links))
+        logger.info(f"找到 {len(thread_links)} 个详情页链接")
+        return thread_links
+    
+    def extract_thread_links_from_file(self, file_path):
+        """从本地HTML文件中提取详情页链接"""
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                html_content = f.read()
+            return self.extract_thread_links_from_html(html_content)
+        except Exception as e:
+            logger.error(f"读取文件失败 {file_path}: {e}")
+            return []
+    
+    def extract_title_and_magnet(self, html_content):
+        """从详情页HTML中提取标题和磁力链接"""
+        title = None
+        magnet_links = []
+        
+        # 提取标题
+        title_pattern = r'<span id="thread_subject">([^<]+)</span>'
+        title_match = re.search(title_pattern, html_content)
+        if title_match:
+            title = title_match.group(1).strip()
+        
+        # 提取磁力链接
+        magnet_pattern = r'magnet:\?xt=urn:btih:[A-F0-9]+[^\s<>"]*'
+        magnet_matches = re.findall(magnet_pattern, html_content, re.IGNORECASE)
+        
+        # 清理磁力链接中的HTML实体
+        for magnet in magnet_matches:
+            clean_magnet = magnet.replace('&amp;', '&')
+            magnet_links.append(clean_magnet)
+        if len(magnet_links) == 0:
+             return title,''
+        return title, magnet_links[0]
+ 
+    
+    def crawl_thread_details(self, thread_url):
+        """爬取单个详情页的信息"""
+        logger.info(f"正在爬取: {thread_url}")
+        
+        html_content = self.get_page_content(thread_url)
+        if not html_content:
+            return None
+        
+        title, magnet_link = self.extract_title_and_magnet(html_content)
+        
+        if title or magnet_link:
+            data = {
+                'url': thread_url,
+                'title': title,
+                'magnet_link': magnet_link
+ 
+            }
+            # 保存到MongoDB
+            self.save_to_mongodb(data)
+            return data
+        
+        return None
+    
+    def crawl_from_file(self, home_file_path):
+ 
+        """从本地文件开始爬取"""
+        logger.info(f"开始从文件爬取: {home_file_path}")
+        
+        # 从首页文件提取详情页链接
+        thread_links = self.extract_thread_links_from_file(home_file_path)
+        
+        if not thread_links:
+            logger.warning("未找到任何详情页链接")
+            return
+        
+        results = []
+        
+        # 爬取每个详情页
+        for i, thread_url in enumerate(thread_links, 1):
+            logger.info(f"进度: {i}/{len(thread_links)}")
+            
+            result = self.crawl_thread_details(thread_url)
+            if result:
+                logger.error(f"提取失败: {thread_url}")
+                results.append(result)
+                logger.info(f"成功提取: {result['title']}")
+            else:
+                logger.error(f"提取失败: {thread_url}")
+
+            # 随机延时避免过于频繁的请求
+            if i < len(thread_links):
+                delay_time = self.delay + random.uniform(-2, 2)
+                time.sleep(max(1, delay_time))
+         
+        logger.info(f"爬取完成，共获取 {len(results)} 条有效数据")
+        logger.info(f"数据已保存到MongoDB")
+ 
+        
+        return results
+    
+    def test_network_connection(self, url):
+        """测试网络连接"""
+        try:
+            import requests
+            response = requests.get(url, timeout=10)
+            logger.info(f"网络连接测试成功: {response.status_code}")
+            return True
+        except Exception as e:
+            logger.error(f"网络连接测试失败: {e}")
+            return False
+    
+    def crawl_from_url(self, home_url):
+        """从网络URL开始爬取"""
+        logger.info(f"开始从URL爬取: {home_url}")
+        
+        # 先测试网络连接
+       
+        
+        # 获取首页内容
+        html_content = self.get_page_content(home_url)
+        if not html_content:
+            logger.error("无法获取首页内容")
+            return
+        
+        # 提取详情页链接
+        thread_links = self.extract_thread_links_from_html(html_content)
+        
+        if not thread_links:
+            logger.warning("未找到任何详情页链接")
+            return
+        
+        results = []
+        
+        # 爬取每个详情页
+        for i, thread_url in enumerate(thread_links, 1):
+            logger.info(f"进度: {i}/{len(thread_links)}")
+            
+            result = self.crawl_thread_details(thread_url)
+            if result:
+                results.append(result)
+                logger.info(f"成功提取: {result['title']}")
+            
+            # 随机延时避免过于频繁的请求
+            if i < len(thread_links):
+                delay_time = self.delay + random.uniform(-2, 2)
+                time.sleep(max(1, delay_time))
+        
+        logger.info(f"爬取完成，共获取 {len(results)} 条有效数据")
+        logger.info(f"数据已保存到MongoDB")
+        
+        return results
+    
+ 
+    def test_with_local_files(self, home_file='home.html', test_file='test.html'):
+        """使用本地文件进行测试"""
+        logger.info("开始本地文件测试")
+        
+        # 测试从test.html提取标题和磁力链接
+        try:
+            with open(test_file, 'r', encoding='utf-8') as f:
+                test_content = f.read()
+            
+            title, magnet_links = self.extract_title_and_magnet(test_content)
+            logger.info(f"测试提取结果:")
+            logger.info(f"标题: {title}")
+            logger.info(f"磁力链接: {magnet_links}")
+        except Exception as e:
+            logger.error(f"测试文件读取失败: {e}")
+    
+    def close_connection(self):
+        """关闭连接"""
+        if self.driver:
+            self.driver.quit()
+            logger.info("Selenium WebDriver已关闭")
+        
+        if self.mongo_client:
+            self.mongo_client.close()
+            logger.info("MongoDB连接已关闭")
+
+def main():
+    """主函数"""
+    # 询问是否使用无头模式
+    headless_choice = input("是否使用无头模式？(y/n，默认y): ").strip().lower()
+    headless = headless_choice != 'n'
+    
+    crawler = SeleniumWebCrawler(delay=3, headless=headless)  # 设置3秒延时
+    
+    try:
+        # 选择运行模式
+        print("请选择运行模式:")
+        print("1. 从在线论坛爬取 (默认)")
+        print("2. 从本地home.html文件爬取")
+        print("3. 从自定义网络URL爬取")
+        print("4. 本地文件测试")
+        
+        choice = input("请输入选择 (1/2/3/4，默认为1): ").strip()
+        if not choice:
+            choice = '1'
+        
+        if choice == '1':
+            # 从在线论坛爬取
+            print(f"正在从在线论坛爬取: {crawler.default_forum_url}")
+            pageNumbers = 1117
+            for pageNumber in range(1, pageNumbers + 1):
+                url = f"{crawler.default_forum_url}&page={pageNumber}"
+                results = crawler.crawl_from_url(url)
+                if results:
+                    print(f"\n第 {pageNumber} 页爬取完成，共获取 {len(results)} 条数据")
+ 
+        
+        elif choice == '2':
+            # 从本地文件爬取
+            results = crawler.crawl_from_file('home.html')
+            if results:
+                print(f"\n爬取完成，共获取 {len(results)} 条数据")
+                for i, result in enumerate(results[:5], 1):  # 显示前5条
+                    print(f"{i}. {result['title']}")
+                    print(f"   磁力链接数量: {len(result['magnet_links'])}")
+        
+        elif choice == '3':
+            # 从自定义网络URL爬取
+            url = input("请输入首页URL: ").strip()
+            if url:
+                results = crawler.crawl_from_url(url)
+                if results:
+                    print(f"\n爬取完成，共获取 {len(results)} 条数据")
+        
+        elif choice == '4':
+            # 本地文件测试
+            crawler.test_with_local_files()
+        
+        else:
+            print("无效选择")
+    
+    finally:
+        # 确保关闭所有连接
+        crawler.close_connection()
+
+if __name__ == "__main__":
+    main()
