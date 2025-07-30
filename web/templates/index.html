@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="search-container">
+    <div class="card">
+        <div class="card-header">
+            <h4 class="mb-0"><i class="bi bi-search"></i> 电影搜索</h4>
+        </div>
+        <div class="card-body">
+            <form id="searchForm">
+                <div class="input-group mb-3">
+                    <input type="text" class="form-control" id="movieName" placeholder="请输入电影名称..." required>
+                    <button class="btn btn-primary" type="submit" id="searchBtn">
+                        <i class="bi bi-search"></i> 搜索
+                    </button>
+                </div>
+            </form>
+            
+            <!-- 加载状态 -->
+            <div id="loading" class="text-center d-none">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">搜索中...</span>
+                </div>
+                <p class="mt-2">正在搜索电影...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 搜索结果 -->
+    <div id="results" class="result-container d-none">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-list-ul"></i> 搜索结果</h5>
+            </div>
+            <div class="card-body" id="resultsContent">
+                <!-- 结果将通过JavaScript动态插入 -->
+            </div>
+        </div>
+    </div>
+
+    <!-- 错误提示 -->
+    <div id="error" class="alert alert-danger d-none" role="alert">
+        <i class="bi bi-exclamation-triangle"></i>
+        <span id="errorMessage"></span>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const searchForm = document.getElementById('searchForm');
+    const movieNameInput = document.getElementById('movieName');
+    const searchBtn = document.getElementById('searchBtn');
+    const loading = document.getElementById('loading');
+    const results = document.getElementById('results');
+    const resultsContent = document.getElementById('resultsContent');
+    const error = document.getElementById('error');
+    const errorMessage = document.getElementById('errorMessage');
+
+    searchForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const movieName = movieNameInput.value.trim();
+        if (!movieName) {
+            showError('请输入电影名称');
+            return;
+        }
+
+        // 显示加载状态
+        showLoading();
+        hideError();
+        hideResults();
+
+        try {
+            const response = await fetch('/search', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ movie_name: movieName })
+            });
+
+            const data = await response.json();
+            
+            if (data.success) {
+                displayResults(data.result);
+            } else {
+                showError(data.error || '搜索失败');
+            }
+        } catch (err) {
+            showError('网络错误，请稍后重试');
+        } finally {
+            hideLoading();
+        }
+    });
+
+    function showLoading() {
+        loading.classList.remove('d-none');
+        searchBtn.disabled = true;
+    }
+
+    function hideLoading() {
+        loading.classList.add('d-none');
+        searchBtn.disabled = false;
+    }
+
+    function showError(message) {
+        errorMessage.textContent = message;
+        error.classList.remove('d-none');
+    }
+
+    function hideError() {
+        error.classList.add('d-none');
+    }
+
+    function hideResults() {
+        results.classList.add('d-none');
+    }
+
+    function displayResults(result) {
+        let html = '';
+        
+        if (result.exists) {
+            html += `
+                <div class="alert alert-success">
+                    <i class="bi bi-check-circle"></i>
+                    <strong>找到电影！</strong> 共找到 ${result.count} 个结果
+                </div>
+            `;
+            
+            result.movies.forEach(movie => {
+                html += `
+                    <div class="card movie-card mb-3">
+                        <div class="card-body">
+                            <h5 class="card-title">
+                                <i class="bi bi-film"></i> ${movie.name}
+                                ${movie.year ? `<span class="badge bg-secondary">${movie.year}</span>` : ''}
+                            </h5>
+                            ${movie.overview ? `<p class="card-text">${movie.overview}</p>` : ''}
+                            <div class="row">
+                                <div class="col-md-6">
+                                    ${movie.genres && movie.genres.length > 0 ? `
+                                        <p><strong>类型:</strong> ${movie.genres.join(', ')}</p>
+                                    ` : ''}
+                                    ${movie.rating ? `<p><strong>评分:</strong> ${movie.rating}/10</p>` : ''}
+                                </div>
+                                <div class="col-md-6">
+                                    <p><strong>所在库:</strong> ${movie.library}</p>
+                                    ${movie.path ? `<p><strong>路径:</strong> <code>${movie.path}</code></p>` : ''}
+                                </div>
+                            </div>
+                            <a href="${movie.server_url}/web/index.html#!/details?id=${movie.id}" 
+                               class="btn btn-primary" target="_blank">
+                                <i class="bi bi-box-arrow-up-right"></i> 在Jellyfin中查看
+                            </a>
+                        </div>
+                    </div>
+                `;
+            });
+        } else {
+            html = `
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    <strong>未找到电影:</strong> "${result.search_term}"
+                </div>
+                <p class="text-muted">建议:</p>
+                <ul class="text-muted">
+                    <li>检查电影名称拼写</li>
+                    <li>尝试使用电影的英文名称</li>
+                    <li>使用部分关键词搜索</li>
+                </ul>
+            `;
+        }
+        
+        resultsContent.innerHTML = html;
+        results.classList.remove('d-none');
+    }
+});
+</script>
+{% endblock %}

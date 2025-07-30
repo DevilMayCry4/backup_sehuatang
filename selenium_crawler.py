@@ -520,7 +520,7 @@ def main():
         if choice == '1':
             # 从在线论坛爬取
             pageNumbers = 1117
-            for pageNumber in range(299, pageNumbers + 1):
+            for pageNumber in range(302, pageNumbers + 1):
                 url = f"{crawler.base_url}&page={pageNumber}"
                 results = crawler.crawl_from_url(url)
                 if results:
