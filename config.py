@@ -30,10 +30,14 @@ class Config:
             "base_url": os.getenv("CRAWLER_BASE_URL", "https://example.com"),
             "delay": int(os.getenv("CRAWLER_DELAY", "3")),
             "headless": os.getenv("CRAWLER_HEADLESS", "true").lower() == "true",
+            "max_retries": int(os.getenv("max_retries", "3")),
+            "page_load_timeout": int(os.getenv("page_load_timeout", "30")),
+            "implicit_wait": int(os.getenv("implicit_wait", "10")),
             
             # MongoDB配置
             "mongo_uri": os.getenv("MONGO_URI", "mongodb://localhost:27017/"),
-            "mongo_db": os.getenv("MONGO_DB", "sehuatang"),
+            "mongo_db": os.getenv("MONGO_DB", "sehuatang_crawler"),
+            "collection_name":os.getenv("collection_name","thread_details"),
             
             # 日志配置
             "log_config": {
@@ -52,7 +56,8 @@ class Config:
         """获取MongoDB配置"""
         return {
             "uri": self.config["mongo_uri"],
-            "db": self.config["mongo_db"]
+            "db_name": self.config["mongo_db"],
+            "collection_name":self.config["collection_name"]
         }
     
     def get_crawler_config(self) -> Dict[str, Any]:
@@ -60,7 +65,10 @@ class Config:
         return {
             "base_url": self.config["base_url"],
             "delay": self.config["delay"],
-            "headless": self.config["headless"]
+            "headless": self.config["headless"],
+            "max_retries":self.config["max_retries"],
+            "page_load_timeout":self.config["page_load_timeout"],
+            "implicit_wait":self.config["implicit_wait"],
         }
     
     def get(self, key: str, default: Any = None) -> Any:

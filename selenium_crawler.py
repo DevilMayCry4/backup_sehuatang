@@ -59,11 +59,10 @@ class SeleniumWebCrawler:
         crawler_config = config.get_crawler_config()
         mongo_config = config.get_mongo_config()
         
-        self.base_url = base_url or crawler_config['base_url']
+        self.base_url = crawler_config['base_url']
         self.delay = delay if delay is not None else crawler_config['delay']
         self.mongo_uri = mongo_uri or mongo_config['uri']
         self.headless = headless if headless is not None else crawler_config['headless']
-        self.default_forum_url = crawler_config['default_forum_url']
         self.max_retries = crawler_config['max_retries']
         self.page_load_timeout = crawler_config['page_load_timeout']
         self.implicit_wait = crawler_config['implicit_wait']
@@ -520,10 +519,9 @@ def main():
         
         if choice == '1':
             # 从在线论坛爬取
-            print(f"正在从在线论坛爬取: {crawler.default_forum_url}")
             pageNumbers = 1117
             for pageNumber in range(299, pageNumbers + 1):
-                url = f"{crawler.default_forum_url}&page={pageNumber}"
+                url = f"{crawler.base_url}&page={pageNumber}"
                 results = crawler.crawl_from_url(url)
                 if results:
                     print(f"\n第 {pageNumber} 页爬取完成，共获取 {len(results)} 条数据")
