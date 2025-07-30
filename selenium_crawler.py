@@ -22,11 +22,13 @@ import random
 import logging
 from logging.handlers import RotatingFileHandler
 import os
+from config import config  # 导入配置
 
 # 配置日志
 # 创建日志目录
-log_dir = 'logs'
-if not osgitsts(log_dir):
+log_config = config.get_log_config()
+log_dir = log_config['log_dir']
+if not os.path.exists(log_dir):
     os.makedirs(log_dir)
 
 # 配置日志格式
@@ -41,23 +43,35 @@ logging.basicConfig(
         logging.StreamHandler(),
         # 文件输出（带轮转）
         RotatingFileHandler(
-            os.path.join(log_dir, 'crawler.log'),
-            maxBytes=10*1024*1024,  # 10MB
-            backupCount=5,
+            os.path.join(log_dir, log_config['log_file']),
+            maxBytes=log_config['max_bytes'],
+            backupCount=log_config['backup_count'],
             encoding='utf-8'
         )
     ]
 )
- 
+
 logger = logging.getLogger(__name__)
 
 class SeleniumWebCrawler:
-    def __init__(self, base_url="https://sehuatang.org", delay=10, mongo_uri="mongodb://xx", headless=True):
-        self.base_url = base_url
-        self.delay = delay
-        self.mongo_uri = mongo_uri
-        self.headless = headless
-        self.default_forum_url = "https://sehuatang.org/forum.php?mod=forumdisplay&fid=103&filter=typeid&typeid=480"
+    def __init__(self, base_url=None, delay=None, mongo_uri=None, headless=None):
+        # 从配置文件获取默认值
+        crawler_config = config.get_crawler_config()
+        mongo_config = config.get_mongo_config()
+        
+        self.base_url = base_url or crawler_config['base_url']
+        self.delay = delay if delay is not None else crawler_config['delay']
+        self.mongo_uri = mongo_uri or mongo_config['uri']
+        self.headless = headless if headless is not None else crawler_config['headless']
+        self.default_forum_url = crawler_config['default_forum_url']
+        self.max_retries = crawler_config['max_retries']
+        self.page_load_timeout = crawler_config['page_load_timeout']
+        self.implicit_wait = crawler_config['implicit_wait']
+        
+        # MongoDB配置
+        self.mongo_db_name = mongo_config['db_name']
+        self.mongo_collection_name = mongo_config['collection_name']
+        
         self.driver = None
         
         # 初始化MongoDB连接
@@ -68,7 +82,7 @@ class SeleniumWebCrawler:
         
         # 初始化Selenium WebDriver
         self.init_webdriver()
-    
+
     def init_webdriver(self):
         """初始化Selenium WebDriver"""
         try:
@@ -297,10 +311,7 @@ class SeleniumWebCrawler:
                 existing_record = self.collection.find_one({'tid': tid})
                 if existing_record:
                     logger.info(f"跳过已存在的记录: tid={tid}")
-                    continue  # 跳过已存在的记录
-                else:
-                    logger.info(f"新记录: tid={tid}")
-            
+                    continue  # 跳过已存在的记录 
  
             processed_links.append(link)
         print(f"处理后的链接: {processed_links}")
@@ -380,7 +391,7 @@ class SeleniumWebCrawler:
         thread_links = self.extract_thread_links_from_file(home_file_path)
         
         if not thread_links:
-            logger.warning("未找到任何详情页链接")
+            logger.warning("未找到任何详情页链接"+home_file_path)
             return
         
         results = []
@@ -436,7 +447,7 @@ class SeleniumWebCrawler:
         thread_links = self.extract_thread_links_from_html(html_content)
         
         if not thread_links:
-            logger.warning("未找到任何详情页链接")
+            logger.warning("未找到任何详情页链接："+home_url)
             return
         
         results = []
@@ -511,12 +522,12 @@ def main():
             # 从在线论坛爬取
             print(f"正在从在线论坛爬取: {crawler.default_forum_url}")
             pageNumbers = 1117
-            for pageNumber in range(1, pageNumbers + 1):
+            for pageNumber in range(142, pageNumbers + 1):
                 url = f"{crawler.default_forum_url}&page={pageNumber}"
                 results = crawler.crawl_from_url(url)
                 if results:
                     print(f"\n第 {pageNumber} 页爬取完成，共获取 {len(results)} 条数据")
- 
+            self.logger.info(f"完成全部爬取")
         
         elif choice == '2':
             # 从本地文件爬取
