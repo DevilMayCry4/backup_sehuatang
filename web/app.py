@@ -4,18 +4,31 @@
 Flask Web应用 - Jellyfin电影查询
 """
 
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, Response
+from flask_cors import CORS
 import sys
 import os
+import requests
+from urllib.parse import urlparse
 
 # 添加父目录到路径，以便导入项目模块
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from jellyfin_movie_checker import JellyfinMovieChecker
 from jellyfin_config import config
+from crawler.javbus_crawler import JavBusCrawler
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key-here'
+
+# 配置CORS - 允许所有来源访问
+CORS(app, resources={
+    r"/*": {
+        "origins": "*",
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization"]
+    }
+})
 
 # 初始化Jellyfin检查器
 try:
@@ -23,6 +36,67 @@ try:
 except Exception as e:
     print(f"Jellyfin初始化失败: {e}")
     jellyfin_checker = None
+
+# 初始化JavBus爬虫
+try:
+    crawler = JavBusCrawler()
+except Exception as e:
+    print(f"JavBusCrawler初始化失败: {e}")
+    crawler = None
+
+@app.route('/proxy-image')
+def proxy_image():
+    """图片代理路由 - 解决跨域图片显示问题"""
+    image_url = request.args.get('url')
+    
+    if not image_url:
+        return jsonify({'error': '缺少图片URL参数'}), 400
+    
+    try:
+        # 验证URL格式
+        parsed_url = urlparse(image_url)
+        if not parsed_url.scheme or not parsed_url.netloc:
+            return jsonify({'error': '无效的图片URL'}), 400
+        
+        # 设置请求头，模拟浏览器访问
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+            'Referer': f"{parsed_url.scheme}://{parsed_url.netloc}/",
+            'Accept': 'image/webp,image/apng,image/*,*/*;q=0.8',
+            'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
+            'Cache-Control': 'no-cache'
+        }
+        
+        # 请求图片
+        response = requests.get(image_url, headers=headers, timeout=10, stream=True)
+        response.raise_for_status()
+        
+        # 获取内容类型
+        content_type = response.headers.get('Content-Type', 'image/jpeg')
+        
+        # 返回图片数据
+        def generate():
+            for chunk in response.iter_content(chunk_size=8192):
+                if chunk:
+                    yield chunk
+        
+        return Response(
+            generate(),
+            content_type=content_type,
+            headers={
+                'Cache-Control': 'public, max-age=3600',  # 缓存1小时
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'GET',
+                'Access-Control-Allow-Headers': 'Content-Type'
+            }
+        )
+        
+    except requests.exceptions.RequestException as e:
+        print(f"图片代理请求失败: {e}")
+        return jsonify({'error': f'图片加载失败: {str(e)}'}), 500
+    except Exception as e:
+        print(f"图片代理出错: {e}")
+        return jsonify({'error': f'服务器错误: {str(e)}'}), 500
 
 @app.route('/')
 def index():
@@ -48,8 +122,84 @@ def search_movie():
                 'error': 'Jellyfin服务未初始化'
             })
         
-        # 执行搜索
-        result = jellyfin_checker.check_movie_exists(movie_name)
+        if not crawler:
+            return jsonify({
+                'success': False,
+                'error': 'JavBusCrawler未初始化'
+            })
+
+        # 执行爬虫搜索
+        crawler_result = crawler.crawl_from_url('https://www.javbus.com/series/'+movie_name)
+        
+        # 处理爬虫结果
+        if not crawler_result or 'movies' not in crawler_result:
+            return jsonify({
+                'success': False,
+                'error': '爬虫未返回有效数据'
+            })
+        
+        movies = crawler_result['movies']
+        processed_movies = []
+        
+        # 遍历每个电影，检查在Jellyfin中是否存在
+        for movie in movies:
+            movie_code = movie.get('movie_code', '')
+            title = movie.get('title', '')
+            original_image_url = movie.get('image_url', '')
+            
+            # 将图片URL转换为代理URL
+            proxy_image_url = ''
+            if original_image_url:
+                proxy_image_url = f"/proxy-image?url={requests.utils.quote(original_image_url, safe='')}"
+            
+            # 使用movie_code在Jellyfin中搜索
+            jellyfin_exists = False
+            jellyfin_details = None
+            
+            if movie_code:
+                try:
+                    # 先用movie_code搜索
+                    jellyfin_result = jellyfin_checker.check_movie_exists(movie_code)
+                    if jellyfin_result.get('exists', False):
+                        jellyfin_exists = True
+                        jellyfin_details = jellyfin_result.get('movies', [])
+                    else:
+                        # 如果movie_code没找到，尝试用title搜索
+                        if title:
+                            jellyfin_result = jellyfin_checker.check_movie_exists(title)
+                            if jellyfin_result.get('exists', False):
+                                jellyfin_exists = True
+                                jellyfin_details = jellyfin_result.get('movies', [])
+                except Exception as e:
+                    print(f"检查电影 {movie_code} 在Jellyfin中是否存在时出错: {e}")
+                    jellyfin_exists = False
+            
+            # 构建返回的电影数据
+            processed_movie = {
+                'title': title,
+                'image_url': proxy_image_url,  # 使用代理URL
+                'original_image_url': original_image_url,  # 保留原始URL用于调试
+                'movie_code': movie_code,
+                'release_date': movie.get('release_date', ''),
+                'movie_url': movie.get('movie_url', ''),
+                'has_hd': movie.get('has_hd', False),
+                'has_subtitle': movie.get('has_subtitle', False),
+                'jellyfin_exists': jellyfin_exists,
+                'jellyfin_details': jellyfin_details if jellyfin_exists else None
+            }
+            
+            processed_movies.append(processed_movie)
+        
+        # 返回处理后的结果
+        result = {
+            'total_movies': len(processed_movies),
+            'movies': processed_movies,
+            'search_term': movie_name,
+            'crawler_info': {
+                'total_pages_crawled': crawler_result.get('total_pages_crawled', 1),
+                'total_movies_found': crawler_result.get('total_movies', len(movies))
+            }
+        }
         
         return jsonify({
             'success': True,

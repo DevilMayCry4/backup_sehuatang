@@ -162,48 +162,85 @@ class JavBusCrawler:
             print(f"读取文件时出错: {e}")
             return {'movies': [], 'pagination': {'has_next': False}}
     
-    def crawl_from_url(self, url, max_pages=None):
+    def crawl_from_url(self, url, max_pages=None, max_retries=3):
         """
-        从网站URL爬取电影信息，支持多页爬取
+        从网站URL爬取电影信息，支持多页爬取和重试机制
         """
         all_movies = []
         current_url = url
         page_count = 0
         
         while current_url and (max_pages is None or page_count < max_pages):
-            try:
-                print(f"正在爬取第 {page_count + 1} 页: {current_url}")
-                
-                response = self.session.get(current_url, timeout=10)
-                response.raise_for_status()
-                response.encoding = 'utf-8'
-                
-                # 解析当前页面
-                movie_items = self.parse_movie_items(response.text)
-                pagination_info = self.parse_pagination(response.text)
-                
-                # 添加页面信息到每个电影项目
-                for movie in movie_items:
-                    movie['page_number'] = page_count + 1
-                    movie['source_url'] = current_url
-                
-                all_movies.extend(movie_items)
-                
-                print(f"第 {page_count + 1} 页找到 {len(movie_items)} 个电影项目")
-                
-                # 检查是否有下一页
-                if pagination_info['has_next']:
-                    current_url = pagination_info['next_url']
-                    page_count += 1
+            retry_count = 0
+            success = False
+            
+            while retry_count < max_retries and not success:
+                try:
+                    print(f"正在爬取第 {page_count + 1} 页: {current_url} (尝试 {retry_count + 1}/{max_retries})")
                     
-                    # 添加延迟避免请求过快
-                    time.sleep(1)
-                else:
-                    print("已到达最后一页")
-                    break
+                    # 增加更长的超时时间和重试间隔
+                    response = self.session.get(current_url, timeout=30)
+                    response.raise_for_status()
+                    response.encoding = 'utf-8'
                     
-            except Exception as e:
-                print(f"爬取第 {page_count + 1} 页时出错: {e}")
+                    # 解析当前页面
+                    movie_items = self.parse_movie_items(response.text)
+                    pagination_info = self.parse_pagination(response.text)
+                    
+                    # 添加页面信息到每个电影项目
+                    for movie in movie_items:
+                        movie['page_number'] = page_count + 1
+                        movie['source_url'] = current_url
+                    
+                    all_movies.extend(movie_items)
+                    
+                    print(f"第 {page_count + 1} 页找到 {len(movie_items)} 个电影项目")
+                    
+                    # 检查是否有下一页
+                    if pagination_info['has_next']:
+                        current_url = pagination_info['next_url']
+                        page_count += 1
+                        
+                        # 增加延迟避免请求过快
+                        time.sleep(2)
+                    else:
+                        print("已到达最后一页")
+                        break
+                        
+                    success = True
+                    
+                except requests.exceptions.ConnectionError as e:
+                    retry_count += 1
+                    print(f"连接错误 (尝试 {retry_count}/{max_retries}): {e}")
+                    if retry_count < max_retries:
+                        wait_time = retry_count * 5  # 递增等待时间
+                        print(f"等待 {wait_time} 秒后重试...")
+                        time.sleep(wait_time)
+                    else:
+                        print(f"第 {page_count + 1} 页连接失败，跳过")
+                        break
+                        
+                except requests.exceptions.Timeout as e:
+                    retry_count += 1
+                    print(f"请求超时 (尝试 {retry_count}/{max_retries}): {e}")
+                    if retry_count < max_retries:
+                        wait_time = retry_count * 3
+                        print(f"等待 {wait_time} 秒后重试...")
+                        time.sleep(wait_time)
+                    else:
+                        print(f"第 {page_count + 1} 页请求超时，跳过")
+                        break
+                        
+                except Exception as e:
+                    retry_count += 1
+                    print(f"爬取第 {page_count + 1} 页时出错 (尝试 {retry_count}/{max_retries}): {e}")
+                    if retry_count < max_retries:
+                        time.sleep(2)
+                    else:
+                        print(f"第 {page_count + 1} 页爬取失败，跳过")
+                        break
+            
+            if not success:
                 break
         
         return {
