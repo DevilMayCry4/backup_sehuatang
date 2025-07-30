@@ -5,3 +5,6 @@ web/run.py
 __pycache__
 core
 .env
+javbus_web_movies.json
+.gitignore
+test.html
