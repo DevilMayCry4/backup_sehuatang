@@ -522,7 +522,7 @@ def main():
             # 从在线论坛爬取
             print(f"正在从在线论坛爬取: {crawler.default_forum_url}")
             pageNumbers = 1117
-            for pageNumber in range(142, pageNumbers + 1):
+            for pageNumber in range(299, pageNumbers + 1):
                 url = f"{crawler.default_forum_url}&page={pageNumber}"
                 results = crawler.crawl_from_url(url)
                 if results:
