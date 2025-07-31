@@ -1,6 +1,73 @@
 {% extends "base.html" %}
 
 {% block content %}
+<style>
+/* 图片样式优化 */
+.movie-image {
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.movie-image:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+}
+
+/* 电影卡片样式 */
+.movie-item {
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 15px;
+    background: #fff;
+    transition: box-shadow 0.3s ease;
+}
+
+.movie-item:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+/* 电影信息布局优化 */
+.movie-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+}
+
+.movie-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.movie-meta .badge {
+    font-size: 0.75rem;
+}
+
+/* 磁力链接容器样式 */
+.magnet-link-container {
+    background: #f8f9fa;
+    border-radius: 6px;
+    padding: 10px;
+    margin-bottom: 10px;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+    .movie-header {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .movie-meta {
+        justify-content: flex-start;
+    }
+}
+</style>
+
 <div class="search-container">
     <div class="card">
         <div class="card-header">
@@ -100,9 +167,9 @@ document.addEventListener('DOMContentLoaded', function() {
         searchMovies();
     });
     
-    // 全选/取消全选
+    // 全选/取消全选 - 修复：只选择未禁用的复选框
     selectAllCheckbox.addEventListener('change', function() {
-        const checkboxes = document.querySelectorAll('.movie-checkbox');
+        const checkboxes = document.querySelectorAll('.movie-checkbox:not(:disabled)');
         checkboxes.forEach(checkbox => {
             checkbox.checked = this.checked;
         });
@@ -116,11 +183,13 @@ document.addEventListener('DOMContentLoaded', function() {
         selectedCountSpan.textContent = count;
         subscribeBtn.disabled = count === 0;
         
-        // 更新全选状态
-        const allCheckboxes = document.querySelectorAll('.movie-checkbox');
-        if (allCheckboxes.length > 0) {
-            selectAllCheckbox.checked = count === allCheckboxes.length;
-            selectAllCheckbox.indeterminate = count > 0 && count < allCheckboxes.length;
+        // 更新全选状态 - 修复：只考虑未禁用的复选框
+        const enabledCheckboxes = document.querySelectorAll('.movie-checkbox:not(:disabled)');
+        const selectedEnabledCheckboxes = document.querySelectorAll('.movie-checkbox:not(:disabled):checked');
+        
+        if (enabledCheckboxes.length > 0) {
+            selectAllCheckbox.checked = selectedEnabledCheckboxes.length === enabledCheckboxes.length;
+            selectAllCheckbox.indeterminate = selectedEnabledCheckboxes.length > 0 && selectedEnabledCheckboxes.length < enabledCheckboxes.length;
         }
     }
     
@@ -170,7 +239,7 @@ document.addEventListener('DOMContentLoaded', function() {
         results.classList.add('d-none');
     }
     
-    // 显示搜索结果
+    // 显示搜索结果 - 优化布局
     function displayResults(result) {
         let html = '';
         
@@ -190,20 +259,21 @@ document.addEventListener('DOMContentLoaded', function() {
                 `;
             }
             
-            // 显示电影列表
+            // 显示电影列表 - 优化布局
             result.movies.forEach((movie, index) => {
                 const jellyfinStatus = movie.jellyfin_exists ? 
-                    '<span class="jellyfin-status status-exists"><i class="bi bi-check-circle"></i> 已存在</span>' :
-                    '<span class="jellyfin-status status-not-exists"><i class="bi bi-x-circle"></i> 未找到</span>';
+                    '<span class="badge bg-success"><i class="bi bi-check-circle"></i> 已存在</span>' :
+                    '<span class="badge bg-secondary"><i class="bi bi-x-circle"></i> 未找到</span>';
                 
+                // 构建标签数组
                 const movieTags = [];
                 if (movie.has_hd) movieTags.push('<span class="badge bg-primary">高清</span>');
-                if (movie.has_subtitle) movieTags.push('<span class="badge bg-warning">字幕</span>');
+                if (movie.has_subtitle) movieTags.push('<span class="badge bg-warning text-dark">字幕</span>');
                 
                 // 添加磁力链接标识
                 const magnetStatus = movie.has_magnet ? 
-                    '<span class="badge bg-success me-1"><i class="bi bi-magnet"></i> 有磁力链接</span>' :
-                    '<span class="badge bg-secondary me-1"><i class="bi bi-x-circle"></i> 无磁力链接</span>';
+                    '<span class="badge bg-success"><i class="bi bi-magnet"></i> 有磁力链接</span>' :
+                    '<span class="badge bg-light text-muted"><i class="bi bi-x-circle"></i> 无磁力链接</span>';
                 
                 html += `
                     <div class="movie-item">
@@ -217,81 +287,77 @@ document.addEventListener('DOMContentLoaded', function() {
                                     <label class="form-check-label" for="movie-${index}"></label>
                                 </div>
                             </div>
-                            <div class="col-md-2 col-sm-3 text-center mb-3">
+                            <div class="col-md-2 col-sm-3 d-flex align-items-center justify-content-center mb-3" style="min-height: 160px;">
                                 ${movie.image_url ? 
                                     `<img src="${movie.image_url}" alt="${movie.title}" class="movie-image img-fluid" 
+                                         style="max-width: 120px; max-height: 160px; object-fit: cover;"
                                          onerror="console.log('图片加载失败 URL:', this.src); this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIwIiBoZWlnaHQ9IjE2MCIgdmlld0JveD0iMCAwIDEyMCAxNjAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMjAiIGhlaWdodD0iMTYwIiBmaWxsPSIjRjhGOUZBIi8+CjxwYXRoIGQ9Ik00MCA2MEw4MCA2MEw2MCA5MEw0MCA2MFoiIGZpbGw9IiNEMUQ1REIiLz4KPC9zdmc+'">` :
-                                    `<div class="movie-image d-flex align-items-center justify-content-center bg-light text-muted" style="width:120px;height:160px;">
+                                    `<div class="movie-image d-flex align-items-center justify-content-center bg-light text-muted" style="width:120px;height:160px; border-radius: 8px;">
                                         <i class="bi bi-film" style="font-size: 2rem;"></i>
                                     </div>`
                                 }
                             </div>
                             <div class="col-md-9 col-sm-8">
                                 <div class="movie-info">
-                                    <div class="d-flex justify-content-between align-items-start mb-2">
-                                        <h6 class="movie-title mb-1">
-                                            <strong>${movie.title || '未知标题'}</strong>
-                                        </h6>
+                                    <!-- 优化的标题和状态布局 -->
+                                    <div class="movie-header">
+                                        <p class="movie-title mb-0" style="font-size: 0.9rem;">
+                                            ${movie.title || '未知标题'}
+                                        </p>
                                         ${jellyfinStatus}
                                     </div>
                                     
-                                    <div class="movie-details">
-                                        <p class="mb-1">
-                                            <strong>编号:</strong> 
-                                            <span class="badge bg-secondary">${movie.movie_code || 'N/A'}</span>
-                                        </p>
-                                        
+                                    <!-- 优化的元数据布局 -->
+                                    <div class="movie-meta">
+                                        <span class="badge bg-info">编号: ${movie.movie_code || 'N/A'}</span>
                                         ${movie.release_date ? 
-                                            `<p class="mb-1"><strong>发布日期:</strong> ${movie.release_date}</p>` : ''
+                                            `<span class="badge bg-secondary">发布: ${movie.release_date}</span>` : ''
+                                        }
+                                        ${magnetStatus}
+                                        ${movieTags.join('')}
+                                    </div>
+                                    
+                                    ${movie.has_magnet && movie.magnet_link ? 
+                                        `<div class="magnet-link-container">
+                                            <small class="text-muted d-block mb-1"><i class="bi bi-magnet"></i> 磁力链接:</small>
+                                            <div class="input-group input-group-sm">
+                                                <input type="text" class="form-control" value="${movie.magnet_link}" readonly>
+                                                <button class="btn btn-outline-secondary" type="button" 
+                                                        onclick="copyToClipboard('${movie.magnet_link.replace(/'/g, "\\'")}')" 
+                                                        title="复制磁力链接">
+                                                    <i class="bi bi-copy"></i>
+                                                </button>
+                                            </div>
+                                        </div>` : ''
+                                    }
+                                    
+                                    <div class="movie-actions mt-2">
+                                        ${movie.movie_url ? 
+                                            `<a href="${movie.movie_url}" target="_blank" class="btn btn-sm btn-outline-primary me-2">
+                                                <i class="bi bi-box-arrow-up-right"></i> 查看详情
+                                            </a>` : ''
                                         }
                                         
-                                        <div class="movie-tags mb-2">
-                                            ${magnetStatus}
-                                            ${movieTags.join('')}
-                                        </div>
-                                        
-                                        ${movie.has_magnet && movie.magnet_link ? 
-                                            `<div class="magnet-link-container mb-2">
-                                                <small class="text-muted">磁力链接:</small>
-                                                <div class="input-group input-group-sm">
-                                                    <input type="text" class="form-control" value="${movie.magnet_link}" readonly>
-                                                    <button class="btn btn-outline-secondary" type="button" 
-                                                            onclick="copyToClipboard('${movie.magnet_link.replace(/'/g, "\\'")}')"
-                                                            title="复制磁力链接">
-                                                        <i class="bi bi-copy"></i>
-                                                    </button>
-                                                </div>
-                                            </div>` : ''
-                                        }
-                                        
-                                        <div class="movie-actions">
-                                            ${movie.movie_url ? 
-                                                `<a href="${movie.movie_url}" target="_blank" class="btn btn-sm btn-outline-primary me-2">
-                                                    <i class="bi bi-box-arrow-up-right"></i> 查看详情
-                                                </a>` : ''
-                                            }
-                                            
-                                            ${movie.jellyfin_exists && movie.jellyfin_details && movie.jellyfin_details.length > 0 ? 
-                                                `<button class="btn btn-sm btn-success" onclick="showJellyfinDetails(${index})">
-                                                    <i class="bi bi-info-circle"></i> Jellyfin详情
-                                                </button>` : ''
-                                            }
-                                        </div>
-                                        
-                                        ${movie.jellyfin_exists && movie.jellyfin_details ? 
-                                            `<div id="jellyfin-details-${index}" class="jellyfin-details mt-2 d-none">
-                                                <div class="alert alert-success">
-                                                    <strong>Jellyfin中的信息:</strong><br>
-                                                    ${movie.jellyfin_details.map(detail => 
-                                                        `<div class="mb-1">
-                                                            <strong>${detail.name}</strong> (${detail.year || 'N/A'})<br>
-                                                            <small class="text-muted">库: ${detail.library} | 路径: ${detail.path || 'N/A'}</small>
-                                                        </div>`
-                                                    ).join('')}
-                                                </div>
-                                            </div>` : ''
+                                        ${movie.jellyfin_exists && movie.jellyfin_details && movie.jellyfin_details.length > 0 ? 
+                                            `<button class="btn btn-sm btn-success" onclick="showJellyfinDetails(${index})">
+                                                <i class="bi bi-info-circle"></i> Jellyfin详情
+                                            </button>` : ''
                                         }
                                     </div>
+                                    
+                                    ${movie.jellyfin_exists && movie.jellyfin_details ? 
+                                        `<div id="jellyfin-details-${index}" class="jellyfin-details mt-2 d-none">
+                                            <div class="alert alert-success">
+                                                <strong>Jellyfin中的信息:</strong><br>
+                                                ${movie.jellyfin_details.map(detail => 
+                                                    `<div class="mb-1">
+                                                        <strong>${detail.name}</strong> (${detail.year || 'N/A'})<br>
+                                                        <small class="text-muted">库: ${detail.library} | 路径: ${detail.path || 'N/A'}</small>
+                                                    </div>`
+                                                ).join('')}
+                                            </div>
+                                        </div>` : ''
+                                    }
                                 </div>
                             </div>
                         </div>
