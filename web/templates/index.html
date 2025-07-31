@@ -30,8 +30,21 @@
     <div id="results" class="result-container d-none">
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0"><i class="bi bi-list-ul"></i> 搜索结果</h5>
-                <div id="resultStats" class="text-muted"></div>
+                <div class="d-flex align-items-center">
+                    <h5 class="mb-0 me-3"><i class="bi bi-list-ul"></i> 搜索结果</h5>
+                    <div class="form-check me-3">
+                        <input class="form-check-input" type="checkbox" id="selectAll">
+                        <label class="form-check-label" for="selectAll">
+                            全选
+                        </label>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center">
+                    <div id="resultStats" class="text-muted me-3"></div>
+                    <button id="subscribeBtn" class="btn btn-success btn-sm" onclick="subscribeSelected()" disabled>
+                        <i class="bi bi-download"></i> 订阅选中 (<span id="selectedCount">0</span>)
+                    </button>
+                </div>
             </div>
             <div class="card-body" id="resultsContent">
                 <!-- 结果将通过JavaScript动态插入 -->
@@ -45,69 +58,25 @@
         <span id="errorMessage"></span>
     </div>
 </div>
+
+<!-- 成功提示模态框 -->
+<div class="modal fade" id="successModal" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-body text-center">
+                <i class="bi bi-check-circle-fill text-success" style="font-size: 3rem;"></i>
+                <h5 class="mt-3">复制成功！</h5>
+                <p class="text-muted">已复制 <span id="copiedCount"></span> 个磁力链接到剪贴板</p>
+            </div>
+            <div class="modal-footer justify-content-center">
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">确定</button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
-<style>
-.movie-item {
-    border: 1px solid #dee2e6;
-    border-radius: 8px;
-    padding: 15px;
-    margin-bottom: 15px;
-    transition: all 0.3s ease;
-}
-
-.movie-item:hover {
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    transform: translateY(-2px);
-}
-
-.movie-image {
-    max-width: 120px;
-    max-height: 160px;
-    object-fit: cover;
-    border-radius: 4px;
-}
-
-.jellyfin-status {
-    font-weight: bold;
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 0.85em;
-}
-
-.status-exists {
-    background-color: #d4edda;
-    color: #155724;
-    border: 1px solid #c3e6cb;
-}
-
-.status-not-exists {
-    background-color: #f8d7da;
-    color: #721c24;
-    border: 1px solid #f5c6cb;
-}
-
-.movie-tags .badge {
-    margin-right: 5px;
-}
-
-.movie-info {
-    flex: 1;
-}
-
-@media (max-width: 768px) {
-    .movie-item {
-        text-align: center;
-    }
-    
-    .movie-image {
-        max-width: 100px;
-        max-height: 130px;
-    }
-}
-</style>
-
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const searchForm = document.getElementById('searchForm');
@@ -116,87 +85,99 @@ document.addEventListener('DOMContentLoaded', function() {
     const loading = document.getElementById('loading');
     const results = document.getElementById('results');
     const resultsContent = document.getElementById('resultsContent');
-    const resultStats = document.getElementById('resultStats');
     const error = document.getElementById('error');
     const errorMessage = document.getElementById('errorMessage');
-
-    searchForm.addEventListener('submit', async function(e) {
+    const resultStats = document.getElementById('resultStats');
+    const selectAllCheckbox = document.getElementById('selectAll');
+    const subscribeBtn = document.getElementById('subscribeBtn');
+    const selectedCountSpan = document.getElementById('selectedCount');
+    
+    let currentMovies = []; // 存储当前搜索结果
+    
+    // 搜索表单提交
+    searchForm.addEventListener('submit', function(e) {
         e.preventDefault();
+        searchMovies();
+    });
+    
+    // 全选/取消全选
+    selectAllCheckbox.addEventListener('change', function() {
+        const checkboxes = document.querySelectorAll('.movie-checkbox');
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = this.checked;
+        });
+        updateSelectedCount();
+    });
+    
+    // 更新选中数量
+    function updateSelectedCount() {
+        const selectedCheckboxes = document.querySelectorAll('.movie-checkbox:checked');
+        const count = selectedCheckboxes.length;
+        selectedCountSpan.textContent = count;
+        subscribeBtn.disabled = count === 0;
         
-        const movieName = movieNameInput.value.trim();
-        if (!movieName) {
-            showError('请输入电影名称');
-            return;
+        // 更新全选状态
+        const allCheckboxes = document.querySelectorAll('.movie-checkbox');
+        if (allCheckboxes.length > 0) {
+            selectAllCheckbox.checked = count === allCheckboxes.length;
+            selectAllCheckbox.indeterminate = count > 0 && count < allCheckboxes.length;
         }
-
+    }
+    
+    // 搜索电影
+    async function searchMovies() {
+        const movieName = movieNameInput.value.trim();
+        if (!movieName) return;
+        
         // 显示加载状态
-        showLoading();
-        hideError();
-        hideResults();
-
+        loading.classList.remove('d-none');
+        results.classList.add('d-none');
+        error.classList.add('d-none');
+        searchBtn.disabled = true;
+        
         try {
             const response = await fetch('/search', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ movie_name: movieName })
+                body: JSON.stringify({
+                    movie_name: movieName
+                })
             });
-
+            
             const data = await response.json();
             
             if (data.success) {
+                currentMovies = data.result.movies || [];
                 displayResults(data.result);
             } else {
                 showError(data.error || '搜索失败');
             }
         } catch (err) {
+            console.error('搜索错误:', err);
             showError('网络错误，请稍后重试');
         } finally {
-            hideLoading();
+            loading.classList.add('d-none');
+            searchBtn.disabled = false;
         }
-    });
-
-    function showLoading() {
-        loading.classList.remove('d-none');
-        searchBtn.disabled = true;
     }
-
-    function hideLoading() {
-        loading.classList.add('d-none');
-        searchBtn.disabled = false;
-    }
-
+    
+    // 显示错误
     function showError(message) {
         errorMessage.textContent = message;
         error.classList.remove('d-none');
-    }
-
-    function hideError() {
-        error.classList.add('d-none');
-    }
-
-    function hideResults() {
         results.classList.add('d-none');
     }
-
+    
+    // 显示搜索结果
     function displayResults(result) {
         let html = '';
         
         // 显示统计信息
-        const totalMovies = result.total_movies || 0;
-        const existsCount = result.movies ? result.movies.filter(m => m.jellyfin_exists).length : 0;
-        const notExistsCount = totalMovies - existsCount;
-        
-        resultStats.innerHTML = `
-            <small>
-                总计: ${totalMovies} 部 | 
-                <span class="text-success">已有: ${existsCount}</span> | 
-                <span class="text-danger">缺失: ${notExistsCount}</span>
-            </small>
-        `;
-        
-        if (totalMovies > 0) {
+        if (result.total_movies > 0) {
+            resultStats.innerHTML = `共找到 ${result.total_movies} 部电影`;
+            
             // 显示爬虫信息
             if (result.crawler_info) {
                 html += `
@@ -219,9 +200,23 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (movie.has_hd) movieTags.push('<span class="badge bg-primary">高清</span>');
                 if (movie.has_subtitle) movieTags.push('<span class="badge bg-warning">字幕</span>');
                 
+                // 添加磁力链接标识
+                const magnetStatus = movie.has_magnet ? 
+                    '<span class="badge bg-success me-1"><i class="bi bi-magnet"></i> 有磁力链接</span>' :
+                    '<span class="badge bg-secondary me-1"><i class="bi bi-x-circle"></i> 无磁力链接</span>';
+                
                 html += `
                     <div class="movie-item">
                         <div class="row align-items-start">
+                            <div class="col-md-1 col-sm-1 d-flex align-items-center justify-content-center">
+                                <div class="form-check">
+                                    <input class="form-check-input movie-checkbox" type="checkbox" 
+                                           id="movie-${index}" data-index="${index}" 
+                                           ${movie.has_magnet ? '' : 'disabled'}
+                                           onchange="updateSelectedCount()">
+                                    <label class="form-check-label" for="movie-${index}"></label>
+                                </div>
+                            </div>
                             <div class="col-md-2 col-sm-3 text-center mb-3">
                                 ${movie.image_url ? 
                                     `<img src="${movie.image_url}" alt="${movie.title}" class="movie-image img-fluid" 
@@ -231,7 +226,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                     </div>`
                                 }
                             </div>
-                            <div class="col-md-10 col-sm-9">
+                            <div class="col-md-9 col-sm-8">
                                 <div class="movie-info">
                                     <div class="d-flex justify-content-between align-items-start mb-2">
                                         <h6 class="movie-title mb-1">
@@ -250,8 +245,23 @@ document.addEventListener('DOMContentLoaded', function() {
                                             `<p class="mb-1"><strong>发布日期:</strong> ${movie.release_date}</p>` : ''
                                         }
                                         
-                                        ${movieTags.length > 0 ? 
-                                            `<div class="movie-tags mb-2">${movieTags.join('')}</div>` : ''
+                                        <div class="movie-tags mb-2">
+                                            ${magnetStatus}
+                                            ${movieTags.join('')}
+                                        </div>
+                                        
+                                        ${movie.has_magnet && movie.magnet_link ? 
+                                            `<div class="magnet-link-container mb-2">
+                                                <small class="text-muted">磁力链接:</small>
+                                                <div class="input-group input-group-sm">
+                                                    <input type="text" class="form-control" value="${movie.magnet_link}" readonly>
+                                                    <button class="btn btn-outline-secondary" type="button" 
+                                                            onclick="copyToClipboard('${movie.magnet_link.replace(/'/g, "\\'")}')"
+                                                            title="复制磁力链接">
+                                                        <i class="bi bi-copy"></i>
+                                                    </button>
+                                                </div>
+                                            </div>` : ''
                                         }
                                         
                                         <div class="movie-actions">
@@ -305,6 +315,11 @@ document.addEventListener('DOMContentLoaded', function() {
         
         resultsContent.innerHTML = html;
         results.classList.remove('d-none');
+        
+        // 重置选择状态
+        selectAllCheckbox.checked = false;
+        selectAllCheckbox.indeterminate = false;
+        updateSelectedCount();
     }
     
     // 全局函数：显示Jellyfin详情
@@ -314,6 +329,71 @@ document.addEventListener('DOMContentLoaded', function() {
             detailsDiv.classList.toggle('d-none');
         }
     };
+    
+    // 全局函数：复制到剪贴板
+    window.copyToClipboard = function(text) {
+        navigator.clipboard.writeText(text).then(function() {
+            // 显示简单提示
+            const toast = document.createElement('div');
+            toast.className = 'toast-notification';
+            toast.innerHTML = '<i class="bi bi-check-circle"></i> 已复制到剪贴板';
+            toast.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: #28a745;
+                color: white;
+                padding: 10px 15px;
+                border-radius: 5px;
+                z-index: 9999;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            `;
+            document.body.appendChild(toast);
+            setTimeout(() => {
+                document.body.removeChild(toast);
+            }, 2000);
+        }, function(err) {
+            console.error('复制失败: ', err);
+            alert('复制失败，请手动复制');
+        });
+    };
+    
+    // 全局函数：订阅选中的电影
+    window.subscribeSelected = function() {
+        const selectedCheckboxes = document.querySelectorAll('.movie-checkbox:checked');
+        const magnetLinks = [];
+        
+        selectedCheckboxes.forEach(checkbox => {
+            const index = parseInt(checkbox.dataset.index);
+            const movie = currentMovies[index];
+            if (movie && movie.magnet_link) {
+                magnetLinks.push(movie.magnet_link);
+            }
+        });
+        
+        if (magnetLinks.length > 0) {
+            const allLinks = magnetLinks.join('\n');
+            navigator.clipboard.writeText(allLinks).then(function() {
+                // 显示成功模态框
+                document.getElementById('copiedCount').textContent = magnetLinks.length;
+                const modal = new bootstrap.Modal(document.getElementById('successModal'));
+                modal.show();
+                
+                // 清除选择
+                selectedCheckboxes.forEach(checkbox => {
+                    checkbox.checked = false;
+                });
+                selectAllCheckbox.checked = false;
+                updateSelectedCount();
+            }, function(err) {
+                console.error('复制失败: ', err);
+                alert('复制失败，请手动复制');
+            });
+        }
+    };
+    
+    // 全局函数：更新选中数量（供HTML调用）
+    window.updateSelectedCount = updateSelectedCount;
 });
 </script>
 {% endblock %}
