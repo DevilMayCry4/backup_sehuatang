@@ -16,7 +16,7 @@ class Config:
     def _load_config(self) -> Dict[str, Any]:
         """加载配置"""
         # 加载环境变量文件
-        env_file = '.env'
+        env_file = '/root/backup_sehuatang/copy.env'
         if os.path.exists(env_file):
             with open(env_file, 'r', encoding='utf-8') as f:
                 for line in f:

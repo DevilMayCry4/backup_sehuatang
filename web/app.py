@@ -10,6 +10,8 @@ import sys
 import os
 import requests
 from urllib.parse import urlparse
+from pymongo import MongoClient
+import re
 
 # 添加父目录到路径，以便导入项目模块
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -17,6 +19,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from jellyfin_movie_checker import JellyfinMovieChecker
 from jellyfin_config import config
 from crawler.javbus_crawler import JavBusCrawler
+from config import config as app_config
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key-here'
@@ -29,6 +32,89 @@ CORS(app, resources={
         "allow_headers": ["Content-Type", "Authorization"]
     }
 })
+
+# 初始化MongoDB连接
+mongo_client = None
+mongo_db = None
+mongo_collection = None
+
+def init_mongodb():
+    """初始化MongoDB连接"""
+    global mongo_client, mongo_db, mongo_collection
+    try:
+        mongo_config = app_config.get_mongo_config()
+        mongo_client = MongoClient(mongo_config['uri'], serverSelectionTimeoutMS=5000)
+        # 测试连接
+        mongo_client.admin.command('ping')
+        # 连接到sehuatang_backup数据库
+        mongo_db = mongo_client['sehuatang_backup']
+        # 连接到sehuatang_crawler集合（从备份数据库中查询）
+        mongo_collection = mongo_db['sehuatang_crawler']
+        print(f"MongoDB连接成功: {mongo_config['uri']}")
+    except Exception as e:
+        print(f"MongoDB连接失败: {e}")
+        mongo_client = None
+
+def extract_movie_code_from_title(title):
+    """从标题中提取电影编号"""
+    if not title:
+        return None
+    
+    # 常见的电影编号格式匹配
+    patterns = [
+        r'([A-Z]{2,6}-\d{3,4})',  # 如 SSIS-123, PRED-456
+        r'([A-Z]{2,6}\d{3,4})',   # 如 SSIS123, PRED456
+        r'(\d{6}[-_]\d{3})',      # 如 123456-789
+        r'([A-Z]+[-_]\d+)',       # 如 ABC-123
+    ]
+    
+    for pattern in patterns:
+        match = re.search(pattern, title.upper())
+        if match:
+            return match.group(1)
+    
+    return None
+
+def query_magnet_link(movie_code, title):
+    """查询MongoDB中的magnet_link"""
+    if mongo_collection is None:
+        return None, False
+    
+    try:
+        # 首先尝试用movie_code在title字段中搜索
+        query_conditions = []
+        
+        if movie_code:
+            # 在title字段中搜索包含movie_code的记录
+            query_conditions.extend([
+                {'title': {'$regex': movie_code, '$options': 'i'}},
+                {'title': {'$regex': movie_code.replace('-', ''), '$options': 'i'}},
+                {'title': {'$regex': movie_code.replace('-', '_'), '$options': 'i'}}
+            ])
+        
+        if title:
+            # 从title中提取可能的电影编号
+            extracted_code = extract_movie_code_from_title(title)
+            if extracted_code and extracted_code != movie_code:
+                query_conditions.extend([
+                    {'title': {'$regex': extracted_code, '$options': 'i'}},
+                    {'title': {'$regex': extracted_code.replace('-', ''), '$options': 'i'}}
+                ])
+        
+        # 执行查询
+        for condition in query_conditions:
+            result = mongo_collection.find_one(condition)
+            if result and result.get('magnet_link'):
+                return result.get('magnet_link'), True
+        
+        return None, False
+        
+    except Exception as e:
+        print(f"查询MongoDB出错: {e}")
+        return None, False
+
+# 初始化MongoDB
+init_mongodb()
 
 # 初始化Jellyfin检查器
 try:
@@ -152,6 +238,9 @@ def search_movie():
             if original_image_url:
                 proxy_image_url = f"/proxy-image?url={requests.utils.quote(original_image_url, safe='')}"
             
+            # 查询MongoDB中的magnet_link
+            magnet_link, has_magnet = query_magnet_link(movie_code, title)
+            
             # 使用movie_code在Jellyfin中搜索
             jellyfin_exists = False
             jellyfin_details = None
@@ -184,6 +273,8 @@ def search_movie():
                 'movie_url': movie.get('movie_url', ''),
                 'has_hd': movie.get('has_hd', False),
                 'has_subtitle': movie.get('has_subtitle', False),
+                'magnet_link': magnet_link,  # 添加磁力链接
+                'has_magnet': has_magnet,    # 添加是否有磁力链接的标识
                 'jellyfin_exists': jellyfin_exists,
                 'jellyfin_details': jellyfin_details if jellyfin_exists else None
             }
@@ -221,7 +312,8 @@ def get_config():
             'config': {
                 'server_url': config.get('server_url', ''),
                 'client_name': config.get('client_name', ''),
-                'jellyfin_available': jellyfin_checker is not None
+                'jellyfin_available': jellyfin_checker is not None,
+                'mongodb_available': mongo_client is not None
             }
         })
     except Exception as e:
