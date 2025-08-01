@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Flask Web应用 - Jellyfin电影查询
+Flask Web应用 - Jellyfin电影查询 (重构版)
 """
 
 from flask import Flask, render_template, request, jsonify, Response
 from flask_cors import CORS
 import sys
 import os
-from jinja2.utils import F
 import requests
 from urllib.parse import urlparse
 from pymongo import MongoClient
@@ -26,11 +25,14 @@ from email.header import Header
 # 添加父目录到路径，以便导入项目模块
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+# 导入模块
+from database import db_manager
+from routes import register_routes
+from subscription import start_scheduler
 from jellyfin_movie_checker import JellyfinMovieChecker
-from jellyfin_config import config
 from crawler.javbus_crawler import JavBusCrawler
-from config import config as app_config
 
+# 创建Flask应用
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key-here'
 
@@ -42,6 +44,47 @@ CORS(app, resources={
         "allow_headers": ["Content-Type", "Authorization"]
     }
 })
+
+def init_components():
+    """初始化所有组件"""
+    # 初始化MongoDB
+    db_manager.init_mongodb()
+    
+    # 初始化Jellyfin检查器
+    try:
+        jellyfin_checker = JellyfinMovieChecker()
+        print("Jellyfin检查器初始化成功")
+    except Exception as e:
+        print(f"Jellyfin初始化失败: {e}")
+        jellyfin_checker = None
+    
+    # 初始化JavBus爬虫
+    try:
+        crawler = JavBusCrawler()
+        print("JavBus爬虫初始化成功")
+    except Exception as e:
+        print(f"JavBusCrawler初始化失败: {e}")
+        crawler = None
+    
+    return jellyfin_checker, crawler
+
+def main():
+    """主函数"""
+    # 初始化组件
+    jellyfin_checker, crawler = init_components()
+    
+    # 注册路由
+    register_routes(app, jellyfin_checker, crawler)
+    
+    # 启动定时任务
+    start_scheduler(jellyfin_checker, crawler)
+    
+    # 启动应用
+    print("Flask应用启动中...")
+    app.run(debug=True, host='0.0.0.0', port=5000)
+
+if __name__ == '__main__':
+    main()
 
 # 初始化MongoDB连接
 mongo_client = None
@@ -141,20 +184,6 @@ def query_magnet_link(movie_code, title):
 
 # 初始化MongoDB
 init_mongodb()
-
-# 初始化Jellyfin检查器
-try:
-    jellyfin_checker = JellyfinMovieChecker()
-except Exception as e:
-    print(f"Jellyfin初始化失败: {e}")
-    jellyfin_checker = None
-
-# 初始化JavBus爬虫
-try:
-    crawler = JavBusCrawler()
-except Exception as e:
-    print(f"JavBusCrawler初始化失败: {e}")
-    crawler = None
 
 @app.route('/proxy-image')
 def proxy_image():

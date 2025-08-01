@@ -1,0 +1,149 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+数据库模块 - MongoDB连接和操作
+"""
+
+from pymongo import MongoClient
+from datetime import datetime
+from bson import ObjectId
+import sys
+import os
+
+# 添加父目录到路径
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from config import config as app_config
+
+class DatabaseManager:
+    def __init__(self):
+        self.mongo_client = None
+        self.mongo_db = None
+        self.mongo_collection = None
+        self.add_movie_collection = None
+        self.found_movies_collection = None
+        
+    def init_mongodb(self):
+        """初始化MongoDB连接"""
+        try:
+            mongo_config = app_config.get_mongo_config()
+            self.mongo_client = MongoClient(mongo_config['uri'], serverSelectionTimeoutMS=5000)
+            # 测试连接
+            self.mongo_client.admin.command('ping')
+            # 连接到sehuatang_backup数据库
+            self.mongo_db = self.mongo_client['sehuatang_crawler']
+            self.mongo_collection = self.mongo_db['thread_details']
+            self.add_movie_collection = self.mongo_db['add_movie']
+            self.found_movies_collection = self.mongo_db['found_movies']
+            
+            # 创建索引
+            self.add_movie_collection.create_index("series_name")
+            self.add_movie_collection.create_index("movie_code")
+            self.add_movie_collection.create_index("created_at")
+            
+            # 为found_movies表创建索引
+            self.found_movies_collection.create_index("movie_code")
+            self.found_movies_collection.create_index("series_name")
+            self.found_movies_collection.create_index("subscription_id")
+            self.found_movies_collection.create_index("found_at")
+            
+            print("MongoDB连接成功")
+            return True
+        except Exception as e:
+            print(f"MongoDB连接失败: {e}")
+            return False
+    
+    def get_subscriptions(self):
+        """获取所有订阅"""
+        if self.add_movie_collection is None:
+            return []
+        return list(self.add_movie_collection.find({'type': 'subscription'}))
+    
+    def create_subscription(self, series_name):
+        """创建订阅"""
+        if self.add_movie_collection is None:
+            raise Exception('MongoDB未初始化')
+            
+        # 检查是否已经订阅
+        existing = self.add_movie_collection.find_one({
+            'series_name': series_name,
+            'type': 'subscription'
+        })
+        
+        if existing:
+            raise Exception(f'已经订阅了系列 "{series_name}"')
+        
+        # 添加订阅记录
+        subscription_doc = {
+            'series_name': series_name,
+            'type': 'subscription',
+            'status': 'active',
+            'created_at': datetime.now(),
+            'last_checked': None,
+            'total_movies_found': 0
+        }
+        
+        result = self.add_movie_collection.insert_one(subscription_doc)
+        return str(result.inserted_id)
+    
+    def delete_subscription(self, subscription_id):
+        """删除订阅"""
+        if self.add_movie_collection is None:
+            raise Exception('MongoDB未初始化')
+            
+        result = self.add_movie_collection.delete_one({
+            '_id': ObjectId(subscription_id),
+            'type': 'subscription'
+        })
+        
+        return result.deleted_count > 0
+    
+    def update_subscription(self, subscription_id, update_data):
+        """更新订阅信息"""
+        if self.add_movie_collection is None:
+            raise Exception('MongoDB未初始化')
+            
+        self.add_movie_collection.update_one(
+            {'_id': subscription_id},
+            {'$set': update_data}
+        )
+    
+    def save_found_movie(self, movie_doc):
+        """保存发现的电影"""
+        if self.found_movies_collection is None:
+            raise Exception('MongoDB未初始化')
+            
+        return self.found_movies_collection.insert_one(movie_doc)
+    
+    def get_subscription_movies(self, series_name):
+        """获取指定订阅的电影列表"""
+        if self.found_movies_collection is None:
+            raise Exception('MongoDB未初始化')
+            
+        return list(self.found_movies_collection.find({
+            'series_name': series_name
+        }).sort('found_at', -1))
+    
+    def find_magnet_link(self, movie_code):
+        """查找磁力链接"""
+        if self.mongo_collection is None:
+            return None
+            
+        magnet_doc = self.mongo_collection.find_one({
+            '$or': [
+                {'title': {'$regex': movie_code, '$options': 'i'}},
+                {'movie_code': movie_code}
+            ],
+            'magnet_link': {'$exists': True, '$ne': ''}
+        })
+        
+        return magnet_doc.get('magnet_link', '') if magnet_doc else None
+    
+    def check_movie_exists_in_found(self, movie_code):
+        """检查电影是否已在found_movies中存在"""
+        if self.found_movies_collection is None:
+            return False
+            
+        return self.found_movies_collection.find_one({'movie_code': movie_code}) is not None
+
+# 创建全局数据库管理器实例
+db_manager = DatabaseManager()
