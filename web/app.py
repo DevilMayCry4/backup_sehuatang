@@ -43,24 +43,32 @@ mongo_client = None
 mongo_db = None
 mongo_collection = None
 add_movie_collection = None
+found_movies_collection = None  # 新增found_movies集合变量
 
 def init_mongodb():
     """初始化MongoDB连接"""
-    global mongo_client, mongo_db, mongo_collection, add_movie_collection
+    global mongo_client, mongo_db, mongo_collection, add_movie_collection, found_movies_collection
     try:
         mongo_config = app_config.get_mongo_config()
         mongo_client = MongoClient(mongo_config['uri'], serverSelectionTimeoutMS=5000)
         # 测试连接
         mongo_client.admin.command('ping')
         # 连接到sehuatang_backup数据库
-        mongo_db = mongo_client['sehuatang_backup']
-        mongo_collection = mongo_db['sehuatang_crawler']
+        mongo_db = mongo_client['sehuatang_crawler']
+        mongo_collection = mongo_db['thread_details']
         add_movie_collection = mongo_db['add_movie']  # 新增订阅表
+        found_movies_collection = mongo_db['found_movies']  # 新增找到的电影表
         
         # 创建索引
         add_movie_collection.create_index("series_name")
         add_movie_collection.create_index("movie_code")
         add_movie_collection.create_index("created_at")
+        
+        # 为found_movies表创建索引
+        found_movies_collection.create_index("movie_code")
+        found_movies_collection.create_index("series_name")
+        found_movies_collection.create_index("subscription_id")
+        found_movies_collection.create_index("found_at")
         
         print("MongoDB连接成功")
         return True
@@ -462,10 +470,11 @@ def delete_subscription(subscription_id):
         })
 
 # 定时任务：检查订阅的电影系列
+# 修改check_subscribed_series函数
 def check_subscribed_series():
     """检查订阅的电影系列，参考search_movie()逻辑"""
     try:
-        if  add_movie_collection is None or mongo_collection is None or jellyfin_checker is None or crawler is None:
+        if add_movie_collection is None or mongo_collection is None or jellyfin_checker is None or crawler is None or found_movies_collection is None:
             print("定时任务跳过：必要组件未初始化")
             return
         
@@ -493,6 +502,7 @@ def check_subscribed_series():
                 
                 movies = crawler_result['movies']
                 new_movies_count = 0
+                found_movies_count = 0
                 
                 # 遍历每个电影
                 for movie in movies:
@@ -501,6 +511,30 @@ def check_subscribed_series():
                     
                     if not movie_code:
                         continue
+                    
+                    # 检查是否已经在found_movies表中记录过
+                    existing_found = found_movies_collection.find_one({
+                        'movie_code': movie_code,
+                        'subscription_id': subscription_id
+                    })
+                    
+                    if not existing_found:
+                        # 保存到found_movies表
+                        found_movie_doc = {
+                            'series_name': series_name,
+                            'movie_code': movie_code,
+                            'title': title,
+                            'subscription_id': subscription_id,
+                            'found_at': datetime.now(),
+                            'release_date': movie.get('release_date', ''),
+                            'cover_url': movie.get('cover_url', ''),
+                            'detail_url': movie.get('detail_url', ''),
+                            'status': 'found'  # 标记为已找到
+                        }
+                        
+                        found_movies_collection.insert_one(found_movie_doc)
+                        found_movies_count += 1
+                        print(f"记录找到的电影: {movie_code} - {title}")
                     
                     # 检查Jellyfin中是否存在
                     jellyfin_exists = False
@@ -531,7 +565,7 @@ def check_subscribed_series():
                         if magnet_doc:
                             magnet_link = magnet_doc.get('magnet_link', '')
                             
-                            # 检查是否已经登记过
+                            # 检查是否已经登记过到add_movie表
                             existing_record = add_movie_collection.find_one({
                                 'movie_code': movie_code,
                                 'type': 'movie',
@@ -555,6 +589,32 @@ def check_subscribed_series():
                                 add_movie_collection.insert_one(movie_doc)
                                 new_movies_count += 1
                                 print(f"新发现电影: {movie_code} - {title}")
+                            
+                            # 更新found_movies表中的磁力链接信息
+                            if existing_found:
+                                found_movies_collection.update_one(
+                                    {'_id': existing_found['_id']},
+                                    {
+                                        '$set': {
+                                            'magnet_link': magnet_link,
+                                            'has_magnet': True,
+                                            'jellyfin_exists': jellyfin_exists,
+                                            'last_checked': datetime.now()
+                                        }
+                                    }
+                                )
+                    else:
+                        # 如果在Jellyfin中存在，更新found_movies表
+                        if existing_found:
+                            found_movies_collection.update_one(
+                                {'_id': existing_found['_id']},
+                                {
+                                    '$set': {
+                                        'jellyfin_exists': True,
+                                        'last_checked': datetime.now()
+                                    }
+                                }
+                            )
                 
                 # 更新订阅的最后检查时间
                 add_movie_collection.update_one(
@@ -562,12 +622,13 @@ def check_subscribed_series():
                     {
                         '$set': {
                             'last_checked': datetime.now(),
-                            'total_movies_found': subscription.get('total_movies_found', 0) + new_movies_count
+                            'total_movies_found': subscription.get('total_movies_found', 0) + new_movies_count,
+                            'total_found_movies': subscription.get('total_found_movies', 0) + found_movies_count
                         }
                     }
                 )
                 
-                print(f"系列 {series_name} 检查完成，新发现 {new_movies_count} 部电影")
+                print(f"系列 {series_name} 检查完成，记录 {found_movies_count} 部找到的电影，新发现 {new_movies_count} 部有磁力链接的电影")
                 
             except Exception as e:
                 print(f"检查系列 {series_name} 时出错: {e}")
