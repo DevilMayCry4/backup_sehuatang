@@ -1,0 +1,369 @@
+{% extends "base.html" %}
+
+{% block title %}订阅管理 - Jellyfin电影查询{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-bookmark-star"></i> 我的订阅</h5>
+            </div>
+            <div class="card-body" id="subscriptionsList">
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">加载中...</span>
+                    </div>
+                    <p class="mt-2">正在加载订阅列表...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-8">
+        <div class="card" id="moviesCard" style="display: none;">
+            <div class="card-header">
+                <h5 class="mb-0" id="moviesTitle">
+                    <i class="bi bi-film"></i> 电影列表
+                </h5>
+            </div>
+            <div class="card-body" id="moviesList">
+                <!-- 电影列表将在这里显示 -->
+            </div>
+        </div>
+        
+        <div class="card" id="welcomeCard">
+            <div class="card-body text-center text-muted">
+                <i class="bi bi-arrow-left" style="font-size: 3rem;"></i>
+                <h5 class="mt-3">选择一个订阅</h5>
+                <p>点击左侧的订阅卡片查看对应的电影列表</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 电影详情模态框 -->
+<div class="modal fade" id="movieModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="movieModalTitle">电影详情</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="movieModalBody">
+                <!-- 电影详情内容 -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let currentSubscriptions = [];
+    let currentMovies = [];
+    
+    // 加载订阅列表
+    loadSubscriptions();
+    
+    async function loadSubscriptions() {
+        try {
+            const response = await fetch('/api/subscriptions');
+            const data = await response.json();
+            
+            if (data.success) {
+                currentSubscriptions = data.subscriptions;
+                displaySubscriptions(data.subscriptions);
+            } else {
+                showError('加载订阅失败: ' + (data.error || '未知错误'));
+            }
+        } catch (error) {
+            console.error('加载订阅错误:', error);
+            showError('网络错误，请稍后重试');
+        }
+    }
+    
+    function displaySubscriptions(subscriptions) {
+        const container = document.getElementById('subscriptionsList');
+        
+        if (subscriptions.length === 0) {
+            container.innerHTML = `
+                <div class="text-center text-muted">
+                    <i class="bi bi-inbox" style="font-size: 3rem;"></i>
+                    <h6 class="mt-3">暂无订阅</h6>
+                    <p>请先在搜索页面添加订阅</p>
+                </div>
+            `;
+            return;
+        }
+        
+        let html = '';
+        subscriptions.forEach((subscription, index) => {
+            const lastChecked = subscription.last_checked ? 
+                new Date(subscription.last_checked).toLocaleString('zh-CN') : '从未检查';
+            
+            html += `
+                <div class="subscription-card card mb-3" onclick="loadMoviesForSubscription('${subscription.series_name}', ${index})">
+                    <div class="card-body">
+                        <h6 class="card-title mb-2">
+                            <i class="bi bi-bookmark-star-fill text-warning"></i>
+                            ${subscription.series_name}
+                        </h6>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-muted">
+                                <i class="bi bi-clock"></i> ${lastChecked}
+                            </small>
+                            <span class="badge bg-primary">
+                                <i class="bi bi-arrow-right"></i>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        container.innerHTML = html;
+    }
+    
+    // 加载指定订阅的电影
+    window.loadMoviesForSubscription = async function(seriesName, index) {
+        // 高亮选中的订阅
+        document.querySelectorAll('.subscription-card').forEach((card, i) => {
+            if (i === index) {
+                card.classList.add('border-primary');
+                card.style.backgroundColor = '#f8f9fa';
+            } else {
+                card.classList.remove('border-primary');
+                card.style.backgroundColor = '';
+            }
+        });
+        
+        // 显示加载状态
+        const moviesCard = document.getElementById('moviesCard');
+        const welcomeCard = document.getElementById('welcomeCard');
+        const moviesList = document.getElementById('moviesList');
+        const moviesTitle = document.getElementById('moviesTitle');
+        
+        welcomeCard.style.display = 'none';
+        moviesCard.style.display = 'block';
+        moviesTitle.innerHTML = `<i class="bi bi-film"></i> ${seriesName} - 电影列表`;
+        
+        moviesList.innerHTML = `
+            <div class="text-center">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">加载中...</span>
+                </div>
+                <p class="mt-2">正在加载电影列表...</p>
+            </div>
+        `;
+        
+        try {
+            const response = await fetch(`/api/subscription-movies/${encodeURIComponent(seriesName)}`);
+            const data = await response.json();
+            
+            if (data.success) {
+                currentMovies = data.movies;
+                displayMovies(data.movies);
+            } else {
+                moviesList.innerHTML = `
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        ${data.error || '加载电影失败'}
+                    </div>
+                `;
+            }
+        } catch (error) {
+            console.error('加载电影错误:', error);
+            moviesList.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    网络错误，请稍后重试
+                </div>
+            `;
+        }
+    };
+    
+    function displayMovies(movies) {
+        const container = document.getElementById('moviesList');
+        
+        if (movies.length === 0) {
+            container.innerHTML = `
+                <div class="text-center text-muted">
+                    <i class="bi bi-film" style="font-size: 3rem;"></i>
+                    <h6 class="mt-3">暂无电影</h6>
+                    <p>该订阅下还没有找到电影</p>
+                </div>
+            `;
+            return;
+        }
+        
+        let html = '';
+        movies.forEach((movie, index) => {
+            const foundAt = movie.found_at ? 
+                new Date(movie.found_at).toLocaleString('zh-CN') : '未知时间';
+            
+            html += `
+                <div class="movie-item">
+                    <div class="row align-items-center">
+                        <div class="col-md-2 text-center mb-3">
+                            ${movie.image_url ? 
+                                `<img src="${movie.image_url}" alt="${movie.title}" class="movie-image img-fluid" 
+                                     style="max-width: 100px; max-height: 140px; object-fit: cover;"
+                                     onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjE0MCIgdmlld0JveD0iMCAwIDEwMCAxNDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMDAiIGhlaWdodD0iMTQwIiBmaWxsPSIjRjhGOUZBIi8+CjxwYXRoIGQ9Ik0zNSA1MEw2NSA1MEw1MCA3NUwzNSA1MFoiIGZpbGw9IiNEMUQ1REIiLz4KPC9zdmc+'">` :
+                                `<div class="movie-image d-flex align-items-center justify-content-center bg-light text-muted" style="width:100px;height:140px; border-radius: 8px;">
+                                    <i class="bi bi-film" style="font-size: 2rem;"></i>
+                                </div>`
+                            }
+                        </div>
+                        <div class="col-md-10">
+                            <div class="movie-info">
+                                <h6 class="movie-title mb-2">
+                                    <strong>${movie.title || '未知标题'}</strong>
+                                </h6>
+                                
+                                <div class="movie-meta mb-2">
+                                    <span class="badge bg-info me-2">编号: ${movie.movie_code || 'N/A'}</span>
+                                    <span class="badge bg-secondary me-2">发现时间: ${foundAt}</span>
+                                    ${movie.magnet_link ? 
+                                        '<span class="badge bg-success"><i class="bi bi-magnet"></i> 有磁力链接</span>' :
+                                        '<span class="badge bg-light text-muted"><i class="bi bi-x-circle"></i> 无磁力链接</span>'
+                                    }
+                                </div>
+                                
+                                ${movie.magnet_link ? 
+                                    `<div class="magnet-link-container mb-2" style="background: #f8f9fa; border-radius: 6px; padding: 10px;">
+                                        <small class="text-muted d-block mb-1"><i class="bi bi-magnet"></i> 磁力链接:</small>
+                                        <div class="input-group input-group-sm">
+                                            <input type="text" class="form-control" value="${movie.magnet_link}" readonly>
+                                            <button class="btn btn-outline-secondary" type="button" 
+                                                    onclick="copyToClipboard('${movie.magnet_link.replace(/'/g, "\\'")}')" 
+                                                    title="复制磁力链接">
+                                                <i class="bi bi-copy"></i>
+                                            </button>
+                                        </div>
+                                    </div>` : ''
+                                }
+                                
+                                <div class="movie-actions">
+                                    <button class="btn btn-sm btn-outline-primary" onclick="showMovieDetails(${index})">
+                                        <i class="bi bi-info-circle"></i> 查看详情
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        container.innerHTML = html;
+    }
+    
+    // 显示电影详情
+    window.showMovieDetails = function(index) {
+        const movie = currentMovies[index];
+        if (!movie) return;
+        
+        const modalTitle = document.getElementById('movieModalTitle');
+        const modalBody = document.getElementById('movieModalBody');
+        
+        modalTitle.textContent = movie.title || '未知标题';
+        
+        const foundAt = movie.found_at ? 
+            new Date(movie.found_at).toLocaleString('zh-CN') : '未知时间';
+        
+        modalBody.innerHTML = `
+            <div class="row">
+                <div class="col-md-4 text-center">
+                    ${movie.image_url ? 
+                        `<img src="${movie.image_url}" alt="${movie.title}" class="img-fluid" 
+                             style="max-width: 200px; border-radius: 8px;"
+                             onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjI4MCIgdmlld0JveD0iMCAwIDIwMCAyODAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMjgwIiBmaWxsPSIjRjhGOUZBIi8+CjxwYXRoIGQ9Ik03MCA5MEwxMzAgOTBMMTAwIDEzMEw3MCA5MFoiIGZpbGw9IiNEMUQ1REIiLz4KPC9zdmc+'">` :
+                        `<div class="d-flex align-items-center justify-content-center bg-light text-muted" style="width:200px;height:280px; border-radius: 8px; margin: 0 auto;">
+                            <i class="bi bi-film" style="font-size: 4rem;"></i>
+                        </div>`
+                    }
+                </div>
+                <div class="col-md-8">
+                    <table class="table table-borderless">
+                        <tr>
+                            <td><strong>电影编号:</strong></td>
+                            <td>${movie.movie_code || 'N/A'}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>标题:</strong></td>
+                            <td>${movie.title || '未知标题'}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>发现时间:</strong></td>
+                            <td>${foundAt}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>磁力链接:</strong></td>
+                            <td>
+                                ${movie.magnet_link ? 
+                                    `<div class="input-group input-group-sm">
+                                        <input type="text" class="form-control" value="${movie.magnet_link}" readonly>
+                                        <button class="btn btn-outline-secondary" type="button" 
+                                                onclick="copyToClipboard('${movie.magnet_link.replace(/'/g, "\\'")}')" 
+                                                title="复制磁力链接">
+                                            <i class="bi bi-copy"></i>
+                                        </button>
+                                    </div>` :
+                                    '<span class="text-muted">无磁力链接</span>'
+                                }
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        `;
+        
+        const modal = new bootstrap.Modal(document.getElementById('movieModal'));
+        modal.show();
+    };
+    
+    // 复制到剪贴板
+    window.copyToClipboard = function(text) {
+        navigator.clipboard.writeText(text).then(function() {
+            // 显示简单提示
+            const toast = document.createElement('div');
+            toast.className = 'toast-notification';
+            toast.innerHTML = '<i class="bi bi-check-circle"></i> 已复制到剪贴板';
+            toast.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: #28a745;
+                color: white;
+                padding: 10px 15px;
+                border-radius: 5px;
+                z-index: 9999;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            `;
+            document.body.appendChild(toast);
+            setTimeout(() => {
+                document.body.removeChild(toast);
+            }, 2000);
+        }, function(err) {
+            console.error('复制失败: ', err);
+            alert('复制失败，请手动复制');
+        });
+    };
+    
+    function showError(message) {
+        const container = document.getElementById('subscriptionsList');
+        container.innerHTML = `
+            <div class="alert alert-danger">
+                <i class="bi bi-exclamation-triangle"></i>
+                ${message}
+            </div>
+        `;
+    }
+});
+</script>
+{% endblock %}

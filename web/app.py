@@ -483,6 +483,10 @@ def check_subscribed_series():
     
     print("开始执行定时推送任务")
     
+    # 从环境变量获取检查间隔天数，默认为7天
+    check_interval_days = int(os.getenv('SUBSCRIPTION_CHECK_INTERVAL_DAYS', '7'))
+    current_time = datetime.now()
+    
     # 收集本次检查发现的所有新电影
     newly_found_movies = []
     
@@ -493,15 +497,43 @@ def check_subscribed_series():
         for subscription in subscriptions:
             series_name = subscription.get('series_name')
             subscription_id = subscription.get('_id')
+            last_checked = subscription.get('last_checked')
             
             if not series_name:
                 continue
+            
+            # 检查是否在指定天数内已经检查过
+            if last_checked:
+                # 如果last_checked是字符串，转换为datetime对象
+                if isinstance(last_checked, str):
+                    try:
+                        last_checked = datetime.fromisoformat(last_checked.replace('Z', '+00:00'))
+                    except ValueError:
+                        # 如果转换失败，视为需要检查
+                        last_checked = None
                 
+                if last_checked and isinstance(last_checked, datetime):
+                    days_since_last_check = (current_time - last_checked).days
+                    if days_since_last_check < check_interval_days:
+                        print(f"系列 {series_name} 在 {days_since_last_check} 天前已检查过，跳过（间隔设置：{check_interval_days}天）")
+                        continue
+            
             print(f"检查系列: {series_name}")
             
             try:
                 # 使用爬虫获取电影列表
-                movies = crawler.search_movies(series_name)
+                movies, series_title = crawler.search_movies(series_name)
+                
+                # 更新订阅的last_checked时间
+                add_movie_collection.update_one(
+                    {'_id': subscription_id},
+                    {
+                        '$set': {
+                            'last_checked': current_time.isoformat(),
+                            'last_check_status': 'success'
+                        }
+                    }
+                )
                 
                 if not movies:
                     print(f"未找到系列 {series_name} 的电影")
@@ -553,7 +585,8 @@ def check_subscribed_series():
                                     'subscription_id': subscription_id,
                                     'found_at': datetime.now(),
                                     'jellyfin_exists': False,
-                                    'status': 'new'
+                                    'status': 'new',
+                                    'image_url':movie.get('image_url','')
                                 }
                                 
                                 found_movies_collection.insert_one(movie_doc)
@@ -572,9 +605,10 @@ def check_subscribed_series():
                     {'_id': subscription_id},
                     {
                         '$set': {
+                            'title':series_title,
                             'last_checked': datetime.now(),
-                            'total_movies_found': subscription.get('total_movies_found', 0) + new_movies_count,
-                            'totoal_found_magnet_movies': subscription.get('totoal_found_magnet_movies', 0) + found_movies_count
+                            'total_movies_found': len(movies),
+                            'totoal_found_magnet_movies': found_movies_count
                         }
                     }
                 ) 
@@ -717,13 +751,23 @@ def send_batch_email_notification(movies_list):
         # 构建电影列表HTML
         movies_html = ""
         for i, movie in enumerate(movies_list, 1):
+            # 获取图片URL，如果没有则使用默认占位符
+            image_url = movie.get('image_url', '')
+            image_html = ""
+            if image_url:
+                image_html = f'<img src="{image_url}" alt="{movie["title"]}" style="width: 120px; height: 160px; object-fit: cover; border-radius: 4px; margin-right: 15px; float: left;">'
+            
             movies_html += f"""
-            <div style="background-color: #f9f9f9; padding: 10px; margin: 10px 0; border-left: 4px solid #007bff; border-radius: 4px;">
-                <h4 style="margin: 0 0 8px 0; color: #333;">{i}. {movie['title']}</h4>
-                <p style="margin: 4px 0;"><strong>系列:</strong> {movie['series_name']}</p>
-                <p style="margin: 4px 0;"><strong>代码:</strong> {movie['movie_code']}</p>
-                <p style="margin: 4px 0;"><strong>发现时间:</strong> {movie['found_at'].strftime('%Y-%m-%d %H:%M:%S')}</p>
-                <p style="margin: 4px 0;"><strong>磁力链接:</strong> <a href="{movie['magnet_link']}" style="color: #007bff;">点击下载</a></p>
+            <div style="background-color: #f9f9f9; padding: 15px; margin: 15px 0; border-left: 4px solid #007bff; border-radius: 4px; overflow: hidden; min-height: 180px;">
+                {image_html}
+                <div style="{"margin-left: 140px;" if image_url else ""}">
+                    <h4 style="margin: 0 0 8px 0; color: #333;">{i}. {movie['title']}</h4>
+                    <p style="margin: 4px 0;"><strong>系列:</strong> {movie['series_name']}</p>
+                    <p style="margin: 4px 0;"><strong>代码:</strong> {movie['movie_code']}</p>
+                    <p style="margin: 4px 0;"><strong>发现时间:</strong> {movie['found_at'].strftime('%Y-%m-%d %H:%M:%S')}</p>
+                    <p style="margin: 4px 0;"><strong>磁力链接:</strong> <a href="{movie['magnet_link']}" style="color: #007bff;">点击下载</a></p>
+                </div>
+                <div style="clear: both;"></div>
             </div>
             """
         
@@ -883,6 +927,62 @@ def send_email_notification(movie_info):
         
     except Exception as e:
         print(f"发送邮件通知失败: {e}")
+
+@app.route('/subscriptions')
+def subscriptions_page():
+    """订阅管理页面"""
+    return render_template('subscriptions.html')
+
+@app.route('/api/subscription-movies/<series_name>', methods=['GET'])
+def get_subscription_movies(series_name):
+    """获取指定订阅的电影列表"""
+    try:
+        if found_movies_collection is None:
+            return jsonify({
+                'success': False,
+                'error': 'MongoDB未初始化'
+            })
+        
+        # 查询found_movies集合中found_movies字段等于series_name的电影
+        movies_cursor = found_movies_collection.find({
+            'series_name': series_name
+        }).sort('found_at', -1)  # 按发现时间倒序排列
+        
+        movies = []
+        for movie_doc in movies_cursor:
+            movie_data = {
+                'movie_code': movie_doc.get('movie_code', ''),
+                'title': movie_doc.get('title', ''),
+                'magnet_link': movie_doc.get('magnet_link', ''),
+                'found_at': movie_doc.get('found_at', ''),
+                'image_url': movie_doc.get('image_url', '')
+            }
+            
+            # 如果有image_url，转换为代理URL
+            if movie_data['image_url']:
+                movie_data['image_url'] = f"/proxy-image?url={movie_data['image_url']}"
+            
+            movies.append(movie_data)
+        
+        return jsonify({
+            'success': True,
+            'movies': movies,
+            'total_count': len(movies)
+        })
+        
+    except Exception as e:
+        print(f"获取订阅电影错误: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        })
+
+    except Exception as e:
+        print(f"触发订阅检查错误: {e}")
+        return jsonify({
+            'success': False,
+            'error': '服务器内部错误'
+        })
 
 if __name__ == '__main__':
     # 启动定时任务

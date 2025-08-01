@@ -169,7 +169,7 @@ class JavBusCrawler:
         all_movies = []
         current_url = url
         page_count = 0
-        
+        title = ''
         while current_url and (max_pages is None or page_count < max_pages):
             retry_count = 0
             success = False
@@ -182,7 +182,8 @@ class JavBusCrawler:
                     response = self.session.get(current_url, timeout=30)
                     response.raise_for_status()
                     response.encoding = 'utf-8'
-                    
+                    if title == '':
+                        title = response.text.split('<title>')[1].split('</title>')[0]
                     # 解析当前页面
                     movie_items = self.parse_movie_items(response.text)
                     pagination_info = self.parse_pagination(response.text)
@@ -244,6 +245,7 @@ class JavBusCrawler:
                 break
         
         return {
+            'title':title,
             'movies': all_movies,
             'total_pages_crawled': page_count + 1,
             'total_movies': len(all_movies)
@@ -340,7 +342,8 @@ class JavBusCrawler:
         搜索指定系列的电影
         """
         url = f"{self.base_url}/series/{series_name}"
-        return self.crawl_from_url(url, max_pages=10)['movies']
+        reslut = self.crawl_from_url(url, max_pages=10)
+        return reslut['movies'],reslut['title']
 
 # 使用示例
 if __name__ == "__main__":

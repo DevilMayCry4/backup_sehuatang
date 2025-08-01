@@ -270,7 +270,7 @@ class JellyfinMovieChecker:
         # 显示结果
         print("\n" + "=" * 50)
         if result["exists"]:
-            print(f"✅ 找到 {result['count']} 部相关电影:")
+            print(f"Jellyfin中 ✅ 找到 {result['count']} 部相关电影:")
             for i, movie in enumerate(movies, 1):
                 print(f"\n{i}. {movie['name']}")
                 if movie['year']:
@@ -288,7 +288,7 @@ class JellyfinMovieChecker:
                     print(f"   📝 简介: {movie['overview']}")
                 print(f"   🔗 链接: {movie['server_url']}/web/index.html#!/details?id={movie['id']}")
         else:
-            print(f"❌ 未找到电影: '{movie_name}'")
+            print(f"Jellyfin中 ❌ 未找到电影: '{movie_name}'")
         
         return result
 
