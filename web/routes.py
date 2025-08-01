@@ -275,3 +275,43 @@ def register_routes(app, jellyfin_checker, crawler):
                 'success': False,
                 'error': str(e)
             })
+    
+    # 在文件末尾添加缺失的路由
+    @app.route('/api/subscriptions/<subscription_id>/status', methods=['PUT'])
+    def update_subscription_status(subscription_id):
+        """更新订阅状态API"""
+        try:
+            from bson import ObjectId
+            
+            data = request.get_json()
+            new_status = data.get('status', '').strip()
+            
+            if new_status not in ['active', 'inactive']:
+                return jsonify({
+                    'success': False,
+                    'error': '状态值无效，只能是 active 或 inactive'
+                })
+            
+            # 更新订阅状态
+            result = db_manager.update_subscription_status(subscription_id, new_status)
+            
+            if not result:
+                return jsonify({
+                    'success': False,
+                    'error': '订阅不存在'
+                })
+            
+            return jsonify({
+                'success': True,
+                'message': f'订阅状态已更新为 {new_status}'
+            })
+            
+        except Exception as e:
+            print(f"更新订阅状态错误: {e}")
+            return jsonify({
+                'success': False,
+                'error': '服务器内部错误'
+            })
+
+ 
+ 

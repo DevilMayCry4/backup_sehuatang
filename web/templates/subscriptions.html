@@ -105,21 +105,60 @@ document.addEventListener('DOMContentLoaded', function() {
         subscriptions.forEach((subscription, index) => {
             const lastChecked = subscription.last_checked ? 
                 new Date(subscription.last_checked).toLocaleString('zh-CN') : '从未检查';
+            const isActive = subscription.status === 'active';
             
             html += `
-                <div class="subscription-card card mb-3" onclick="loadMoviesForSubscription('${subscription.series_name}', ${index})">
+                <div class="subscription-card card mb-3">
                     <div class="card-body">
-                        <h6 class="card-title mb-2">
-                            <i class="bi bi-bookmark-star-fill text-warning"></i>
-                            ${subscription.series_name}
-                        </h6>
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h6 class="card-title mb-0">
+                                <i class="bi bi-bookmark-star-fill text-warning"></i>
+                                ${subscription.series_name}
+                            </h6>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" 
+                                       id="status-${subscription._id}" 
+                                       ${isActive ? 'checked' : ''}
+                                       onchange="toggleSubscriptionStatus('${subscription._id}', this.checked)">
+                                <label class="form-check-label" for="status-${subscription._id}">
+                                    <small class="text-muted">${isActive ? '活跃' : '暂停'}</small>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="subscription-stats mb-2">
+                            <div class="row text-center">
+                                <div class="col-4">
+                                    <div class="stat-item">
+                                        <div class="stat-number text-primary">${subscription.total_movies_found || 0}</div>
+                                        <div class="stat-label"><small class="text-muted">总电影数</small></div>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="stat-item">
+                                        <div class="stat-number text-success">${subscription.totoal_found_magnet_movies || 0}</div>
+                                        <div class="stat-label"><small class="text-muted">有磁力链接</small></div>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="stat-item">
+                                        <span class="badge ${isActive ? 'bg-success' : 'bg-secondary'}">
+                                            <i class="bi bi-${isActive ? 'play-circle' : 'pause-circle'}"></i>
+                                            ${isActive ? '活跃' : '暂停'}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
                         <div class="d-flex justify-content-between align-items-center">
                             <small class="text-muted">
                                 <i class="bi bi-clock"></i> ${lastChecked}
                             </small>
-                            <span class="badge bg-primary">
-                                <i class="bi bi-arrow-right"></i>
-                            </span>
+                            <button class="btn btn-sm btn-outline-primary" 
+                                    onclick="loadMoviesForSubscription('${subscription.series_name}', ${index})">
+                                <i class="bi bi-arrow-right"></i> 查看电影
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -127,6 +166,84 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         
         container.innerHTML = html;
+    }
+    
+    // 切换订阅状态
+    window.toggleSubscriptionStatus = async function(subscriptionId, isActive) {
+        try {
+            const newStatus = isActive ? 'active' : 'inactive';
+            
+            const response = await fetch(`/api/subscriptions/${subscriptionId}/status`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ status: newStatus })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                // 显示成功提示
+                showToast(`订阅状态已更新为${isActive ? '活跃' : '暂停'}`, 'success');
+                
+                // 更新本地数据
+                const subscription = currentSubscriptions.find(sub => sub._id === subscriptionId);
+                if (subscription) {
+                    subscription.status = newStatus;
+                }
+                
+                // 重新显示订阅列表
+                displaySubscriptions(currentSubscriptions);
+            } else {
+                // 恢复开关状态
+                const switchElement = document.getElementById(`status-${subscriptionId}`);
+                if (switchElement) {
+                    switchElement.checked = !isActive;
+                }
+                showToast('更新状态失败: ' + (data.error || '未知错误'), 'error');
+            }
+        } catch (error) {
+            console.error('更新订阅状态错误:', error);
+            // 恢复开关状态
+            const switchElement = document.getElementById(`status-${subscriptionId}`);
+            if (switchElement) {
+                switchElement.checked = !isActive;
+            }
+            showToast('网络错误，请稍后重试', 'error');
+        }
+    };
+    
+    // 显示提示消息
+    function showToast(message, type = 'info') {
+        const toast = document.createElement('div');
+        toast.className = 'toast-notification';
+        
+        const bgColor = type === 'success' ? '#28a745' : 
+                       type === 'error' ? '#dc3545' : '#17a2b8';
+        const icon = type === 'success' ? 'check-circle' : 
+                    type === 'error' ? 'exclamation-triangle' : 'info-circle';
+        
+        toast.innerHTML = `<i class="bi bi-${icon}"></i> ${message}`;
+        toast.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: ${bgColor};
+            color: white;
+            padding: 10px 15px;
+            border-radius: 5px;
+            z-index: 9999;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            max-width: 300px;
+        `;
+        
+        document.body.appendChild(toast);
+        setTimeout(() => {
+            if (document.body.contains(toast)) {
+                document.body.removeChild(toast);
+            }
+        }, 3000);
     }
     
     // 加载指定订阅的电影
@@ -366,4 +483,34 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
+
+<style>
+.subscription-stats .stat-item {
+    padding: 5px;
+}
+
+.subscription-stats .stat-number {
+    font-size: 1.2rem;
+    font-weight: bold;
+    line-height: 1;
+}
+
+.subscription-stats .stat-label {
+    font-size: 0.75rem;
+    line-height: 1;
+}
+
+.form-switch .form-check-input {
+    width: 2.5rem;
+    height: 1.25rem;
+}
+
+.subscription-card {
+    transition: all 0.2s ease;
+}
+
+.subscription-card:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+</style>
 {% endblock %}

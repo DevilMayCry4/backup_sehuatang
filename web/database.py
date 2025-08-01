@@ -138,6 +138,21 @@ class DatabaseManager:
         
         return magnet_doc.get('magnet_link', '') if magnet_doc else None
     
+    def update_subscription_status(self, subscription_id, new_status):
+        """更新订阅状态"""
+        if self.add_movie_collection is None:
+            raise Exception('MongoDB未初始化')
+            
+        try:
+            result = self.add_movie_collection.update_one(
+                {'_id': ObjectId(subscription_id), 'type': 'subscription'},
+                {'$set': {'status': new_status}}
+            )
+            return result.matched_count > 0
+        except Exception as e:
+            print(f"更新订阅状态错误: {e}")
+            return False
+    
     def check_movie_exists_in_found(self, movie_code):
         """检查电影是否已在found_movies中存在"""
         if self.found_movies_collection is None:

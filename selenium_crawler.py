@@ -497,6 +497,16 @@ class SeleniumWebCrawler:
             self.mongo_client.close()
             logger.info("MongoDB连接已关闭")
 
+    def update_subscription(self):
+         crawler = SeleniumWebCrawler()  
+         pageNumbers = 50
+         for pageNumber in range(0, pageNumbers + 1):
+            url = f"{crawler.base_url}&page={pageNumber}"
+            results = crawler.crawl_from_url(url)
+            if results:
+                print(f"\n第 {pageNumber} 页爬取完成，共获取 {len(results)} 条数据")
+         self.logger.info(f"完成全部爬取")
+
 def main():
     """主函数"""
     # 询问是否使用无头模式
@@ -519,8 +529,8 @@ def main():
         
         if choice == '1':
             # 从在线论坛爬取
-            pageNumbers = 1117
-            for pageNumber in range(302, pageNumbers + 1):
+            pageNumbers = 100
+            for pageNumber in range(0, pageNumbers + 1):
                 url = f"{crawler.base_url}&page={pageNumber}"
                 results = crawler.crawl_from_url(url)
                 if results:
