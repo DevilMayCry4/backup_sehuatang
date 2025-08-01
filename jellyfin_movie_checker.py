@@ -312,19 +312,7 @@ def main():
             username=args.username,
             password=args.password
         )
-        
-        # 检查电影
-        result = checker.check_movie_exists(args.movie_name)
-        
-        # 输出结果
-        if args.json:
-            print("\n" + "=" * 50)
-            print("JSON 结果:")
-            print(json.dumps(result, ensure_ascii=False, indent=2))
-        
-        # 设置退出码
-        sys.exit(0 if result["exists"] else 1)
-        
+         
     except ValueError as e:
         print(f"❌ 配置错误: {e}")
         print("\n💡 请确保设置了以下环境变量或使用命令行参数:")

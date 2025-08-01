@@ -8,6 +8,7 @@ from flask import Flask, render_template, request, jsonify, Response
 from flask_cors import CORS
 import sys
 import os
+from jinja2.utils import F
 import requests
 from urllib.parse import urlparse
 from pymongo import MongoClient
@@ -474,63 +475,55 @@ def delete_subscription(subscription_id):
         })
 
 # 定时任务：检查订阅的电影系列
-# 修改check_subscribed_series函数
 def check_subscribed_series():
-    """检查订阅的电影系列，参考search_movie()逻辑"""
+    """检查订阅的电影系列"""
+    if any(component is None for component in [add_movie_collection, mongo_collection, jellyfin_checker, crawler, found_movies_collection]):
+        print("必要组件未初始化，跳过检查")
+        return
+    
+    print("开始执行定时推送任务")
+    
+    # 收集本次检查发现的所有新电影
+    newly_found_movies = []
+    
     try:
-        if add_movie_collection is None or mongo_collection is None or jellyfin_checker is None or crawler is None or found_movies_collection is None:
-            print("定时任务跳过：必要组件未初始化")
-            return
-        
-        print("开始执行定时推送任务...")
-        
-        # 获取所有活跃的订阅
-        subscriptions = list(add_movie_collection.find({
-            'type': 'subscription',
-            'status': 'active'
-        }))
+        # 获取所有订阅
+        subscriptions = list(add_movie_collection.find({'type': 'subscription'}))
         
         for subscription in subscriptions:
-            series_name = subscription['series_name']
-            subscription_id = subscription['_id']
-            print(f"检查订阅系列: {series_name}")
+            series_name = subscription.get('series_name')
+            subscription_id = subscription.get('_id')
+            
+            if not series_name:
+                continue
+                
+            print(f"检查系列: {series_name}")
+            
             try:
-                # 使用爬虫获取系列电影列表
-                crawler_result = crawler.crawl_from_url(f'https://www.javbus.com/series/{series_name}')
+                # 使用爬虫获取电影列表
+                movies = crawler.search_movies(series_name)
                 
-                if not crawler_result or 'movies' not in crawler_result:
-                    print(f"系列 {series_name} 爬取失败")
+                if not movies:
+                    print(f"未找到系列 {series_name} 的电影")
                     continue
-                
-                movies = crawler_result['movies']
+
                 new_movies_count = 0
                 found_movies_count = 0
                 
-                # 遍历每个电影
                 for movie in movies:
-                    movie_code = movie.get('movie_code', '')
                     title = movie.get('title', '')
+                    movie_code = movie.get('movie_code', '')
                     
                     if not movie_code:
+                        print(f"电影 {title} 没有有效的电影编码")
                         continue
+                    else:
+                        print(f"电影 {title} 电影编码是：({movie_code})")
+                    # 检查Jellyfin中是否存在
+                    jellyfin_exists = jellyfin_checker.check_movie_exists(movie_code)['exists']
                     
-                    
-                    jellyfin_exists = False
-                    try:
-                        jellyfin_result = jellyfin_checker.check_movie_exists(movie_code)
-                        if jellyfin_result.get('exists', False):
-                            jellyfin_exists = True
-                        else:
-                            # 尝试用title搜索
-                            if title:
-                                jellyfin_result = jellyfin_checker.check_movie_exists(title)
-                                if jellyfin_result.get('exists', False):
-                                    jellyfin_exists = True
-                    except Exception as e:
-                        print(f"检查电影 {movie_code} 在Jellyfin中是否存在时出错: {e}")
-                    
-                    # 如果Jellyfin中不存在，检查MongoDB中是否有磁力链接
                     if not jellyfin_exists:
+                        found_movies_count += 1
                         new_movies_count += 1
                         # 在sehuatang_crawler表中查找磁力链接
                         magnet_doc = mongo_collection.find_one({
@@ -544,13 +537,13 @@ def check_subscribed_series():
                         if magnet_doc:
                             magnet_link = magnet_doc.get('magnet_link', '')
                             
-                            # 检查是否已经登记过到add_movie表
+                            # 检查是否已经登记过到found_movies表
                             existing_record = found_movies_collection.find_one({
                                 'movie_code': movie_code
                             })
                             
                             if not existing_record and magnet_link:
-                                # 登记到add_movie表
+                                # 登记到found_movies表
                                 movie_doc = {
                                     'series_name': series_name,
                                     'movie_code': movie_code,
@@ -565,12 +558,15 @@ def check_subscribed_series():
                                 
                                 found_movies_collection.insert_one(movie_doc)
                                 
-                                # 发送邮件通知
-                                send_email_notification(movie_doc)
+                                # 添加到本次发现的电影列表
+                                newly_found_movies.append(movie_doc)
                                 print(f"发现新电影并已记录: {title} ({movie_code})")
-                          
-                       
-                
+                            else:
+                                print(f"电影 {title} ({movie_code}) 已存在，跳过")
+                        else:
+                            print(f"未找到电影 {title} ({movie_code}) 的磁力链接")
+                    else:
+                        print(f"电影 {title} ({movie_code}) 在Jellyfin中已存在，跳过")
                 # 更新订阅的最后检查时间
                 add_movie_collection.update_one(
                     {'_id': subscription_id},
@@ -578,17 +574,21 @@ def check_subscribed_series():
                         '$set': {
                             'last_checked': datetime.now(),
                             'total_movies_found': subscription.get('total_movies_found', 0) + new_movies_count,
-                            'total_found_movies': subscription.get('total_found_movies', 0) + found_movies_count
+                            'totoal_found_magnet_movies': subscription.get('totoal_found_magnet_movies', 0) + found_movies_count
                         }
                     }
                 ) 
             except Exception as e:
                 print(f"检查系列 {series_name} 时出错: {e}")
         
+        # 如果有新发现的电影，发送批量邮件通知
+        if newly_found_movies:
+            send_batch_email_notification(newly_found_movies)
+        
         print("定时推送任务执行完成")
         
     except Exception as e:
-        print(f"定时推送任务执行错误: {e}")
+        print(f"执行定时推送任务时出错: {e}")
 
 # 启动定时任务
 def start_scheduler():
@@ -612,6 +612,8 @@ def start_scheduler():
 # 在delete_subscription函数后添加手动触发订阅检查的API
 @app.route('/api/trigger-subscription-check', methods=['POST'])
 def trigger_subscription_check():
+
+    print("手动触发订阅检查")
     """手动触发订阅检查API"""
     try:
         if add_movie_collection is None or mongo_collection is None or jellyfin_checker is None or crawler is None or found_movies_collection is None:
@@ -667,7 +669,7 @@ def get_subscription_check_status():
                 'series_name': sub.get('series_name', ''),
                 'last_checked': sub.get('last_checked', '').isoformat() if sub.get('last_checked') else '从未检查',
                 'total_movies_found': sub.get('total_movies_found', 0),
-                'total_found_movies': sub.get('total_found_movies', 0)
+                'totoal_found_magnet_movies': sub.get('totoal_found_magnet_movies', 0)
             })
         
         return jsonify({
@@ -688,6 +690,143 @@ def get_subscription_check_status():
             'success': False,
             'error': '服务器内部错误'
         })
+
+def send_batch_email_notification(movies_list):
+    """批量发送新电影发现邮件通知"""
+    try:
+        email_config = app_config.get_email_config()
+        
+        # 检查是否启用邮件功能
+        if not email_config.get('enable_email', False):
+            return
+            
+        # 检查必要的邮件配置
+        if not all([email_config.get('sender_email'), 
+                   email_config.get('sender_password'),
+                   email_config.get('recipient_emails')]):
+            print("邮件配置不完整，跳过邮件发送")
+            return
+        
+        # 收集所有磁力链接
+        magnet_links = [movie['magnet_link'] for movie in movies_list if movie.get('magnet_link')]
+        magnet_links_text = '\n'.join(magnet_links)
+        
+        # 创建邮件内容
+        subject = f"🎬 发现 {len(movies_list)} 部新电影"
+        
+        # 构建电影列表HTML
+        movies_html = ""
+        for i, movie in enumerate(movies_list, 1):
+            movies_html += f"""
+            <div style="background-color: #f9f9f9; padding: 10px; margin: 10px 0; border-left: 4px solid #007bff; border-radius: 4px;">
+                <h4 style="margin: 0 0 8px 0; color: #333;">{i}. {movie['title']}</h4>
+                <p style="margin: 4px 0;"><strong>系列:</strong> {movie['series_name']}</p>
+                <p style="margin: 4px 0;"><strong>代码:</strong> {movie['movie_code']}</p>
+                <p style="margin: 4px 0;"><strong>发现时间:</strong> {movie['found_at'].strftime('%Y-%m-%d %H:%M:%S')}</p>
+                <p style="margin: 4px 0;"><strong>磁力链接:</strong> <a href="{movie['magnet_link']}" style="color: #007bff;">点击下载</a></p>
+            </div>
+            """
+        
+        html_body = f"""
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <style>
+                .copy-button {{
+                    background-color: #28a745;
+                    color: white;
+                    padding: 10px 20px;
+                    border: none;
+                    border-radius: 5px;
+                    cursor: pointer;
+                    font-size: 14px;
+                    margin: 10px 0;
+                }}
+                .copy-button:hover {{
+                    background-color: #218838;
+                }}
+                .magnet-links {{
+                    background-color: #f8f9fa;
+                    padding: 15px;
+                    border-radius: 5px;
+                    border: 1px solid #dee2e6;
+                    font-family: monospace;
+                    font-size: 12px;
+                    max-height: 200px;
+                    overflow-y: auto;
+                    white-space: pre-wrap;
+                    word-break: break-all;
+                }}
+            </style>
+        </head>
+        <body>
+            <h2>🎬 发现 {len(movies_list)} 部新电影</h2>
+            
+            <div style="background-color: #d4edda; padding: 15px; border-radius: 5px; margin: 15px 0; border: 1px solid #c3e6cb;">
+                <h3 style="margin: 0 0 10px 0; color: #155724;">📋 一键复制所有磁力链接</h3>
+                <button class="copy-button" onclick="copyToClipboard()">📋 复制所有磁力链接</button>
+                <div id="magnetLinks" class="magnet-links">{magnet_links_text}</div>
+            </div>
+            
+            <h3>📽️ 电影详情列表</h3>
+            {movies_html}
+            
+            <div style="margin-top: 20px; padding: 10px; background-color: #e9ecef; border-radius: 5px;">
+                <p style="margin: 0; font-size: 12px; color: #6c757d;"><em>此邮件由电影订阅系统自动发送 - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</em></p>
+            </div>
+            
+            <script>
+                function copyToClipboard() {{
+                    const magnetLinks = document.getElementById('magnetLinks').textContent;
+                    
+                    // 创建临时文本区域
+                    const textArea = document.createElement('textarea');
+                    textArea.value = magnetLinks;
+                    document.body.appendChild(textArea);
+                    
+                    // 选择并复制
+                    textArea.select();
+                    document.execCommand('copy');
+                    
+                    // 清理
+                    document.body.removeChild(textArea);
+                    
+                    // 更新按钮文本
+                    const button = event.target;
+                    const originalText = button.textContent;
+                    button.textContent = '✅ 已复制!';
+                    button.style.backgroundColor = '#007bff';
+                    
+                    setTimeout(() => {{
+                        button.textContent = originalText;
+                        button.style.backgroundColor = '#28a745';
+                    }}, 2000);
+                }}
+            </script>
+        </body>
+        </html>
+        """
+        
+        # 创建邮件对象
+        msg = MIMEMultipart('alternative')
+        msg['From'] = email_config['sender_email']
+        msg['To'] = ', '.join(email_config['recipient_emails'])
+        msg['Subject'] = Header(subject, 'utf-8')
+        
+        # 添加HTML内容
+        html_part = MIMEText(html_body, 'html', 'utf-8')
+        msg.attach(html_part)
+        
+        # 发送邮件
+        with smtplib.SMTP(email_config['smtp_server'], email_config['smtp_port']) as server:
+            server.starttls()
+            server.login(email_config['sender_email'], email_config['sender_password'])
+            server.send_message(msg)
+            
+        print(f"批量邮件通知已发送: 共 {len(movies_list)} 部新电影")
+        
+    except Exception as e:
+        print(f"发送批量邮件通知失败: {e}")
 
 def send_email_notification(movie_info):
     """发送新电影发现邮件通知"""
