@@ -12,6 +12,11 @@ import requests
 from urllib.parse import urlparse
 from pymongo import MongoClient
 import re
+from datetime import datetime, timedelta
+from bson import ObjectId
+import threading
+import time
+import schedule
 
 # 添加父目录到路径，以便导入项目模块
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -37,10 +42,11 @@ CORS(app, resources={
 mongo_client = None
 mongo_db = None
 mongo_collection = None
+add_movie_collection = None
 
 def init_mongodb():
     """初始化MongoDB连接"""
-    global mongo_client, mongo_db, mongo_collection
+    global mongo_client, mongo_db, mongo_collection, add_movie_collection
     try:
         mongo_config = app_config.get_mongo_config()
         mongo_client = MongoClient(mongo_config['uri'], serverSelectionTimeoutMS=5000)
@@ -48,19 +54,26 @@ def init_mongodb():
         mongo_client.admin.command('ping')
         # 连接到sehuatang_backup数据库
         mongo_db = mongo_client['sehuatang_backup']
-        # 连接到sehuatang_crawler集合（从备份数据库中查询）
         mongo_collection = mongo_db['sehuatang_crawler']
-        print(f"MongoDB连接成功: {mongo_config['uri']}")
+        add_movie_collection = mongo_db['add_movie']  # 新增订阅表
+        
+        # 创建索引
+        add_movie_collection.create_index("series_name")
+        add_movie_collection.create_index("movie_code")
+        add_movie_collection.create_index("created_at")
+        
+        print("MongoDB连接成功")
+        return True
     except Exception as e:
         print(f"MongoDB连接失败: {e}")
-        mongo_client = None
+        return False
 
 def extract_movie_code_from_title(title):
     """从标题中提取电影编号"""
     if not title:
         return None
     
-    # 常见的电影编号格式匹配
+    # 常见的电影编号格式
     patterns = [
         r'([A-Z]{2,6}-\d{3,4})',  # 如 SSIS-123, PRED-456
         r'([A-Z]{2,6}\d{3,4})',   # 如 SSIS123, PRED456
@@ -322,5 +335,268 @@ def get_config():
             'error': str(e)
         })
 
+# 新增API：订阅电影系列
+@app.route('/api/subscribe-series', methods=['POST'])
+def subscribe_series():
+    """订阅电影系列API"""
+    try:
+        data = request.get_json()
+        series_name = data.get('series_name', '').strip()
+        
+        if not series_name:
+            return jsonify({
+                'success': False,
+                'error': '请输入系列名称'
+            })
+        
+        if add_movie_collection is None:
+            return jsonify({
+                'success': False,
+                'error': 'MongoDB未初始化'
+            })
+        
+        # 检查是否已经订阅
+        existing = add_movie_collection.find_one({
+            'series_name': series_name,
+            'type': 'subscription'
+        })
+        
+        if existing:
+            return jsonify({
+                'success': False,
+                'error': f'已经订阅了系列 "{series_name}"'
+            })
+        
+        # 添加订阅记录
+        subscription_doc = {
+            'series_name': series_name,
+            'type': 'subscription',
+            'status': 'active',
+            'created_at': datetime.now(),
+            'last_checked': None,
+            'total_movies_found': 0
+        }
+        
+        result = add_movie_collection.insert_one(subscription_doc)
+        
+        return jsonify({
+            'success': True,
+            'message': f'成功订阅系列 "{series_name}"',
+            'subscription_id': str(result.inserted_id)
+        })
+        
+    except Exception as e:
+        print(f"订阅系列错误: {e}")
+        return jsonify({
+            'success': False,
+            'error': '服务器内部错误'
+        })
+
+# 新增API：获取订阅列表
+@app.route('/api/subscriptions', methods=['GET'])
+def get_subscriptions():
+    """获取订阅列表API"""
+    try:
+        if add_movie_collection is None:
+            return jsonify({
+                'success': False,
+                'error': 'MongoDB未初始化'
+            })
+        
+        # 查询所有订阅
+        subscriptions = list(add_movie_collection.find(
+            {'type': 'subscription'},
+            {'_id': 1, 'series_name': 1, 'status': 1, 'created_at': 1, 
+             'last_checked': 1, 'total_movies_found': 1}
+        ).sort('created_at', -1))
+        
+        # 转换ObjectId为字符串
+        for sub in subscriptions:
+            sub['_id'] = str(sub['_id'])
+        
+        return jsonify({
+            'success': True,
+            'subscriptions': subscriptions
+        })
+        
+    except Exception as e:
+        print(f"获取订阅列表错误: {e}")
+        return jsonify({
+            'success': False,
+            'error': '服务器内部错误'
+        })
+
+# 新增API：删除订阅
+@app.route('/api/subscriptions/<subscription_id>', methods=['DELETE'])
+def delete_subscription(subscription_id):
+    """删除订阅API"""
+    try:
+        if add_movie_collection is None:
+            return jsonify({
+                'success': False,
+                'error': 'MongoDB未初始化'
+            })
+        
+        # 删除订阅记录
+        result = add_movie_collection.delete_one({
+            '_id': ObjectId(subscription_id),
+            'type': 'subscription'
+        })
+        
+        if result.deleted_count > 0:
+            return jsonify({
+                'success': True,
+                'message': '订阅已删除'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': '订阅不存在'
+            })
+        
+    except Exception as e:
+        print(f"删除订阅错误: {e}")
+        return jsonify({
+            'success': False,
+            'error': '服务器内部错误'
+        })
+
+# 定时任务：检查订阅的电影系列
+def check_subscribed_series():
+    """检查订阅的电影系列，参考search_movie()逻辑"""
+    try:
+        if  add_movie_collection is None or mongo_collection is None or jellyfin_checker is None or crawler is None:
+            print("定时任务跳过：必要组件未初始化")
+            return
+        
+        print("开始执行定时推送任务...")
+        
+        # 获取所有活跃的订阅
+        subscriptions = list(add_movie_collection.find({
+            'type': 'subscription',
+            'status': 'active'
+        }))
+        
+        for subscription in subscriptions:
+            series_name = subscription['series_name']
+            subscription_id = subscription['_id']
+            
+            print(f"检查订阅系列: {series_name}")
+            
+            try:
+                # 使用爬虫获取系列电影列表
+                crawler_result = crawler.crawl_from_url(f'https://www.javbus.com/series/{series_name}')
+                
+                if not crawler_result or 'movies' not in crawler_result:
+                    print(f"系列 {series_name} 爬取失败")
+                    continue
+                
+                movies = crawler_result['movies']
+                new_movies_count = 0
+                
+                # 遍历每个电影
+                for movie in movies:
+                    movie_code = movie.get('movie_code', '')
+                    title = movie.get('title', '')
+                    
+                    if not movie_code:
+                        continue
+                    
+                    # 检查Jellyfin中是否存在
+                    jellyfin_exists = False
+                    try:
+                        jellyfin_result = jellyfin_checker.check_movie_exists(movie_code)
+                        if jellyfin_result.get('exists', False):
+                            jellyfin_exists = True
+                        else:
+                            # 尝试用title搜索
+                            if title:
+                                jellyfin_result = jellyfin_checker.check_movie_exists(title)
+                                if jellyfin_result.get('exists', False):
+                                    jellyfin_exists = True
+                    except Exception as e:
+                        print(f"检查电影 {movie_code} 在Jellyfin中是否存在时出错: {e}")
+                    
+                    # 如果Jellyfin中不存在，检查MongoDB中是否有磁力链接
+                    if not jellyfin_exists:
+                        # 在sehuatang_crawler表中查找磁力链接
+                        magnet_doc = mongo_collection.find_one({
+                            '$or': [
+                                {'title': {'$regex': movie_code, '$options': 'i'}},
+                                {'movie_code': movie_code}
+                            ],
+                            'magnet_link': {'$exists': True, '$ne': ''}
+                        })
+                        
+                        if magnet_doc:
+                            magnet_link = magnet_doc.get('magnet_link', '')
+                            
+                            # 检查是否已经登记过
+                            existing_record = add_movie_collection.find_one({
+                                'movie_code': movie_code,
+                                'type': 'movie',
+                                'subscription_id': subscription_id
+                            })
+                            
+                            if not existing_record and magnet_link:
+                                # 登记到add_movie表
+                                movie_doc = {
+                                    'series_name': series_name,
+                                    'movie_code': movie_code,
+                                    'title': title,
+                                    'magnet_link': magnet_link,
+                                    'type': 'movie',
+                                    'subscription_id': subscription_id,
+                                    'found_at': datetime.now(),
+                                    'jellyfin_exists': False,
+                                    'status': 'new'
+                                }
+                                
+                                add_movie_collection.insert_one(movie_doc)
+                                new_movies_count += 1
+                                print(f"新发现电影: {movie_code} - {title}")
+                
+                # 更新订阅的最后检查时间
+                add_movie_collection.update_one(
+                    {'_id': subscription_id},
+                    {
+                        '$set': {
+                            'last_checked': datetime.now(),
+                            'total_movies_found': subscription.get('total_movies_found', 0) + new_movies_count
+                        }
+                    }
+                )
+                
+                print(f"系列 {series_name} 检查完成，新发现 {new_movies_count} 部电影")
+                
+            except Exception as e:
+                print(f"检查系列 {series_name} 时出错: {e}")
+        
+        print("定时推送任务执行完成")
+        
+    except Exception as e:
+        print(f"定时推送任务执行错误: {e}")
+
+# 启动定时任务
+def start_scheduler():
+    """启动定时任务调度器"""
+    # 每天晚上10点执行
+    schedule.every().day.at("22:00").do(check_subscribed_series)
+    
+    # 也可以设置为每小时执行一次用于测试
+    # schedule.every().hour.do(check_subscribed_series)
+    
+    def run_scheduler():
+        while True:
+            schedule.run_pending()
+            time.sleep(60)  # 每分钟检查一次
+    
+    # 在后台线程中运行调度器
+    scheduler_thread = threading.Thread(target=run_scheduler, daemon=True)
+    scheduler_thread.start()
+    print("定时任务调度器已启动")
+
 if __name__ == '__main__':
+    # 启动定时任务
+    start_scheduler()
     app.run(debug=True, host='0.0.0.0', port=5000)

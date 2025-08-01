@@ -55,6 +55,18 @@
     margin-bottom: 10px;
 }
 
+/* 定时推送卡片样式 */
+.subscription-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+}
+
+.subscription-card .card-header {
+    background: rgba(255,255,255,0.1);
+    border-bottom: 1px solid rgba(255,255,255,0.2);
+}
+
 /* 响应式调整 */
 @media (max-width: 768px) {
     .movie-header {
@@ -69,6 +81,43 @@
 </style>
 
 <div class="search-container">
+    <!-- 定时推送功能卡片 -->
+    <div class="card subscription-card mb-4">
+        <div class="card-header">
+            <h4 class="mb-0"><i class="bi bi-bell"></i> 定时推送订阅</h4>
+        </div>
+        <div class="card-body">
+            <p class="mb-3">订阅电影系列，系统将每天晚上自动检查新电影并推送磁力链接</p>
+            <form id="subscriptionForm">
+                <div class="row">
+                    <div class="col-md-8">
+                        <div class="input-group mb-3">
+                            <input type="text" class="form-control" id="seriesName" 
+                                   placeholder="请输入电影系列名称（如：SSIS）" required>
+                            <button class="btn btn-warning" type="submit" id="subscribeSeriesBtn">
+                                <i class="bi bi-plus-circle"></i> 订阅系列
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <button type="button" class="btn btn-outline-light" id="viewSubscriptionsBtn">
+                            <i class="bi bi-list"></i> 查看订阅列表
+                        </button>
+                    </div>
+                </div>
+            </form>
+            
+            <!-- 订阅状态提示 -->
+            <div id="subscriptionStatus" class="d-none">
+                <div class="spinner-border spinner-border-sm text-light me-2" role="status">
+                    <span class="visually-hidden">处理中...</span>
+                </div>
+                <span>正在添加订阅...</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 原有的搜索功能 -->
     <div class="card">
         <div class="card-header">
             <h4 class="mb-0"><i class="bi bi-search"></i> 电影搜索</h4>
@@ -126,14 +175,32 @@
     </div>
 </div>
 
+<!-- 订阅列表模态框 -->
+<div class="modal fade" id="subscriptionsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-list"></i> 我的订阅列表</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="subscriptionsContent">
+                <!-- 订阅列表将通过JavaScript动态加载 -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- 成功提示模态框 -->
 <div class="modal fade" id="successModal" tabindex="-1">
     <div class="modal-dialog modal-sm">
         <div class="modal-content">
             <div class="modal-body text-center">
                 <i class="bi bi-check-circle-fill text-success" style="font-size: 3rem;"></i>
-                <h5 class="mt-3">复制成功！</h5>
-                <p class="text-muted">已复制 <span id="copiedCount"></span> 个磁力链接到剪贴板</p>
+                <h5 class="mt-3">操作成功！</h5>
+                <p class="text-muted" id="successMessage">操作已完成</p>
             </div>
             <div class="modal-footer justify-content-center">
                 <button type="button" class="btn btn-primary" data-bs-dismiss="modal">确定</button>
@@ -159,7 +226,177 @@ document.addEventListener('DOMContentLoaded', function() {
     const subscribeBtn = document.getElementById('subscribeBtn');
     const selectedCountSpan = document.getElementById('selectedCount');
     
+    // 定时推送相关元素
+    const subscriptionForm = document.getElementById('subscriptionForm');
+    const seriesNameInput = document.getElementById('seriesName');
+    const subscribeSeriesBtn = document.getElementById('subscribeSeriesBtn');
+    const subscriptionStatus = document.getElementById('subscriptionStatus');
+    const viewSubscriptionsBtn = document.getElementById('viewSubscriptionsBtn');
+    const subscriptionsModal = document.getElementById('subscriptionsModal');
+    const subscriptionsContent = document.getElementById('subscriptionsContent');
+    
     let currentMovies = []; // 存储当前搜索结果
+    
+    // 订阅系列表单提交
+    subscriptionForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        subscribeToSeries();
+    });
+    
+    // 查看订阅列表
+    viewSubscriptionsBtn.addEventListener('click', function() {
+        loadSubscriptions();
+        const modal = new bootstrap.Modal(subscriptionsModal);
+        modal.show();
+    });
+    
+    // 订阅电影系列
+    async function subscribeToSeries() {
+        const seriesName = seriesNameInput.value.trim();
+        if (!seriesName) return;
+        
+        // 显示加载状态
+        subscriptionStatus.classList.remove('d-none');
+        subscribeSeriesBtn.disabled = true;
+        
+        try {
+            const response = await fetch('/api/subscribe-series', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    series_name: seriesName
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                // 显示成功提示
+                showToast('订阅成功！系统将每天晚上自动检查新电影', 'success');
+                seriesNameInput.value = '';
+            } else {
+                showToast(data.error || '订阅失败', 'error');
+            }
+        } catch (err) {
+            console.error('订阅错误:', err);
+            showToast('网络错误，请稍后重试', 'error');
+        } finally {
+            subscriptionStatus.classList.add('d-none');
+            subscribeSeriesBtn.disabled = false;
+        }
+    }
+    
+    // 加载订阅列表
+    async function loadSubscriptions() {
+        subscriptionsContent.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"></div><p class="mt-2">加载中...</p></div>';
+        
+        try {
+            const response = await fetch('/api/subscriptions');
+            const data = await response.json();
+            
+            if (data.success) {
+                displaySubscriptions(data.subscriptions);
+            } else {
+                subscriptionsContent.innerHTML = '<div class="alert alert-danger">加载订阅列表失败: ' + (data.error || '未知错误') + '</div>';
+            }
+        } catch (err) {
+            console.error('加载订阅列表错误:', err);
+            subscriptionsContent.innerHTML = '<div class="alert alert-danger">网络错误，请稍后重试</div>';
+        }
+    }
+    
+    // 显示订阅列表
+    function displaySubscriptions(subscriptions) {
+        if (subscriptions.length === 0) {
+            subscriptionsContent.innerHTML = '<div class="alert alert-info"><i class="bi bi-info-circle"></i> 暂无订阅的电影系列</div>';
+            return;
+        }
+        
+        let html = '<div class="list-group">';
+        subscriptions.forEach(sub => {
+            const createdDate = new Date(sub.created_at).toLocaleDateString('zh-CN');
+            const lastChecked = sub.last_checked ? new Date(sub.last_checked).toLocaleDateString('zh-CN') : '未检查';
+            
+            html += `
+                <div class="list-group-item">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h6 class="mb-1"><i class="bi bi-film"></i> ${sub.series_name}</h6>
+                            <p class="mb-1 text-muted"><i class="bi bi-calendar"></i> 订阅时间: ${createdDate}</p>
+                            <small class="text-muted"><i class="bi bi-clock"></i> 最后检查: ${lastChecked}</small>
+                            ${sub.total_movies_found ? `<br><small class="text-success"><i class="bi bi-check-circle"></i> 已发现 ${sub.total_movies_found} 部电影</small>` : ''}
+                        </div>
+                        <div>
+                            <span class="badge ${sub.status === 'active' ? 'bg-success' : 'bg-secondary'} me-2">
+                                ${sub.status === 'active' ? '活跃' : '暂停'}
+                            </span>
+                            <button class="btn btn-sm btn-outline-danger" 
+                                    onclick="removeSubscription('${sub._id}')" 
+                                    title="删除订阅">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        html += '</div>';
+        
+        subscriptionsContent.innerHTML = html;
+    }
+    
+    // 全局函数：删除订阅
+    window.removeSubscription = async function(subscriptionId) {
+        if (!confirm('确定要删除这个订阅吗？')) return;
+        
+        try {
+            const response = await fetch(`/api/subscriptions/${subscriptionId}`, {
+                method: 'DELETE'
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                showToast('订阅已删除', 'success');
+                loadSubscriptions(); // 重新加载列表
+            } else {
+                showToast(data.error || '删除失败', 'error');
+            }
+        } catch (err) {
+            console.error('删除订阅错误:', err);
+            showToast('网络错误，请稍后重试', 'error');
+        }
+    };
+    
+    // 显示提示消息
+    function showToast(message, type = 'info') {
+        const toast = document.createElement('div');
+        toast.className = 'toast-notification';
+        const bgColor = type === 'success' ? '#28a745' : type === 'error' ? '#dc3545' : '#17a2b8';
+        const icon = type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-triangle' : 'info-circle';
+        
+        toast.innerHTML = `<i class="bi bi-${icon}"></i> ${message}`;
+        toast.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: ${bgColor};
+            color: white;
+            padding: 10px 15px;
+            border-radius: 5px;
+            z-index: 9999;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            max-width: 300px;
+        `;
+        document.body.appendChild(toast);
+        setTimeout(() => {
+            if (document.body.contains(toast)) {
+                document.body.removeChild(toast);
+            }
+        }, 3000);
+    }
     
     // 搜索表单提交
     searchForm.addEventListener('submit', function(e) {
@@ -441,7 +678,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const allLinks = magnetLinks.join('\n');
             navigator.clipboard.writeText(allLinks).then(function() {
                 // 显示成功模态框
-                document.getElementById('copiedCount').textContent = magnetLinks.length;
+                document.getElementById('successMessage').textContent = `已复制 ${magnetLinks.length} 个磁力链接到剪贴板`;
                 const modal = new bootstrap.Modal(document.getElementById('successModal'));
                 modal.show();
                 
