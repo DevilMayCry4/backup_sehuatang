@@ -17,6 +17,10 @@ from bson import ObjectId
 import threading
 import time
 import schedule
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from email.header import Header
 
 # 添加父目录到路径，以便导入项目模块
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -489,9 +493,7 @@ def check_subscribed_series():
         for subscription in subscriptions:
             series_name = subscription['series_name']
             subscription_id = subscription['_id']
-            
             print(f"检查订阅系列: {series_name}")
-            
             try:
                 # 使用爬虫获取系列电影列表
                 crawler_result = crawler.crawl_from_url(f'https://www.javbus.com/series/{series_name}')
@@ -512,31 +514,7 @@ def check_subscribed_series():
                     if not movie_code:
                         continue
                     
-                    # 检查是否已经在found_movies表中记录过
-                    existing_found = found_movies_collection.find_one({
-                        'movie_code': movie_code,
-                        'subscription_id': subscription_id
-                    })
                     
-                    if not existing_found:
-                        # 保存到found_movies表
-                        found_movie_doc = {
-                            'series_name': series_name,
-                            'movie_code': movie_code,
-                            'title': title,
-                            'subscription_id': subscription_id,
-                            'found_at': datetime.now(),
-                            'release_date': movie.get('release_date', ''),
-                            'cover_url': movie.get('cover_url', ''),
-                            'detail_url': movie.get('detail_url', ''),
-                            'status': 'found'  # 标记为已找到
-                        }
-                        
-                        found_movies_collection.insert_one(found_movie_doc)
-                        found_movies_count += 1
-                        print(f"记录找到的电影: {movie_code} - {title}")
-                    
-                    # 检查Jellyfin中是否存在
                     jellyfin_exists = False
                     try:
                         jellyfin_result = jellyfin_checker.check_movie_exists(movie_code)
@@ -553,6 +531,7 @@ def check_subscribed_series():
                     
                     # 如果Jellyfin中不存在，检查MongoDB中是否有磁力链接
                     if not jellyfin_exists:
+                        new_movies_count += 1
                         # 在sehuatang_crawler表中查找磁力链接
                         magnet_doc = mongo_collection.find_one({
                             '$or': [
@@ -566,10 +545,8 @@ def check_subscribed_series():
                             magnet_link = magnet_doc.get('magnet_link', '')
                             
                             # 检查是否已经登记过到add_movie表
-                            existing_record = add_movie_collection.find_one({
-                                'movie_code': movie_code,
-                                'type': 'movie',
-                                'subscription_id': subscription_id
+                            existing_record = found_movies_collection.find_one({
+                                'movie_code': movie_code
                             })
                             
                             if not existing_record and magnet_link:
@@ -586,35 +563,13 @@ def check_subscribed_series():
                                     'status': 'new'
                                 }
                                 
-                                add_movie_collection.insert_one(movie_doc)
-                                new_movies_count += 1
-                                print(f"新发现电影: {movie_code} - {title}")
-                            
-                            # 更新found_movies表中的磁力链接信息
-                            if existing_found:
-                                found_movies_collection.update_one(
-                                    {'_id': existing_found['_id']},
-                                    {
-                                        '$set': {
-                                            'magnet_link': magnet_link,
-                                            'has_magnet': True,
-                                            'jellyfin_exists': jellyfin_exists,
-                                            'last_checked': datetime.now()
-                                        }
-                                    }
-                                )
-                    else:
-                        # 如果在Jellyfin中存在，更新found_movies表
-                        if existing_found:
-                            found_movies_collection.update_one(
-                                {'_id': existing_found['_id']},
-                                {
-                                    '$set': {
-                                        'jellyfin_exists': True,
-                                        'last_checked': datetime.now()
-                                    }
-                                }
-                            )
+                                found_movies_collection.insert_one(movie_doc)
+                                
+                                # 发送邮件通知
+                                send_email_notification(movie_doc)
+                                print(f"发现新电影并已记录: {title} ({movie_code})")
+                          
+                       
                 
                 # 更新订阅的最后检查时间
                 add_movie_collection.update_one(
@@ -626,10 +581,7 @@ def check_subscribed_series():
                             'total_found_movies': subscription.get('total_found_movies', 0) + found_movies_count
                         }
                     }
-                )
-                
-                print(f"系列 {series_name} 检查完成，记录 {found_movies_count} 部找到的电影，新发现 {new_movies_count} 部有磁力链接的电影")
-                
+                ) 
             except Exception as e:
                 print(f"检查系列 {series_name} 时出错: {e}")
         
@@ -657,7 +609,145 @@ def start_scheduler():
     scheduler_thread.start()
     print("定时任务调度器已启动")
 
+# 在delete_subscription函数后添加手动触发订阅检查的API
+@app.route('/api/trigger-subscription-check', methods=['POST'])
+def trigger_subscription_check():
+    """手动触发订阅检查API"""
+    try:
+        if add_movie_collection is None or mongo_collection is None or jellyfin_checker is None or crawler is None or found_movies_collection is None:
+            return jsonify({
+                'success': False,
+                'error': '必要组件未初始化，请检查MongoDB、Jellyfin和爬虫连接'
+            })
+        
+        # 在后台线程中执行订阅检查，避免阻塞请求
+        def run_check():
+            try:
+                check_subscribed_series()
+            except Exception as e:
+                print(f"手动触发订阅检查时出错: {e}")
+        
+        # 启动后台线程
+        thread = threading.Thread(target=run_check)
+        thread.daemon = True
+        thread.start()
+        
+        return jsonify({
+            'success': True,
+            'message': '订阅检查已开始执行，请查看控制台日志了解进度'
+        })
+        
+    except Exception as e:
+        print(f"触发订阅检查错误: {e}")
+        return jsonify({
+            'success': False,
+            'error': '服务器内部错误'
+        })
+
+# 新增API：获取订阅检查状态
+@app.route('/api/subscription-check-status', methods=['GET'])
+def get_subscription_check_status():
+    """获取最近的订阅检查状态"""
+    try:
+        if add_movie_collection is None:
+            return jsonify({
+                'success': False,
+                'error': 'MongoDB未初始化'
+            })
+        
+        # 获取最近更新的订阅记录
+        recent_subscriptions = list(add_movie_collection.find({
+            'type': 'subscription',
+            'status': 'active'
+        }).sort('last_checked', -1).limit(10))
+        
+        status_info = []
+        for sub in recent_subscriptions:
+            status_info.append({
+                'series_name': sub.get('series_name', ''),
+                'last_checked': sub.get('last_checked', '').isoformat() if sub.get('last_checked') else '从未检查',
+                'total_movies_found': sub.get('total_movies_found', 0),
+                'total_found_movies': sub.get('total_found_movies', 0)
+            })
+        
+        return jsonify({
+            'success': True,
+            'subscriptions': status_info
+        })
+        
+    except Exception as e:
+        print(f"获取订阅检查状态错误: {e}")
+        return jsonify({
+            'success': False,
+            'error': '服务器内部错误'
+        })
+
+    except Exception as e:
+        print(f"触发订阅检查错误: {e}")
+        return jsonify({
+            'success': False,
+            'error': '服务器内部错误'
+        })
+
+def send_email_notification(movie_info):
+    """发送新电影发现邮件通知"""
+    try:
+        email_config = app_config.get_email_config()
+        
+        # 检查是否启用邮件功能
+        if not email_config.get('enable_email', False):
+            return
+            
+        # 检查必要的邮件配置
+        if not all([email_config.get('sender_email'), 
+                   email_config.get('sender_password'),
+                   email_config.get('recipient_emails')]):
+            print("邮件配置不完整，跳过邮件发送")
+            return
+        
+        # 创建邮件内容
+        subject = f"🎬 发现新电影: {movie_info['title']}"
+        
+        html_body = f"""
+        <html>
+        <body>
+            <h2>🎬 发现新电影通知</h2>
+            <div style="background-color: #f5f5f5; padding: 15px; border-radius: 5px; margin: 10px 0;">
+                <p><strong>系列名称:</strong> {movie_info['series_name']}</p>
+                <p><strong>电影代码:</strong> {movie_info['movie_code']}</p>
+                <p><strong>电影标题:</strong> {movie_info['title']}</p>
+                <p><strong>发现时间:</strong> {movie_info['found_at'].strftime('%Y-%m-%d %H:%M:%S')}</p>
+                <p><strong>磁力链接:</strong> <a href="{movie_info['magnet_link']}">点击下载</a></p>
+            </div>
+            <p><em>此邮件由电影订阅系统自动发送</em></p>
+        </body>
+        </html>
+        """
+        
+        # 创建邮件对象
+        msg = MIMEMultipart('alternative')
+        msg['From'] = email_config['sender_email']
+        msg['To'] = ', '.join(email_config['recipient_emails'])
+        msg['Subject'] = Header(subject, 'utf-8')
+        
+        # 添加HTML内容
+        html_part = MIMEText(html_body, 'html', 'utf-8')
+        msg.attach(html_part)
+        
+        # 发送邮件
+        with smtplib.SMTP(email_config['smtp_server'], email_config['smtp_port']) as server:
+            server.starttls()
+            server.login(email_config['sender_email'], email_config['sender_password'])
+            server.send_message(msg)
+            
+        print(f"邮件通知已发送: {movie_info['title']}")
+        
+    except Exception as e:
+        print(f"发送邮件通知失败: {e}")
+
 if __name__ == '__main__':
     # 启动定时任务
     start_scheduler()
     app.run(debug=True, host='0.0.0.0', port=5000)
+
+

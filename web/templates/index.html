@@ -99,9 +99,13 @@
                             </button>
                         </div>
                     </div>
+                    <!-- 在订阅卡片的card-body中，查看订阅列表按钮后添加 -->
                     <div class="col-md-4">
                         <button type="button" class="btn btn-outline-light" id="viewSubscriptionsBtn">
                             <i class="bi bi-list"></i> 查看订阅列表
+                        </button>
+                        <button type="button" class="btn btn-warning" id="triggerCheckBtn" style="margin-left: 8px;">
+                            <i class="bi bi-play-circle"></i> 手动检查
                         </button>
                     </div>
                 </div>
@@ -212,6 +216,7 @@
 
 {% block scripts %}
 <script>
+// 在现有JavaScript代码中添加手动触发功能
 document.addEventListener('DOMContentLoaded', function() {
     const searchForm = document.getElementById('searchForm');
     const movieNameInput = document.getElementById('movieName');
@@ -234,6 +239,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const viewSubscriptionsBtn = document.getElementById('viewSubscriptionsBtn');
     const subscriptionsModal = document.getElementById('subscriptionsModal');
     const subscriptionsContent = document.getElementById('subscriptionsContent');
+    const triggerCheckBtn = document.getElementById('triggerCheckBtn'); // 添加手动触发按钮元素
     
     let currentMovies = []; // 存储当前搜索结果
     
@@ -249,6 +255,13 @@ document.addEventListener('DOMContentLoaded', function() {
         const modal = new bootstrap.Modal(subscriptionsModal);
         modal.show();
     });
+    
+    // 手动触发订阅检查 - 添加事件监听器
+    if (triggerCheckBtn) {
+        triggerCheckBtn.addEventListener('click', function() {
+            triggerSubscriptionCheck();
+        });
+    }
     
     // 订阅电影系列
     async function subscribeToSeries() {
@@ -697,6 +710,44 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // 全局函数：更新选中数量（供HTML调用）
     window.updateSelectedCount = updateSelectedCount;
+    
+    // 手动触发订阅检查函数 - 移到script标签内
+    function triggerSubscriptionCheck() {
+        const triggerBtn = document.getElementById('triggerCheckBtn');
+        const originalText = triggerBtn.innerHTML;
+        
+        // 显示加载状态
+        triggerBtn.disabled = true;
+        triggerBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> 检查中...';
+        
+        fetch('/api/trigger-subscription-check', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast('订阅检查已开始执行，请查看控制台日志了解进度', 'success');
+                // 5秒后恢复按钮状态
+                setTimeout(() => {
+                    triggerBtn.disabled = false;
+                    triggerBtn.innerHTML = originalText;
+                }, 5000);
+            } else {
+                showToast('触发订阅检查失败: ' + data.error, 'error');
+                triggerBtn.disabled = false;
+                triggerBtn.innerHTML = originalText;
+            }
+        })
+        .catch(error => {
+            console.error('触发订阅检查时出错:', error);
+            showToast('触发订阅检查时出错', 'error');
+            triggerBtn.disabled = false;
+            triggerBtn.innerHTML = originalText;
+        });
+    }
 });
 </script>
 {% endblock %}

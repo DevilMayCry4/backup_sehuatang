@@ -45,12 +45,26 @@ class Config:
                 "log_file": os.getenv("LOG_FILE", "crawler.log"),
                 "max_bytes": int(os.getenv("LOG_MAX_BYTES", "10485760")),  # 10MB
                 "backup_count": int(os.getenv("LOG_BACKUP_COUNT", "5"))
+            },
+            
+            # 邮件配置
+            "email_config": {
+                "smtp_server": os.getenv("SMTP_SERVER", "smtp.gmail.com"),
+                "smtp_port": int(os.getenv("SMTP_PORT", "587")),
+                "sender_email": os.getenv("SENDER_EMAIL", ""),
+                "sender_password": os.getenv("SENDER_PASSWORD", ""),
+                "recipient_emails": os.getenv("RECIPIENT_EMAILS", "").split(",") if os.getenv("RECIPIENT_EMAILS") else [],
+                "enable_email": os.getenv("ENABLE_EMAIL", "false").lower() == "true"
             }
         }
     
     def get_log_config(self) -> Dict[str, Any]:
         """获取日志配置"""
         return self.config["log_config"]
+    
+    def get_email_config(self) -> Dict[str, Any]:
+        """获取邮件配置"""
+        return self.config["email_config"]
     
     def get_mongo_config(self) -> Dict[str, str]:
         """获取MongoDB配置"""
