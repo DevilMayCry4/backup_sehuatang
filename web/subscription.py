@@ -35,8 +35,9 @@ def check_subscribed_series(jellyfin_checker, crawler):
             series_name = subscription.get('series_name')
             subscription_id = subscription.get('_id')
             last_checked = subscription.get('last_checked')
+            status = subscription.get('status')
             
-            if not series_name:
+            if not series_name or status != 'active':
                 continue
             
             # 检查是否在指定天数内已经检查过
@@ -146,7 +147,7 @@ def check_subscribed_series(jellyfin_checker, crawler):
 def start_scheduler(jellyfin_checker, crawler):
     """启动定时任务调度器"""
     # 每天晚上10点执行
-    schedule.every().day.at("22:00").do(lambda: check_subscribed_series(jellyfin_checker, crawler))
+    schedule.every().day.at("23:00").do(lambda: check_subscribed_series(jellyfin_checker, crawler))
     
     def run_scheduler():
         while True:

@@ -110,12 +110,19 @@ document.addEventListener('DOMContentLoaded', function() {
             html += `
                 <div class="subscription-card card mb-3">
                     <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-start mb-2">
-                            <h6 class="card-title mb-0">
-                                <i class="bi bi-bookmark-star-fill text-warning"></i>
-                                ${subscription.series_name}
-                            </h6>
-                            <div class="form-check form-switch">
+                        <!-- 标题区域优化 -->
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <div class="subscription-info flex-grow-1">
+                                <h6 class="card-title mb-1">
+                                    <i class="bi bi-bookmark-star-fill text-warning me-2"></i>
+                                    ${subscription.title || subscription.series_name}
+                                </h6>
+                                ${subscription.title && subscription.title !== subscription.series_name ? 
+                                    `<small class="text-muted">关键词: ${subscription.series_name}</small>` : ''}
+                            </div>
+                            
+                            <!-- 状态开关 -->
+                            <div class="form-check form-switch ms-3">
                                 <input class="form-check-input" type="checkbox" 
                                        id="status-${subscription._id}" 
                                        ${isActive ? 'checked' : ''}
@@ -126,24 +133,25 @@ document.addEventListener('DOMContentLoaded', function() {
                             </div>
                         </div>
                         
-                        <div class="subscription-stats mb-2">
-                            <div class="row text-center">
+                        <!-- 统计信息区域 -->
+                        <div class="subscription-stats mb-3">
+                            <div class="row g-2">
                                 <div class="col-4">
-                                    <div class="stat-item">
-                                        <div class="stat-number text-primary">${subscription.total_movies_found || 0}</div>
+                                    <div class="stat-item text-center p-2 bg-light rounded">
+                                        <div class="stat-number text-primary fw-bold">${subscription.total_movies_found || 0}</div>
                                         <div class="stat-label"><small class="text-muted">总电影数</small></div>
                                     </div>
                                 </div>
                                 <div class="col-4">
-                                    <div class="stat-item">
-                                        <div class="stat-number text-success">${subscription.totoal_found_magnet_movies || 0}</div>
+                                    <div class="stat-item text-center p-2 bg-light rounded">
+                                        <div class="stat-number text-success fw-bold">${subscription.totoal_found_magnet_movies || 0}</div>
                                         <div class="stat-label"><small class="text-muted">有磁力链接</small></div>
                                     </div>
                                 </div>
                                 <div class="col-4">
-                                    <div class="stat-item">
-                                        <span class="badge ${isActive ? 'bg-success' : 'bg-secondary'}">
-                                            <i class="bi bi-${isActive ? 'play-circle' : 'pause-circle'}"></i>
+                                    <div class="stat-item text-center p-2 rounded" style="background-color: ${isActive ? '#d4edda' : '#f8f9fa'}">
+                                        <span class="badge ${isActive ? 'bg-success' : 'bg-secondary'} w-100">
+                                            <i class="bi bi-${isActive ? 'play-circle' : 'pause-circle'} me-1"></i>
                                             ${isActive ? '活跃' : '暂停'}
                                         </span>
                                     </div>
@@ -151,13 +159,16 @@ document.addEventListener('DOMContentLoaded', function() {
                             </div>
                         </div>
                         
-                        <div class="d-flex justify-content-between align-items-center">
-                            <small class="text-muted">
-                                <i class="bi bi-clock"></i> ${lastChecked}
+                        <!-- 底部操作区域 -->
+                        <div class="d-flex justify-content-between align-items-center pt-2 border-top">
+                            <small class="text-muted d-flex align-items-center">
+                                <i class="bi bi-clock me-1"></i> 
+                                <span>最后检查: ${lastChecked}</span>
                             </small>
-                            <button class="btn btn-sm btn-outline-primary" 
+                            <button class="btn btn-sm btn-outline-primary d-flex align-items-center" 
                                     onclick="loadMoviesForSubscription('${subscription.series_name}', ${index})">
-                                <i class="bi bi-arrow-right"></i> 查看电影
+                                <i class="bi bi-film me-1"></i> 查看电影
+                                <i class="bi bi-arrow-right ms-1"></i>
                             </button>
                         </div>
                     </div>
