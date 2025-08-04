@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html>
+ <head>
+  <meta charset="utf-8"/>
+  <meta content="IE=edge" http-equiv="X-UA-Compatible"/>
+  <meta content="webkit" name="renderer"/>
+  <meta content="width=device-width, initial-scale=1" name="viewport"/>
+  <title>
+   Age Verification JavBus - JavBus
+  </title>
+  <meta content="" name="keywords"/>
+  <meta content="" name="description"/>
+  <link href="https://www.javbus.com/en/doc/driver-verify?referer=https%3A%2F%2Fwww.javbus.com%2Factresses" hreflang="en" rel="alternate"/>
+  <link href="https://www.javbus.com/ja/doc/driver-verify?referer=https%3A%2F%2Fwww.javbus.com%2Factresses" hreflang="ja" rel="alternate"/>
+  <link href="https://www.javbus.com/ko/doc/driver-verify?referer=https%3A%2F%2Fwww.javbus.com%2Factresses" hreflang="ko" rel="alternate"/>
+  <link href="https://www.javbus.com/doc/driver-verify?referer=https%3A%2F%2Fwww.javbus.com%2Factresses" hreflang="zh" rel="alternate"/>
+  <link href="https://www.javbus.com/doc/driver-verify?referer=https%3A%2F%2Fwww.javbus.com%2Factresses" hreflang="x-default" rel="alternate"/>
+  <link href="https://www.javbus.com/doc/driver-verify?referer=https%3A%2F%2Fwww.javbus.com%2Factresses" rel="canonical"/>
+  <link crossorigin="" href="https://poweredby.jads.co" rel="preconnect"/>
+  <link href="https://poweredby.jads.co" rel="dns-prefetch"/>
+  <link href="https://www.javbus.com/css/bootstrap.min.css" rel="stylesheet"/>
+  <link href="https://www.javbus.com/css/bootstrap-theme.min.css" rel="stylesheet"/>
+  <link href="https://www.javbus.com/css/css-slider.css?v=9.3" rel="stylesheet"/>
+  <link href="https://www.javbus.com/css/nav.overlay.css?v=3.9.8" rel="stylesheet"/>
+  <link href="https://www.javbus.com/css/magnific-popup.css" rel="stylesheet"/>
+  <link href="https://www.javbus.com/css/base.css?v=7.15" rel="stylesheet"/>
+  <script src="https://www.javbus.com/js/jquery.min.js">
+  </script>
+  <script src="https://www.javbus.com/js/jquery.magnific-popup.min.js">
+  </script>
+  <script defer="" src="https://www.javbus.com/js/bootstrap.min.js">
+  </script>
+  <script defer="" src="https://www.javbus.com/js/jquery.cookie.min.js">
+  </script>
+  <script defer="" src="https://www.javbus.com/js/base.js">
+  </script>
+  <script defer="" src="https://www.javbus.com/js/bootstrap-hover-dropdown.js">
+  </script>
+  <script defer="" src="https://www.javbus.com/js/nav.overlay.js?v=10.30.3">
+  </script>
+  <!--[if lt IE 9]> <script src="https://www.javbus.com/js/html5shiv.min.js"></script><script src="https://www.javbus.com/js/respond.min.js"></script><![endif]-->
+ </head>
+ <body>
+  <script language="JavaScript">
+   var mod = 0;
+var lang = 'zh';
+var info = '搜尋 識別碼, 影片, 演員';
+function searchs(obj){
+        var searchinput = $("#"+obj);
+        if(searchinput.val()=='')
+        {
+                $('#magnet-url-post').trigger("click");
+                   return false;
+        }
+        else
+        {
+                //$('#search-loading').show();str.replace(/ /g, "-")
+                window.open("https://www.javbus.com/search/"+encodeURIComponent($.trim(searchinput.val()).replace(/ /g,"+"))+"&type=&parent=ce");
+        }
+}
+
+$(function(){
+
+        var url ='https://www.javbus.com/ajax/search-modal.php?floor='+Math.floor(Math.random()*1000+1)+'&lang='+lang;
+       $.ajax({url: url,type: 'GET',success: function(msg){
+                        $("#searchModal").append(msg);                                                                            
+           }});
+});
+  </script>
+  <div id="search-loading">
+   <table border="0" cellpadding="0" cellspacing="0" class="search-loading-box">
+    <tbody>
+     <tr>
+      <td align="center">
+       <table border="0" cellpadding="0" cellspacing="0" height="80" width="100%">
+        <tbody>
+         <tr>
+          <td align="center" height="40">
+           <div class="search-loading-text">
+            搜尋中...
+           </div>
+          </td>
+         </tr>
+         <tr>
+          <td align="center" height="40">
+           <img border="0" src="https://www.javbus.com/images/search_loading.gif"/>
+          </td>
+         </tr>
+        </tbody>
+       </table>
+      </td>
+     </tr>
+    </tbody>
+   </table>
+  </div>
+  <!-- Modal Search -->
+  <div class="modal fade" id="searchModal" role="dialog" tabindex="-1">
+  </div>
+  <nav class="navbar navbar-default navbar-fixed-top top-bar" style="z-index:900">
+   <div class="container-fluid">
+    <div class="navbar-header mh50">
+     <a href="https://www.javbus.com/">
+      <img alt="JavBus" class="hidden-xs" height="50" src="https://www.javbus.com/images/logo.png" style="height:40px; margin-top:5px;"/>
+      <img alt="JavBus" class="visible-xs-inline" height="50" src="https://www.javbus.com/images/logo.png"/>
+     </a>
+     <div class="btn-group pull-right visible-xs-inline" role="group" style="margin:8px 8px 0 0;">
+      <button aria-expanded="false" class="btn btn-default dropdown-toggle" data-toggle="dropdown" type="button">
+       <span class="glyphicon glyphicon-globe">
+       </span>
+       <span class="caret">
+       </span>
+      </button>
+      <ul class="dropdown-menu" role="menu">
+       <li>
+        <a href="https://www.javbus.com/en/doc/driver-verify?referer=https%3A%2F%2Fwww.javbus.com%2Factresses">
+         English
+        </a>
+       </li>
+       <li>
+        <a href="https://www.javbus.com/ja/doc/driver-verify?referer=https%3A%2F%2Fwww.javbus.com%2Factresses">
+         日本语
+        </a>
+       </li>
+       <li>
+        <a href="https://www.javbus.com/ko/doc/driver-verify?referer=https%3A%2F%2Fwww.javbus.com%2Factresses">
+         한국의
+        </a>
+       </li>
+       <li>
+        <a href="https://www.javbus.com/doc/driver-verify?referer=https%3A%2F%2Fwww.javbus.com%2Factresses">
+         中文
+        </a>
+       </li>
+      </ul>
+     </div>
+    </div>
+    <div class="collapse navbar-collapse" id="navbar">
+     <div class="navbar-form navbar-left fullsearch-form">
+      <div class="input-group">
+       <input class="form-control" id="search-input" placeholder="搜尋 識別碼, 影片, 演員" type="text"/>
+       <span class="input-group-btn">
+        <button class="btn btn-default" onclick="searchs('search-input')" type="submit">
+         搜尋
+        </button>
+       </span>
+      </div>
+     </div>
+     <ul class="nav navbar-nav">
+      <li class="active">
+       <a href="https://www.javbus.com/">
+        有碼
+       </a>
+      </li>
+      <li>
+       <a href="https://www.javbus.com/uncensored">
+        無碼
+       </a>
+      </li>
+      <li class="hidden-md hidden-sm">
+       <!-- <div class="icon-new"></div> -->
+       <a href="https://www.javbus.org/">
+        歐美
+       </a>
+      </li>
+      <li class="dropdown hidden-sm">
+       <a aria-expanded="false" class="dropdown-toggle" data-hover="dropdown" data-toggle="dropdown" href="#" role="button">
+        類別
+        <span class="caret">
+        </span>
+       </a>
+       <ul class="dropdown-menu" role="menu">
+        <li>
+         <a href="https://www.javbus.com/genre">
+          有碼類別
+         </a>
+        </li>
+        <li>
+         <a href="https://www.javbus.com/uncensored/genre">
+          無碼類別
+         </a>
+        </li>
+       </ul>
+      </li>
+      <li class="dropdown hidden-sm">
+       <a aria-expanded="false" class="dropdown-toggle" data-hover="dropdown" data-toggle="dropdown" href="#" role="button">
+        女優
+        <span class="caret">
+        </span>
+       </a>
+       <ul class="dropdown-menu" role="menu">
+        <li>
+         <a href="https://www.javbus.com/actresses">
+          有碼女優
+         </a>
+        </li>
+        <li>
+         <a href="https://www.javbus.com/uncensored/actresses">
+          無碼女優
+         </a>
+        </li>
+       </ul>
+      </li>
+      <li class="dropdown">
+       <a aria-expanded="false" class="dropdown-toggle" data-hover="dropdown" data-toggle="dropdown" href="https://www.javbus.com/" role="button">
+        <span class="glyphicon glyphicon-menu-hamburger">
+        </span>
+       </a>
+       <ul class="dropdown-menu" role="menu">
+        <li class="visible-md-block visible-sm-block">
+         <a href="https://www.javbus.org/">
+          歐美
+         </a>
+        </li>
+        <li class="visible-sm-block">
+         <a href="https://www.javbus.com/genre">
+          有碼類別
+         </a>
+        </li>
+        <li class="visible-sm-block">
+         <a href="https://www.javbus.com/uncensored/genre">
+          無碼類別
+         </a>
+        </li>
+        <li class="visible-sm-block">
+         <a href="https://www.javbus.com/actresses">
+          有碼女優
+         </a>
+        </li>
+        <li class="visible-sm-block">
+         <a href="https://www.javbus.com/uncensored/actresses">
+          無碼女優
+         </a>
+        </li>
+        <li>
+         <a href="https://www.javbus.com/genre/hd">
+          高清
+         </a>
+        </li>
+        <li>
+         <a href="https://www.javbus.com/genre/sub">
+          字幕
+         </a>
+        </li>
+       </ul>
+      </li>
+     </ul>
+     <ul class="nav navbar-nav navbar-right">
+      <li class="dropdown">
+       <a aria-expanded="false" class="dropdown-toggle" data-hover="dropdown" data-toggle="dropdown" href="#" role="button">
+        <span class="glyphicon glyphicon-globe" style="font-size:12px;">
+        </span>
+        <span class="hidden-md hidden-sm">
+         English
+        </span>
+        <span class="caret">
+        </span>
+       </a>
+       <ul class="dropdown-menu" role="menu">
+        <li>
+         <a href="https://www.javbus.com/en/doc/driver-verify?referer=https%3A%2F%2Fwww.javbus.com%2Factresses">
+          English
+         </a>
+        </li>
+        <li>
+         <a href="https://www.javbus.com/ja/doc/driver-verify?referer=https%3A%2F%2Fwww.javbus.com%2Factresses">
+          日本语
+         </a>
+        </li>
+        <li>
+         <a href="https://www.javbus.com/ko/doc/driver-verify?referer=https%3A%2F%2Fwww.javbus.com%2Factresses">
+          한국의
+         </a>
+        </li>
+        <li>
+         <a href="https://www.javbus.com/doc/driver-verify?referer=https%3A%2F%2Fwww.javbus.com%2Factresses">
+          中文
+         </a>
+        </li>
+       </ul>
+      </li>
+     </ul>
+    </div>
+    <!--/.nav-collapse -->
+   </div>
+  </nav>
+  <div class="row visible-xs-inline footer-bar">
+   <div class="col-xs-3 text-center">
+    <a class="btn btn-default trigger-overlay" id="menu">
+     <span class="glyphicon glyphicon-align-justify">
+     </span>
+    </a>
+   </div>
+   <div class="col-xs-3 text-center">
+   </div>
+   <div class="col-xs-3 text-center">
+   </div>
+   <div class="col-xs-3 text-center">
+    <a class="btn btn-default" href="javascript:window.history.back()" id="back">
+     <span class="glyphicon glyphicon-share-alt flipx">
+     </span>
+    </a>
+   </div>
+  </div>
+  <script src="https://www.javbus.com/js/focus.js?v=8.7">
+  </script>
+  <div class="container">
+   <div class="row">
+    <p style="height:300px;">
+    </p>
+   </div>
+  </div>
+  <!-- Modal -->
+  <div class="modal show" id="ageVerify" role="dialog">
+   <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+     <div class="modal-header">
+      <h4 class="modal-title">
+       你是否已經成年?
+      </h4>
+     </div>
+     <div class="modal-body">
+      <p>
+       根據你所在地區的規定，你需要達到法定成年年齡，才可以瀏覽網站內容，請確定你是否成年
+      </p>
+      <form action="" class="form1" id="form1" method="post">
+       <div class="checkbox">
+        <label>
+         <input onchange="document.getElementById('submit').disabled = !this.checked;" type="checkbox" value=""/>
+         我已經成年
+        </label>
+       </div>
+       <input class="submit btn btn-success" disabled="" id="submit" name="Submit" type="submit" value="確認">
+       </input>
+      </form>
+     </div>
+     <div class="modal-footer">
+      <p class="small text-muted">
+       地區年齡檢測
+      </p>
+     </div>
+    </div>
+   </div>
+  </div>
+  <style>
+   body.modal-open { overflow: hidden; }
+  </style>
+  <footer class="footer hidden-xs">
+   <div class="container-fluid">
+    <p>
+     <a href="https://www.javbus.com/doc/terms">
+      Terms
+     </a>
+     /
+     <a href="https://www.javbus.com/doc/privacy">
+      Privacy
+     </a>
+     /
+     <a href="https://www.javbus.com/doc/usc">
+      2257
+     </a>
+     /
+     <a href="http://www.rtalabel.org/" rel="external nofollow" target="_blank">
+      RTA
+     </a>
+     /
+     <a href="javascript:bootstr(1);" r="">
+      廣告投放
+     </a>
+     /
+     <a href="javascript:bootstr(2);">
+      聯絡我們
+     </a>
+     <br/>
+     <a data-toggle="modal" href="#formModal" id="adscontact">
+     </a>
+     Copyright © 2013 JavBus. All Rights Reserved. All other trademarks and copyrights are the property of their respective holders. The reviews and comments expressed at or through this website are the opinions of the individual author and do not reflect the opinions or views of JavBus. JavBus is not responsible for the accuracy of any of the information supplied here.
+    </p>
+   </div>
+  </footer>
+  <div class="visible-xs-block footer-bar-placeholder">
+  </div>
+  <script language="javascript">
+   function bootstr(type){
+        ads = "廣告投放";
+        contact = "聯絡我們";
+        translate = "翻譯";
+        $("#adstype").val(type);
+        if(type==1){
+                $("#contactModalLab").html(ads);
+                $("#qqskype").show();
+                $("#transinfo").hide();
+                $("#translanguage").hide();
+                $("#mailcontent").show();
+        }else if(type==2){
+                $("#contactModalLab").html(contact);
+                $("#qqskype").show();
+                $("#transinfo").hide();
+                $("#translanguage").hide();
+                $("#mailcontent").show();
+        }else if(type==3){
+                $("#contactModalLab").html(translate);
+                $("#qqskype").hide();
+                $("#transinfo").show();
+                $("#translanguage").show();
+                $("#mailcontent").hide();
+        }
+        $("#adscontact").trigger("click");
+                getverifycode();    
+    };
+    function getverifycode(){
+       $('#verify').attr("src","/post/verify?"+Math.random()*10000);
+    };
+    function IsMail(mail){
+     var remail= /^([a-zA-Z0-9_-])+(\.)?([a-zA-Z0-9_-])+@([a-zA-Z0-9_-])+(.[a-zA-Z0-9_-])+/;
+     return(remail.test(mail));
+    };
+    function checkform(){
+        var post = true; 
+      if($("#verifycode").val().length!=5){
+                alert("驗證碼輸入錯誤!") 
+                $("#verifycode").focus(); 
+                post = false;
+          }
+      if($("#contact").val().length>255){
+                alert("聯繫方式字數過多!") 
+                $("#contact").focus(); 
+                post = false;
+          }
+      
+      if(!IsMail($("#mail").val())){
+        alert("請輸入正確的電郵地址!") 
+        $("#mail").focus(); 
+        post = false;
+      }
+      
+      if($("#intention").val().length>25500){
+                alert("投放意向字數過多!") 
+                $("#intention").focus(); 
+                post = false;
+          }
+          
+      if($("#trans").val().length>255){
+                alert("Too many words in your language textbox!") 
+                $("#intention").focus(); 
+                post = false;
+          }       
+      if(post== true){
+          $("#modalclose").trigger("click");
+          $("#postform").attr("action", "/post/contact");
+          $("#postform").submit();
+        }
+      return post;
+    };
+  </script>
+  <script>
+   $("#showmag,#cellshowmag,#resultshowmag").click(function(){
+        $.cookie("existmag", "mag",{expires:365,path:'/'}); 
+        location.reload() 
+});
+
+$("#showall,#cellshowall,#resultshowall").click(function(){
+        $.cookie("existmag", "all",{expires:365,path:'/'}); 
+        location.reload() 
+});
+$("#showonline").click(function(){
+        $.cookie("existmag", "online",{expires:365,path:'/'}); 
+        location.reload() 
+});
+$(".info .mypointer").click(function(){
+        var obj = $(this);
+        var code = obj.attr('value');
+        var token = $("#token").val();
+        var e = "../ajax/addfavorite.php?code=" + encodeURIComponent(code) + "&token=" + encodeURIComponent(token) + "&floor=" + Math.floor(Math.random() * 1e3 + 1);
+    $.ajax({
+        url: e,
+        type: "POST",
+                //dataType: "json",
+                cache:false,
+        success: function (json) {
+                        //obj.html(json);
+                        ajaxobj=eval("("+json+")");
+                        if(ajaxobj.act=='err'){
+                                alert('收藏次數達上限，請稍候再試');
+                        }else{
+                                obj.html(ajaxobj.act);
+                                obj.attr('value',ajaxobj.code);
+                                obj.attr('title',ajaxobj.title);
+                                $("#token").val(ajaxobj.token);
+                        }
+        }
+    });
+});
+
+$(".glyphicon-heart-empty").hover(function () {
+    $(this).removeClass('glyphicon-heart-empty');
+        $(this).addClass('glyphicon-heart');
+}, function () {
+    $(this).removeClass('glyphicon-heart');
+    $(this).addClass('glyphicon-heart-empty');
+});
+$(".glyphicon-heart").hover(function () {
+    $(this).removeClass('glyphicon-heart');
+        $(this).addClass('glyphicon-heart-empty');
+}, function () {
+    $(this).removeClass('glyphicon-heart-empty');
+    $(this).addClass('glyphicon-heart');
+});
+  </script>
+  <!-- Modal Forms -->
+  <div aria-hidden="true" aria-labelledby="formModalLabel" class="modal fade" id="formModal" role="dialog" tabindex="-1">
+   <div class="modal-dialog">
+    <div class="modal-content">
+     <div class="modal-header">
+      <button aria-label="Close" class="close" data-dismiss="modal" id="modalclose" type="button">
+       <span aria-hidden="true">
+        ×
+       </span>
+      </button>
+      <h4 class="modal-title" id="contactModalLab">
+       聯絡我們
+      </h4>
+     </div>
+     <div class="modal-body">
+      <form class="form-horizontal" enctype="multipart/form-data" id="postform" method="post" name="postform">
+       <fieldset>
+        <div class="form-group" id="qqskype">
+         <label class="col-sm-4 control-label" for="contact">
+          QQ / Skype
+         </label>
+         <div class="col-sm-6">
+          <input class="form-control" id="contact" name="contact" placeholder="" type="text"/>
+         </div>
+        </div>
+        <div class="form-group">
+         <label class="col-sm-4 control-label" for="mail">
+          Email
+         </label>
+         <div class="col-sm-6">
+          <input class="form-control" id="mail" name="mail" placeholder="" type="text"/>
+         </div>
+        </div>
+        <div class="form-group" id="translanguage">
+         <label class="col-sm-4 control-label" for="trans">
+          Your Language
+         </label>
+         <div class="col-sm-6">
+          <input class="form-control" id="trans" name="trans" placeholder="" type="text"/>
+         </div>
+        </div>
+        <div class="form-group" id="mailcontent">
+         <label class="col-sm-4 control-label" for="intention" id="inten-trans">
+          內容
+         </label>
+         <div class="col-sm-6">
+          <textarea class="form-control" id="intention" name="intention" rows="9"></textarea>
+         </div>
+        </div>
+        <div class="form-group">
+         <label class="col-sm-4 control-label" for="verify">
+          驗證碼
+         </label>
+         <div class="col-sm-6">
+          <input id="verifycode" name="verifycode" style="width:50px" type="text">
+           <img id="verify" onclick="getverifycode()" src="" style="cursor: pointer; vertical-align:middle;">
+           </img>
+          </input>
+         </div>
+        </div>
+        <input id="adstype" name="adstype" type="hidden" value="1">
+        </input>
+       </fieldset>
+      </form>
+     </div>
+     <div class="modal-footer">
+      <button button="" class="btn btn-primary" onclick="checkform()" type="button">
+       送出
+      </button>
+      <button button="" class="btn btn-default" data-dismiss="modal" type="button">
+       關閉
+      </button>
+     </div>
+    </div>
+   </div>
+  </div>
+  <!-- ////////////////////////////////////////////////// -->
+  <div class="overlay overlay-contentscale">
+   <div class="row">
+    <div class="col-xs-12 text-center ptb20">
+     <div class="input-group col-xs-offset-2 col-xs-8">
+      <input class="form-control" id="search-input-mobile" placeholder="搜尋 識別碼, 影片, 演員" type="text"/>
+      <span class="input-group-btn">
+       <button class="btn btn-default" onclick="searchs('search-input-mobile')" type="submit">
+        搜尋
+       </button>
+      </span>
+     </div>
+    </div>
+    <div class="col-xs-6 text-center">
+     <a href="https://www.javbus.com/">
+      有碼
+     </a>
+    </div>
+    <div class="col-xs-6 text-center">
+     <a href="https://www.javbus.com/uncensored">
+      無碼
+     </a>
+    </div>
+    <div class="col-xs-6 text-center">
+     <a href="https://www.javbus.com/genre">
+      有碼類別
+     </a>
+    </div>
+    <div class="col-xs-6 text-center">
+     <a href="https://www.javbus.com/uncensored/genre">
+      無碼類別
+     </a>
+    </div>
+    <div class="col-xs-6 text-center">
+     <a href="https://www.javbus.com/actresses">
+      有碼女優
+     </a>
+    </div>
+    <div class="col-xs-6 text-center">
+     <a href="https://www.javbus.com/uncensored/actresses">
+      無碼女優
+     </a>
+    </div>
+    <div class="col-xs-6 text-center">
+     <a href="https://www.javbus.org/">
+      歐美
+     </a>
+    </div>
+    <div class="col-xs-6 text-center">
+     <a href="https://www.javbus.com/genre/hd">
+      高清
+     </a>
+    </div>
+    <div class="col-xs-12 text-center overlay-close">
+     <i class="glyphicon glyphicon-remove">
+     </i>
+    </div>
+   </div>
+  </div>
+ </body>
+</html>
+
+

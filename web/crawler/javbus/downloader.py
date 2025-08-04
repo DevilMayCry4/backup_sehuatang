@@ -204,7 +204,7 @@ headers = {
     'authority': 'www.javbus.com',
     'accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
     'accept-language': 'en-US,en;q=0.9,zh-CN;q=0.8,zh;q=0.7',
-    'cookie': '4fJN_2132_seccodecSeRRfg5=14339.4cce2e4f1ae59e531e; 4fJN_2132_seccodecSTVfEvf=9372.f1ae0a808eec67ca6a; 4fJN_2132_seccodecSXYwYAC=20246.0620c823cb43b800c7; 4fJN_2132_seccodecSM7ir7C=32974.501fed7ed7e50412ed; 4fJN_2132_seccodecSQTZPiM=26549.061809068ea08ce4ce; PHPSESSID=9ku0thftv26h49i683n1ml0ag1; existmag=mag; dv=1',
+    'cookie': 'PHPSESSID=h6u9r21udmvr2b8cpfrvkpj6t7; existmag=mag',
     'referer': 'https://www.javbus.com',
     'sec-ch-ua': '" Not A;Brand";v="99", "Chromium";v="104", "Opera";v="90"',
     'sec-ch-ua-mobile': '?0',

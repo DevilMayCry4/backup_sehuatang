@@ -146,6 +146,54 @@ def read_magnets_from_table(url):
         print(f"Error reading magnets from MongoDB: {e}")
         return None
 
+def write_actress_data(actress_info):
+    """写入女优数据到 MongoDB"""
+    try:
+        db = get_mongo_connection()
+        collection = db.actresses_data
+        
+        # 准备文档数据
+        document = {
+            'name': actress_info.get('name', ''),
+            'code': actress_info.get('code', ''),
+            'detail_url': actress_info.get('detail_url', ''),
+            'image_url': actress_info.get('image_url', '')
+        }
+        
+        # 使用 upsert 操作，如果 code 已存在则更新，否则插入
+        result = collection.update_one(
+            {'code': document['code']},
+            {'$set': document},
+            upsert=True
+        )
+        
+        if result.upserted_id:
+            print(f"Inserted new actress: {document['name']} ({document['code']})")
+        elif result.modified_count > 0:
+            print(f"Updated existing actress: {document['name']} ({document['code']})")
+            
+        return True
+        
+    except Exception as e:
+        print(f"Error writing actress data to MongoDB: {e}")
+        return False
+
+def create_actress_db():
+    """创建女优数据库集合和索引"""
+    try:
+        db = get_mongo_connection()
+        collection = db.actresses_data
+        
+        # 创建索引以提高查询性能
+        collection.create_index("code", unique=True)
+        collection.create_index("name")
+        
+        print("Actresses MongoDB collection and indexes created successfully")
+        return True
+    except Exception as e:
+        print(f"Error creating actresses MongoDB collection: {e}")
+        return False
+
 def close_connection():
     """关闭 MongoDB 连接"""
     global _mongo_client
