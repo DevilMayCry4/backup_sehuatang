@@ -8,3 +8,4 @@ core
 javbus_web_movies.json
 .gitignore
 test.html
+cover/

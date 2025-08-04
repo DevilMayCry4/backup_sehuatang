@@ -1,0 +1,159 @@
+#!/usr/bin/env python
+#-*-coding:utf-8-*-
+
+import os
+from pymongo import MongoClient
+from dotenv import load_dotenv
+
+# 加载环境变量
+load_dotenv('/root/backup_sehuatang/copy.env')
+
+# MongoDB 配置
+MONGO_URI = os.getenv('MONGO_URI', 'mongodb://192.168.100.227:38234/')
+MONGO_DB = os.getenv('MONGO_DB', 'javbus_crawler')
+
+# 全局 MongoDB 客户端
+_mongo_client = None
+_mongo_db = None
+
+def get_mongo_connection():
+    """获取 MongoDB 连接"""
+    global _mongo_client, _mongo_db
+    if _mongo_client is None:
+        _mongo_client = MongoClient(MONGO_URI)
+        _mongo_db = _mongo_client[MONGO_DB]
+    return _mongo_db
+
+def create_db():
+    """创建数据库和集合索引（如果不存在）"""
+    try:
+        db = get_mongo_connection()
+        collection = db.javbus_data
+        
+        # 创建索引以提高查询性能
+        collection.create_index("URL", unique=True)
+        collection.create_index("識別碼")
+        collection.create_index("標題")
+        
+        print("MongoDB collection and indexes created successfully")
+        return True
+    except Exception as e:
+        print(f"Error creating MongoDB collection: {e}")
+        return False
+
+def write_data(dict_jav):
+    """写入数据到 MongoDB"""
+    try:
+        db = get_mongo_connection()
+        collection = db.javbus_data
+        
+        # 准备文档数据
+        document = {
+            'URL': dict_jav.get('URL', ''),
+            '識別碼': dict_jav.get('識別碼', ''),
+            '標題': dict_jav.get('標題', ''),
+            '封面': dict_jav.get('封面', ''),
+            '樣品圖像': dict_jav.get('樣品圖像', ''),
+            '發行日期': dict_jav.get('發行日期', ''),
+            '長度': dict_jav.get('長度', ''),
+            '導演': dict_jav.get('導演', ''),
+            '製作商': dict_jav.get('製作商', ''),
+            '發行商': dict_jav.get('發行商', ''),
+            '系列': dict_jav.get('系列', ''),
+            '演員': dict_jav.get('演員', ''),
+            '類別': dict_jav.get('類別', ''),
+            '磁力链接': dict_jav.get('磁力链接', ''),
+            '無碼': dict_jav.get('無碼', 0)
+        }
+        
+        # 使用 upsert 操作，如果 URL 已存在则更新，否则插入
+        result = collection.update_one(
+            {'URL': document['URL']},
+            {'$set': document},
+            upsert=True
+        )
+        
+        if result.upserted_id:
+            print(f"Inserted new document with URL: {document['URL']}")
+        elif result.modified_count > 0:
+            print(f"Updated existing document with URL: {document['URL']}")
+            
+        return True
+        
+    except Exception as e:
+        print(f"Error writing data to MongoDB: {e}")
+        return False
+
+def refresh_data(dict_jav, url):
+    """更新指定 URL 的磁力链接数据"""
+    try:
+        db = get_mongo_connection()
+        collection = db.javbus_data
+        
+        # 更新磁力链接
+        result = collection.update_one(
+            {'URL': {'$regex': f'^{url}$', '$options': 'i'}},  # 不区分大小写匹配
+            {'$set': {'磁力链接': dict_jav.get('磁力链接', '')}}
+        )
+        
+        if result.modified_count > 0:
+            print(f"Updated magnet links for URL: {url}")
+            return True
+        else:
+            print(f"No document found with URL: {url}")
+            return False
+            
+    except Exception as e:
+        print(f"Error refreshing data in MongoDB: {e}")
+        return False
+
+def check_url_not_in_table(url):
+    """检查 URL 是否不在数据库中，如果不存在返回 True，存在返回 False"""
+    try:
+        db = get_mongo_connection()
+        collection = db.javbus_data
+        
+        # 不区分大小写查询
+        result = collection.find_one(
+            {'URL': {'$regex': f'^{url}$', '$options': 'i'}},
+            {'_id': 1}  # 只返回 _id 字段以提高性能
+        )
+        
+        return result is None
+        
+    except Exception as e:
+        print(f"Error checking URL in MongoDB: {e}")
+        return True  # 出错时假设不存在
+
+def read_magnets_from_table(url):
+    """从数据库中读取指定 URL 的磁力链接"""
+    try:
+        db = get_mongo_connection()
+        collection = db.javbus_data
+        
+        # 不区分大小写查询
+        result = collection.find_one(
+            {'URL': {'$regex': f'^{url}$', '$options': 'i'}},
+            {'磁力链接': 1, '_id': 0}  # 只返回磁力链接字段
+        )
+        
+        if result and result.get('磁力链接'):
+            return [(result['磁力链接'],)]  # 返回与原 SQLite 版本兼容的格式
+        else:
+            return None
+            
+    except Exception as e:
+        print(f"Error reading magnets from MongoDB: {e}")
+        return None
+
+def close_connection():
+    """关闭 MongoDB 连接"""
+    global _mongo_client
+    if _mongo_client:
+        _mongo_client.close()
+        _mongo_client = None
+        print("MongoDB connection closed")
+
+# 在程序退出时自动关闭连接
+import atexit
+atexit.register(close_connection)
