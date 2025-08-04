@@ -1,0 +1,13 @@
+/root/backup_sehuatang/logs/gunicorn_*.log {
+    daily
+    missingok
+    rotate 30
+    compress
+    delaycompress
+    notifempty
+    create 644 root root
+    sharedscripts
+    postrotate
+        kill -USR1 `cat /var/run/gunicorn.pid 2>/dev/null` 2>/dev/null || true
+    endscript
+}

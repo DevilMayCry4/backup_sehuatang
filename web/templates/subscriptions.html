@@ -23,9 +23,21 @@
     <div class="col-md-8">
         <div class="card" id="moviesCard" style="display: none;">
             <div class="card-header">
-                <h5 class="mb-0" id="moviesTitle">
-                    <i class="bi bi-film"></i> 电影列表
-                </h5>
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0" id="moviesTitle">
+                        <i class="bi bi-film"></i> 电影列表
+                    </h5>
+                    <!-- 批量操作工具栏 -->
+                    <div id="batchToolbar" class="d-none">
+                        <span class="badge bg-primary me-2" id="selectedCount">已选择 0 部电影</span>
+                        <button class="btn btn-sm btn-success me-2" onclick="copySelectedMagnets()">
+                            <i class="bi bi-copy"></i> 复制磁力链接
+                        </button>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="clearSelection()">
+                            <i class="bi bi-x"></i> 取消选择
+                        </button>
+                    </div>
+                </div>
             </div>
             <div class="card-body" id="moviesList">
                 <!-- 电影列表将在这里显示 -->
@@ -329,25 +341,50 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
-        let html = '';
+        // 添加全选/取消全选功能
+        let html = `
+            <div class="mb-3 p-2 bg-light rounded">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="selectAll" onchange="toggleSelectAll()">
+                    <label class="form-check-label fw-bold" for="selectAll">
+                        全选/取消全选 (${movies.length} 部电影)
+                    </label>
+                </div>
+            </div>
+        `;
+        
         movies.forEach((movie, index) => {
             const foundAt = movie.found_at ? 
                 new Date(movie.found_at).toLocaleString('zh-CN') : '未知时间';
             
             html += `
-                <div class="movie-item">
+                <div class="movie-item border rounded p-3 mb-3" data-index="${index}">
                     <div class="row align-items-center">
+                        <!-- 多选复选框 -->
+                        <div class="col-auto">
+                            <div class="form-check">
+                                <input class="form-check-input movie-checkbox" type="checkbox" 
+                                       id="movie-${index}" value="${index}" 
+                                       onchange="updateSelection()" 
+                                       ${movie.magnet_link ? '' : 'disabled'}>
+                                <label class="form-check-label" for="movie-${index}"></label>
+                            </div>
+                        </div>
+                        
+                        <!-- 电影封面 -->
                         <div class="col-md-2 text-center mb-3">
                             ${movie.image_url ? 
                                 `<img src="${movie.image_url}" alt="${movie.title}" class="movie-image img-fluid" 
-                                     style="max-width: 100px; max-height: 140px; object-fit: cover;"
+                                     style="max-width: 100px; max-height: 140px; object-fit: cover; border-radius: 8px;"
                                      onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjE0MCIgdmlld0JveD0iMCAwIDEwMCAxNDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMDAiIGhlaWdodD0iMTQwIiBmaWxsPSIjRjhGOUZBIi8+CjxwYXRoIGQ9Ik0zNSA1MEw2NSA1MEw1MCA3NUwzNSA1MFoiIGZpbGw9IiNEMUQ1REIiLz4KPC9zdmc+'">` :
                                 `<div class="movie-image d-flex align-items-center justify-content-center bg-light text-muted" style="width:100px;height:140px; border-radius: 8px;">
                                     <i class="bi bi-film" style="font-size: 2rem;"></i>
                                 </div>`
                             }
                         </div>
-                        <div class="col-md-10">
+                        
+                        <!-- 电影信息 -->
+                        <div class="col-md-9">
                             <div class="movie-info">
                                 <h6 class="movie-title mb-2">
                                     <strong>${movie.title || '未知标题'}</strong>
@@ -483,15 +520,147 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     };
     
-    function showError(message) {
-        const container = document.getElementById('subscriptionsList');
-        container.innerHTML = `
-            <div class="alert alert-danger">
-                <i class="bi bi-exclamation-triangle"></i>
-                ${message}
-            </div>
-        `;
+    // 全选/取消全选
+    window.toggleSelectAll = function() {
+        const selectAllCheckbox = document.getElementById('selectAll');
+        const movieCheckboxes = document.querySelectorAll('.movie-checkbox:not(:disabled)');
+        
+        movieCheckboxes.forEach(checkbox => {
+            checkbox.checked = selectAllCheckbox.checked;
+        });
+        
+        updateSelection();
+    };
+    
+    // 更新选择状态
+    window.updateSelection = function() {
+        const movieCheckboxes = document.querySelectorAll('.movie-checkbox');
+        const enabledCheckboxes = document.querySelectorAll('.movie-checkbox:not(:disabled)');
+        const checkedCheckboxes = document.querySelectorAll('.movie-checkbox:checked');
+        const selectAllCheckbox = document.getElementById('selectAll');
+        const batchToolbar = document.getElementById('batchToolbar');
+        const selectedCount = document.getElementById('selectedCount');
+        
+        // 更新全选状态
+        if (checkedCheckboxes.length === 0) {
+            selectAllCheckbox.indeterminate = false;
+            selectAllCheckbox.checked = false;
+        } else if (checkedCheckboxes.length === enabledCheckboxes.length) {
+            selectAllCheckbox.indeterminate = false;
+            selectAllCheckbox.checked = true;
+        } else {
+            selectAllCheckbox.indeterminate = true;
+            selectAllCheckbox.checked = false;
+        }
+        
+        // 显示/隐藏批量操作工具栏
+        if (checkedCheckboxes.length > 0) {
+            batchToolbar.classList.remove('d-none');
+            selectedCount.textContent = `已选择 ${checkedCheckboxes.length} 部电影`;
+        } else {
+            batchToolbar.classList.add('d-none');
+        }
+        
+        // 高亮选中的电影项
+        movieCheckboxes.forEach((checkbox, index) => {
+            const movieItem = checkbox.closest('.movie-item');
+            if (checkbox.checked) {
+                movieItem.classList.add('border-primary', 'bg-light');
+            } else {
+                movieItem.classList.remove('border-primary', 'bg-light');
+            }
+        });
+    };
+    
+    // 复制选中电影的磁力链接
+    window.copySelectedMagnets = function() {
+        const checkedCheckboxes = document.querySelectorAll('.movie-checkbox:checked');
+        const magnetLinks = [];
+        
+        console.log('选中的复选框数量:', checkedCheckboxes.length);
+        console.log('当前电影数据:', currentMovies);
+        
+        checkedCheckboxes.forEach(checkbox => {
+            const index = parseInt(checkbox.value);
+            console.log('处理索引:', index);
+            
+            if (currentMovies && currentMovies[index]) {
+                const movie = currentMovies[index];
+                console.log('电影数据:', movie);
+                
+                if (movie.magnet_link) {
+                    const title = movie.title || movie.movie_code || '未知标题';
+                    magnetLinks.push(movie.magnet_link);
+                }
+            }
+        });
+        
+        console.log('收集到的磁力链接:', magnetLinks);
+        
+        if (magnetLinks.length === 0) {
+            showToast('没有可复制的磁力链接', 'warning');
+            return;
+        }
+        
+        const magnetText = magnetLinks.join('\n\n');
+        console.log('要复制的文本:', magnetText);
+        
+        // 使用更可靠的复制方法
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(magnetText).then(function() {
+                showToast(`已复制 ${magnetLinks.length} 个磁力链接到剪贴板`, 'success');
+                clearSelection();
+            }).catch(function(err) {
+                console.error('复制失败: ', err);
+                // 降级到传统方法
+                fallbackCopyTextToClipboard(magnetText);
+            });
+        } else {
+            // 降级到传统方法
+            fallbackCopyTextToClipboard(magnetText);
+        }
+    };
+    
+    // 降级复制方法
+    function fallbackCopyTextToClipboard(text) {
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        textArea.style.top = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        
+        try {
+            const successful = document.execCommand('copy');
+            if (successful) {
+                showToast(`已复制磁力链接到剪贴板`, 'success');
+                clearSelection();
+            } else {
+                showToast('复制失败，请手动复制', 'error');
+            }
+        } catch (err) {
+            console.error('降级复制也失败了: ', err);
+            showToast('复制失败，请手动复制', 'error');
+        }
+        
+        document.body.removeChild(textArea);
     }
+    
+    // 清除选择
+    window.clearSelection = function() {
+        const movieCheckboxes = document.querySelectorAll('.movie-checkbox');
+        const selectAllCheckbox = document.getElementById('selectAll');
+        
+        movieCheckboxes.forEach(checkbox => {
+            checkbox.checked = false;
+        });
+        selectAllCheckbox.checked = false;
+        selectAllCheckbox.indeterminate = false;
+        
+        updateSelection();
+    };
 });
 </script>
 
