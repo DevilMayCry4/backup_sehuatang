@@ -256,8 +256,8 @@ def actresses_handler(url):
     return actresses_data
 
 def crawl_actresses():
-    max = 3
-    for i in range(2, max):
+    max = 250
+    for i in range(1, max):
         url = f"{base_url}/actresses/{i}"
         actresses_handler(url)
 
