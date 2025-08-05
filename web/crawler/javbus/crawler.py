@@ -9,7 +9,7 @@ import time
 import re
 from bs4 import BeautifulSoup
 from requests.exceptions import HTTPError
-import controler_selenium
+import controler_selenium 
 
 base_url = 'https://www.javbus.com'
 
@@ -112,8 +112,7 @@ def homeurl_handler(entrance):
     if join_db(entrance) == 30:
         print('done the incremental last page.......')
         return
-    print('sssssssssssssssss')
-    entrance_html = controler_selenium.get_html(entrance)
+    entrance_html = controler_selenium.get_html_with_selenium(entrance)
     next_page_url = pageparser.get_next_page_url(entrance, entrance_html)
     while True:
         if next_page_url != None:
@@ -257,14 +256,17 @@ def actresses_handler(url):
 
 def crawl_actresses():
     max = 250
-    for i in range(1, max):
+    for i in range(11, max):
         url = f"{base_url}/actresses/{i}"
         actresses_handler(url)
 
-if __name__ == '__main__':
-    crawl_actresses()
-   
+def craw_star():
+    result = controler_selenium.process_actress_page('reg',max_pages=1000)
 
+if __name__ == '__main__':
+    #crawl_actresses()
+      
+    craw_star()
     #homeurl_handler('https://www.javbus.com')
     # homeurl_handler('https://www.javbus.com/ja/page/38')
     #homeurl_handler('https://www.javbus.com/ja/uncensored')

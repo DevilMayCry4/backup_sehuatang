@@ -146,7 +146,7 @@ def read_magnets_from_table(url):
         print(f"Error reading magnets from MongoDB: {e}")
         return None
 
-def write_actress_data(actress_info):
+def write_actress_data(actress_info, local_image_path=None):
     """写入女优数据到 MongoDB"""
     try:
         db = get_mongo_connection()
@@ -157,7 +157,14 @@ def write_actress_data(actress_info):
             'name': actress_info.get('name', ''),
             'code': actress_info.get('code', ''),
             'detail_url': actress_info.get('detail_url', ''),
-            'image_url': actress_info.get('image_url', '')
+            'image_url': actress_info.get('image_url', ''),
+            'local_image_path': local_image_path or actress_info.get('local_image_path', ''),
+            'height': actress_info.get('height', ''),
+            'cup_size': actress_info.get('cup_size', ''),
+            'bust': actress_info.get('bust', ''),
+            'waist': actress_info.get('waist', ''),
+            'hip': actress_info.get('hip', ''),
+            'hobby': actress_info.get('hobby', '')
         }
         
         # 使用 upsert 操作，如果 code 已存在则更新，否则插入

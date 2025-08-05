@@ -150,7 +150,7 @@ def parser_content(html):
     """parser_content(html),parser page's content of every url and yield the dict of content"""
 
     soup = BeautifulSoup(html, "html.parser")
-
+    print("sssss")
     '''获取lang'''
     lang_pattern = re.compile(r"var lang = '.*?'")
     match = lang_pattern.findall(soup.prettify())

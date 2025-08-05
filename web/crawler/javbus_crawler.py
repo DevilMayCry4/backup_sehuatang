@@ -345,6 +345,17 @@ class JavBusCrawler:
         reslut = self.crawl_from_url(url, max_pages=10)
         return reslut['movies'],reslut['title']
 
+
+    def handle_star_movies(self, code):
+        """
+        处理星号电影，添加系列信息
+        """
+        for movie in movies:
+            if movie['title'].startswith('*'):
+                movie['series'] = movie['title'][1:].strip()
+                movie['title'] = movie['title'][1:].strip()
+        return movies
+
 # 使用示例
 if __name__ == "__main__":
     crawler = JavBusCrawler()

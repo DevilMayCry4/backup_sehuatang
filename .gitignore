@@ -10,3 +10,5 @@ javbus_web_movies.json
 test.html
 cover/
 actresses/
+logs/gunicorn_access.log
+logs/gunicorn_error.log

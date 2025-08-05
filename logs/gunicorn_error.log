@@ -1823,3 +1823,516 @@ MongoDB连接成功
 Jellyfin检查器初始化成功
 JavBus爬虫初始化成功
 定时任务调度器已启动
+[2025-08-04 12:10:55 +0000] [603058] [CRITICAL] WORKER TIMEOUT (pid:717712)
+[2025-08-04 12:10:55 +0000] [717712] [ERROR] Error handling request (no URI read)
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/workers/sync.py", line 133, in handle
+    req = next(parser)
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/parser.py", line 41, in __next__
+    self.mesg = self.mesg_class(self.cfg, self.unreader, self.source_addr, self.req_count)
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/message.py", line 259, in __init__
+    super().__init__(cfg, unreader, peer_addr)
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/message.py", line 60, in __init__
+    unused = self.parse(self.unreader)
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/message.py", line 274, in parse
+    line, rbuf = self.read_line(unreader, buf, self.limit_request_line)
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/message.py", line 326, in read_line
+    self.get_data(unreader, buf)
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/message.py", line 262, in get_data
+    data = unreader.read()
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/unreader.py", line 36, in read
+    d = self.chunk()
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/unreader.py", line 63, in chunk
+    return self.sock.recv(self.mxchunk)
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/workers/base.py", line 204, in handle_abort
+    sys.exit(1)
+SystemExit: 1
+[2025-08-04 12:10:55 +0000] [717712] [INFO] Worker exiting (pid: 717712)
+[2025-08-04 12:10:56 +0000] [603058] [ERROR] Worker (pid:717712) was sent SIGKILL! Perhaps out of memory?
+[2025-08-04 12:10:56 +0000] [770438] [INFO] Booting worker with pid: 770438
+{'server_url': 'http://dudu213.duckdns.org:8096', 'username': '2', 'password': '2', 'client_name': 'Movie Checker', 'client_version': '1.0.0', 'search_limit': 50, 'timeout': 30}
+MongoDB连接成功
+MongoDB连接成功
+Jellyfin检查器初始化成功
+JavBus爬虫初始化成功
+定时任务调度器已启动
+手动触发订阅检查
+开始执行定时推送任务
+系列 s6m 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 11o0 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 lzq 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 ikw 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 34z 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 ez0 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 fwi 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 4os 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 zva 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 j5e 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 xk5 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 grc 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 3ig 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 4ri 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 12nm 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 rdy 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 4yd 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 ocr 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 3q3 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 1lg 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 3d5 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 gji 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 nal 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 2oe 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 pj5 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 kgx 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 4zl 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 izo 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 ocs 在 0 天前已检查过，跳过（间隔设置：1天）
+定时推送任务执行完成
+[2025-08-04 12:52:54 +0000] [603058] [CRITICAL] WORKER TIMEOUT (pid:603061)
+[2025-08-04 12:52:54 +0000] [603061] [ERROR] Error handling request (no URI read)
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/workers/sync.py", line 133, in handle
+    req = next(parser)
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/parser.py", line 41, in __next__
+    self.mesg = self.mesg_class(self.cfg, self.unreader, self.source_addr, self.req_count)
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/message.py", line 259, in __init__
+    super().__init__(cfg, unreader, peer_addr)
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/message.py", line 60, in __init__
+    unused = self.parse(self.unreader)
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/message.py", line 274, in parse
+    line, rbuf = self.read_line(unreader, buf, self.limit_request_line)
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/message.py", line 326, in read_line
+    self.get_data(unreader, buf)
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/message.py", line 262, in get_data
+    data = unreader.read()
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/unreader.py", line 36, in read
+    d = self.chunk()
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/unreader.py", line 63, in chunk
+    return self.sock.recv(self.mxchunk)
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/workers/base.py", line 204, in handle_abort
+    sys.exit(1)
+SystemExit: 1
+[2025-08-04 12:52:54 +0000] [603061] [INFO] Worker exiting (pid: 603061)
+[2025-08-04 12:52:55 +0000] [603058] [ERROR] Worker (pid:603061) was sent SIGKILL! Perhaps out of memory?
+[2025-08-04 12:52:55 +0000] [810663] [INFO] Booting worker with pid: 810663
+{'server_url': 'http://dudu213.duckdns.org:8096', 'username': '2', 'password': '2', 'client_name': 'Movie Checker', 'client_version': '1.0.0', 'search_limit': 50, 'timeout': 30}
+MongoDB连接成功
+MongoDB连接成功
+Jellyfin检查器初始化成功
+JavBus爬虫初始化成功
+定时任务调度器已启动
+[2025-08-04 14:05:37 +0000] [603058] [CRITICAL] WORKER TIMEOUT (pid:770438)
+[2025-08-04 14:05:37 +0000] [770438] [ERROR] Error handling request (no URI read)
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/workers/sync.py", line 133, in handle
+    req = next(parser)
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/parser.py", line 41, in __next__
+    self.mesg = self.mesg_class(self.cfg, self.unreader, self.source_addr, self.req_count)
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/message.py", line 259, in __init__
+    super().__init__(cfg, unreader, peer_addr)
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/message.py", line 60, in __init__
+    unused = self.parse(self.unreader)
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/message.py", line 274, in parse
+    line, rbuf = self.read_line(unreader, buf, self.limit_request_line)
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/message.py", line 326, in read_line
+    self.get_data(unreader, buf)
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/message.py", line 262, in get_data
+    data = unreader.read()
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/unreader.py", line 36, in read
+    d = self.chunk()
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/unreader.py", line 63, in chunk
+    return self.sock.recv(self.mxchunk)
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/workers/base.py", line 204, in handle_abort
+    sys.exit(1)
+SystemExit: 1
+[2025-08-04 14:05:37 +0000] [770438] [INFO] Worker exiting (pid: 770438)
+[2025-08-04 14:05:38 +0000] [603058] [ERROR] Worker (pid:770438) was sent SIGKILL! Perhaps out of memory?
+[2025-08-04 14:05:38 +0000] [821377] [INFO] Booting worker with pid: 821377
+{'server_url': 'http://dudu213.duckdns.org:8096', 'username': '2', 'password': '2', 'client_name': 'Movie Checker', 'client_version': '1.0.0', 'search_limit': 50, 'timeout': 30}
+MongoDB连接成功
+MongoDB连接成功
+Jellyfin检查器初始化成功
+JavBus爬虫初始化成功
+定时任务调度器已启动
+[2025-08-04 14:19:01 +0000] [603058] [CRITICAL] WORKER TIMEOUT (pid:685810)
+[2025-08-04 14:19:01 +0000] [685810] [ERROR] Error handling request (no URI read)
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/workers/sync.py", line 133, in handle
+    req = next(parser)
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/parser.py", line 41, in __next__
+    self.mesg = self.mesg_class(self.cfg, self.unreader, self.source_addr, self.req_count)
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/message.py", line 259, in __init__
+    super().__init__(cfg, unreader, peer_addr)
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/message.py", line 60, in __init__
+    unused = self.parse(self.unreader)
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/message.py", line 274, in parse
+    line, rbuf = self.read_line(unreader, buf, self.limit_request_line)
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/message.py", line 326, in read_line
+    self.get_data(unreader, buf)
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/message.py", line 262, in get_data
+    data = unreader.read()
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/unreader.py", line 36, in read
+    d = self.chunk()
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/unreader.py", line 63, in chunk
+    return self.sock.recv(self.mxchunk)
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/workers/base.py", line 204, in handle_abort
+    sys.exit(1)
+SystemExit: 1
+[2025-08-04 14:19:01 +0000] [685810] [INFO] Worker exiting (pid: 685810)
+[2025-08-04 14:19:02 +0000] [603058] [ERROR] Worker (pid:685810) was sent SIGKILL! Perhaps out of memory?
+[2025-08-04 14:19:02 +0000] [823290] [INFO] Booting worker with pid: 823290
+{'server_url': 'http://dudu213.duckdns.org:8096', 'username': '2', 'password': '2', 'client_name': 'Movie Checker', 'client_version': '1.0.0', 'search_limit': 50, 'timeout': 30}
+MongoDB连接成功
+MongoDB连接成功
+Jellyfin检查器初始化成功
+JavBus爬虫初始化成功
+定时任务调度器已启动
+[2025-08-04 14:39:46 +0000] [603058] [CRITICAL] WORKER TIMEOUT (pid:810663)
+[2025-08-04 14:39:46 +0000] [810663] [ERROR] Error handling request (no URI read)
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/workers/sync.py", line 133, in handle
+    req = next(parser)
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/parser.py", line 41, in __next__
+    self.mesg = self.mesg_class(self.cfg, self.unreader, self.source_addr, self.req_count)
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/message.py", line 259, in __init__
+    super().__init__(cfg, unreader, peer_addr)
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/message.py", line 60, in __init__
+    unused = self.parse(self.unreader)
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/message.py", line 274, in parse
+    line, rbuf = self.read_line(unreader, buf, self.limit_request_line)
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/message.py", line 326, in read_line
+    self.get_data(unreader, buf)
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/message.py", line 262, in get_data
+    data = unreader.read()
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/unreader.py", line 36, in read
+    d = self.chunk()
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/unreader.py", line 63, in chunk
+    return self.sock.recv(self.mxchunk)
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/workers/base.py", line 204, in handle_abort
+    sys.exit(1)
+SystemExit: 1
+[2025-08-04 14:39:46 +0000] [810663] [INFO] Worker exiting (pid: 810663)
+[2025-08-04 14:39:46 +0000] [826181] [INFO] Booting worker with pid: 826181
+{'server_url': 'http://dudu213.duckdns.org:8096', 'username': '2', 'password': '2', 'client_name': 'Movie Checker', 'client_version': '1.0.0', 'search_limit': 50, 'timeout': 30}
+MongoDB连接成功
+MongoDB连接成功
+Jellyfin检查器初始化成功
+JavBus爬虫初始化成功
+定时任务调度器已启动
+[2025-08-04 15:07:15 +0000] [603058] [CRITICAL] WORKER TIMEOUT (pid:823290)
+[2025-08-04 15:07:15 +0000] [823290] [ERROR] Error handling request (no URI read)
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/workers/sync.py", line 133, in handle
+    req = next(parser)
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/parser.py", line 41, in __next__
+    self.mesg = self.mesg_class(self.cfg, self.unreader, self.source_addr, self.req_count)
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/message.py", line 259, in __init__
+    super().__init__(cfg, unreader, peer_addr)
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/message.py", line 60, in __init__
+    unused = self.parse(self.unreader)
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/message.py", line 274, in parse
+    line, rbuf = self.read_line(unreader, buf, self.limit_request_line)
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/message.py", line 326, in read_line
+    self.get_data(unreader, buf)
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/message.py", line 262, in get_data
+    data = unreader.read()
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/unreader.py", line 36, in read
+    d = self.chunk()
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/unreader.py", line 63, in chunk
+    return self.sock.recv(self.mxchunk)
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/workers/base.py", line 204, in handle_abort
+    sys.exit(1)
+SystemExit: 1
+[2025-08-04 15:07:15 +0000] [823290] [INFO] Worker exiting (pid: 823290)
+[2025-08-04 15:07:15 +0000] [830562] [INFO] Booting worker with pid: 830562
+{'server_url': 'http://dudu213.duckdns.org:8096', 'username': '2', 'password': '2', 'client_name': 'Movie Checker', 'client_version': '1.0.0', 'search_limit': 50, 'timeout': 30}
+MongoDB连接成功
+MongoDB连接成功
+Jellyfin检查器初始化成功
+JavBus爬虫初始化成功
+定时任务调度器已启动
+[2025-08-04 15:08:27 +0000] [603058] [CRITICAL] WORKER TIMEOUT (pid:826181)
+[2025-08-04 15:08:27 +0000] [826181] [ERROR] Error handling request (no URI read)
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/workers/sync.py", line 133, in handle
+    req = next(parser)
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/parser.py", line 41, in __next__
+    self.mesg = self.mesg_class(self.cfg, self.unreader, self.source_addr, self.req_count)
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/message.py", line 259, in __init__
+    super().__init__(cfg, unreader, peer_addr)
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/message.py", line 60, in __init__
+    unused = self.parse(self.unreader)
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/message.py", line 274, in parse
+    line, rbuf = self.read_line(unreader, buf, self.limit_request_line)
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/message.py", line 326, in read_line
+    self.get_data(unreader, buf)
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/message.py", line 262, in get_data
+    data = unreader.read()
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/unreader.py", line 36, in read
+    d = self.chunk()
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/unreader.py", line 63, in chunk
+    return self.sock.recv(self.mxchunk)
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/workers/base.py", line 204, in handle_abort
+    sys.exit(1)
+SystemExit: 1
+[2025-08-04 15:08:27 +0000] [826181] [INFO] Worker exiting (pid: 826181)
+[2025-08-04 15:08:28 +0000] [830781] [INFO] Booting worker with pid: 830781
+{'server_url': 'http://dudu213.duckdns.org:8096', 'username': '2', 'password': '2', 'client_name': 'Movie Checker', 'client_version': '1.0.0', 'search_limit': 50, 'timeout': 30}
+MongoDB连接成功
+MongoDB连接成功
+Jellyfin检查器初始化成功
+JavBus爬虫初始化成功
+定时任务调度器已启动
+[2025-08-04 15:21:02 +0000] [603058] [CRITICAL] WORKER TIMEOUT (pid:821377)
+[2025-08-04 15:21:02 +0000] [821377] [ERROR] Error handling request (no URI read)
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/workers/sync.py", line 133, in handle
+    req = next(parser)
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/parser.py", line 41, in __next__
+    self.mesg = self.mesg_class(self.cfg, self.unreader, self.source_addr, self.req_count)
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/message.py", line 259, in __init__
+    super().__init__(cfg, unreader, peer_addr)
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/message.py", line 60, in __init__
+    unused = self.parse(self.unreader)
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/message.py", line 274, in parse
+    line, rbuf = self.read_line(unreader, buf, self.limit_request_line)
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/message.py", line 326, in read_line
+    self.get_data(unreader, buf)
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/message.py", line 262, in get_data
+    data = unreader.read()
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/unreader.py", line 36, in read
+    d = self.chunk()
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/unreader.py", line 63, in chunk
+    return self.sock.recv(self.mxchunk)
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/workers/base.py", line 204, in handle_abort
+    sys.exit(1)
+SystemExit: 1
+[2025-08-04 15:21:02 +0000] [821377] [INFO] Worker exiting (pid: 821377)
+[2025-08-04 15:21:03 +0000] [832920] [INFO] Booting worker with pid: 832920
+{'server_url': 'http://dudu213.duckdns.org:8096', 'username': '2', 'password': '2', 'client_name': 'Movie Checker', 'client_version': '1.0.0', 'search_limit': 50, 'timeout': 30}
+MongoDB连接成功
+MongoDB连接成功
+Jellyfin检查器初始化成功
+JavBus爬虫初始化成功
+定时任务调度器已启动
+[2025-08-04 15:26:51 +0000] [603058] [CRITICAL] WORKER TIMEOUT (pid:603062)
+[2025-08-04 15:26:51 +0000] [603062] [ERROR] Error handling request (no URI read)
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/workers/sync.py", line 133, in handle
+    req = next(parser)
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/parser.py", line 41, in __next__
+    self.mesg = self.mesg_class(self.cfg, self.unreader, self.source_addr, self.req_count)
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/message.py", line 259, in __init__
+    super().__init__(cfg, unreader, peer_addr)
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/message.py", line 60, in __init__
+    unused = self.parse(self.unreader)
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/message.py", line 274, in parse
+    line, rbuf = self.read_line(unreader, buf, self.limit_request_line)
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/message.py", line 326, in read_line
+    self.get_data(unreader, buf)
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/message.py", line 262, in get_data
+    data = unreader.read()
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/unreader.py", line 36, in read
+    d = self.chunk()
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/unreader.py", line 63, in chunk
+    return self.sock.recv(self.mxchunk)
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/workers/base.py", line 204, in handle_abort
+    sys.exit(1)
+SystemExit: 1
+[2025-08-04 15:26:51 +0000] [603062] [INFO] Worker exiting (pid: 603062)
+[2025-08-04 15:26:52 +0000] [603058] [ERROR] Worker (pid:603062) was sent SIGKILL! Perhaps out of memory?
+[2025-08-04 15:26:52 +0000] [833993] [INFO] Booting worker with pid: 833993
+{'server_url': 'http://dudu213.duckdns.org:8096', 'username': '2', 'password': '2', 'client_name': 'Movie Checker', 'client_version': '1.0.0', 'search_limit': 50, 'timeout': 30}
+MongoDB连接成功
+MongoDB连接成功
+Jellyfin检查器初始化成功
+JavBus爬虫初始化成功
+定时任务调度器已启动
+[2025-08-04 16:47:03 +0000] [603058] [CRITICAL] WORKER TIMEOUT (pid:830562)
+[2025-08-04 16:47:03 +0000] [830562] [ERROR] Error handling request (no URI read)
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/workers/sync.py", line 133, in handle
+    req = next(parser)
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/parser.py", line 41, in __next__
+    self.mesg = self.mesg_class(self.cfg, self.unreader, self.source_addr, self.req_count)
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/message.py", line 259, in __init__
+    super().__init__(cfg, unreader, peer_addr)
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/message.py", line 60, in __init__
+    unused = self.parse(self.unreader)
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/message.py", line 274, in parse
+    line, rbuf = self.read_line(unreader, buf, self.limit_request_line)
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/message.py", line 326, in read_line
+    self.get_data(unreader, buf)
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/message.py", line 262, in get_data
+    data = unreader.read()
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/unreader.py", line 36, in read
+    d = self.chunk()
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/unreader.py", line 63, in chunk
+    return self.sock.recv(self.mxchunk)
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/workers/base.py", line 204, in handle_abort
+    sys.exit(1)
+SystemExit: 1
+[2025-08-04 16:47:03 +0000] [830562] [INFO] Worker exiting (pid: 830562)
+[2025-08-04 16:47:04 +0000] [844412] [INFO] Booting worker with pid: 844412
+{'server_url': 'http://dudu213.duckdns.org:8096', 'username': '2', 'password': '2', 'client_name': 'Movie Checker', 'client_version': '1.0.0', 'search_limit': 50, 'timeout': 30}
+MongoDB连接成功
+MongoDB连接成功
+Jellyfin检查器初始化成功
+JavBus爬虫初始化成功
+定时任务调度器已启动
+[2025-08-04 16:51:50 +0000] [603058] [CRITICAL] WORKER TIMEOUT (pid:833993)
+[2025-08-04 16:51:50 +0000] [833993] [ERROR] Error handling request (no URI read)
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/workers/sync.py", line 133, in handle
+    req = next(parser)
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/parser.py", line 41, in __next__
+    self.mesg = self.mesg_class(self.cfg, self.unreader, self.source_addr, self.req_count)
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/message.py", line 259, in __init__
+    super().__init__(cfg, unreader, peer_addr)
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/message.py", line 60, in __init__
+    unused = self.parse(self.unreader)
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/message.py", line 274, in parse
+    line, rbuf = self.read_line(unreader, buf, self.limit_request_line)
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/message.py", line 326, in read_line
+    self.get_data(unreader, buf)
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/message.py", line 262, in get_data
+    data = unreader.read()
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/unreader.py", line 36, in read
+    d = self.chunk()
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/http/unreader.py", line 63, in chunk
+    return self.sock.recv(self.mxchunk)
+  File "/usr/local/lib/python3.10/site-packages/gunicorn/workers/base.py", line 204, in handle_abort
+    sys.exit(1)
+SystemExit: 1
+[2025-08-04 16:51:50 +0000] [833993] [INFO] Worker exiting (pid: 833993)
+[2025-08-04 16:51:51 +0000] [845136] [INFO] Booting worker with pid: 845136
+{'server_url': 'http://dudu213.duckdns.org:8096', 'username': '2', 'password': '2', 'client_name': 'Movie Checker', 'client_version': '1.0.0', 'search_limit': 50, 'timeout': 30}
+MongoDB连接成功
+MongoDB连接成功
+Jellyfin检查器初始化成功
+JavBus爬虫初始化成功
+定时任务调度器已启动
+开始执行定时推送任务
+系列 s6m 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 11o0 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 lzq 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 ikw 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 34z 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 ez0 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 fwi 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 4os 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 zva 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 j5e 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 xk5 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 grc 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 3ig 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 4ri 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 12nm 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 rdy 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 4yd 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 ocr 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 3q3 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 1lg 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 3d5 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 gji 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 nal 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 2oe 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 pj5 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 kgx 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 4zl 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 izo 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 ocs 在 0 天前已检查过，跳过（间隔设置：1天）
+定时推送任务执行完成
+开始执行定时推送任务
+系列 s6m 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 11o0 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 lzq 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 ikw 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 34z 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 ez0 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 fwi 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 4os 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 zva 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 j5e 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 xk5 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 grc 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 3ig 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 4ri 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 12nm 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 rdy 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 4yd 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 ocr 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 3q3 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 1lg 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 3d5 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 gji 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 nal 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 2oe 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 pj5 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 kgx 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 4zl 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 izo 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 ocs 在 0 天前已检查过，跳过（间隔设置：1天）
+定时推送任务执行完成
+开始执行定时推送任务
+系列 s6m 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 11o0 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 lzq 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 ikw 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 34z 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 ez0 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 fwi 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 4os 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 zva 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 j5e 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 xk5 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 grc 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 3ig 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 4ri 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 12nm 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 rdy 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 4yd 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 ocr 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 3q3 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 1lg 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 3d5 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 gji 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 nal 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 2oe 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 pj5 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 kgx 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 4zl 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 izo 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 ocs 在 0 天前已检查过，跳过（间隔设置：1天）
+定时推送任务执行完成
+开始执行定时推送任务
+系列 s6m 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 11o0 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 lzq 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 ikw 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 34z 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 ez0 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 fwi 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 4os 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 zva 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 j5e 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 xk5 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 grc 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 3ig 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 4ri 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 12nm 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 rdy 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 4yd 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 ocr 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 3q3 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 1lg 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 3d5 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 gji 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 nal 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 2oe 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 pj5 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 kgx 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 4zl 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 izo 在 0 天前已检查过，跳过（间隔设置：1天）
+系列 ocs 在 0 天前已检查过，跳过（间隔设置：1天）
+定时推送任务执行完成

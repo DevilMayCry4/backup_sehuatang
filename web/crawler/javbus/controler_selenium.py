@@ -11,29 +11,23 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
 from selenium.common.exceptions import TimeoutException, WebDriverException
-from pymongo import MongoClient
 from dotenv import load_dotenv
 from urllib.parse import urljoin
 import requests
 import json
 import re
 from bs4 import BeautifulSoup
+# 导入 MongoDB 操作模块
+import controler
 
 # 加载环境变量
 load_dotenv('/root/backup_sehuatang/copy.env')
 
-# MongoDB 配置
-MONGO_URI = os.getenv('MONGO_URI', 'mongodb://192.168.100.227:38234/')
-MONGO_DB = os.getenv('MONGO_DB', 'javbus_crawler')
 # 大模型API配置
 llm_api_url = os.getenv('LLM_API_URL', 'https://open.bigmodel.cn/api/paas/v4/chat/completions')
 llm_api_key = os.getenv('LLM_API_KEY', '')
 llm_model = os.getenv('LLM_MODEL', 'glm-4.5-flash')
-
-# 全局 MongoDB 客户端
-_mongo_client = None
-_mongo_db = None
-
+jav_base_url = 'https://www.javbus.com'
 # 配置日志
 logging.basicConfig(
     level=logging.INFO,
@@ -151,11 +145,8 @@ class SeleniumControler:
                 
                 # 模拟人类行为
                 while(self.simulate_human_behavior()):
-                    print(self.driver.page_source) 
                     # 添加延时
-                    time.sleep(self.delay)
-                
-                
+                    time.sleep(self.delay) 
                 return self.driver.page_source
                 
             except TimeoutException:
@@ -175,7 +166,7 @@ class SeleniumControler:
             if attempt == max_retries - 1:
                 return None
                 
-        return None
+        return page_source
     
     
     
@@ -398,9 +389,6 @@ class SeleniumControler:
                 try:
                     # 提取页面题目
                     questions_html = self.extract_questions_from_page()
-                    print("-------------------============")
-                    print(questions_html)
-                    print("---#########-----============")
                     if not questions_html:
                         logger.warning("无法提取页面题目，使用备用答案")
                         # 使用预设的备用答案
@@ -661,199 +649,17 @@ class SeleniumControler:
         return False
     
     def close_driver(self):
-        """关闭 WebDriver"""
+        """关闭浏览器驱动"""
         if self.driver:
-            self.driver.quit()
-            self.driver = None
-            logger.info("Selenium WebDriver已关闭")
+            try:
+                self.driver.quit()
+                logger.info("WebDriver已关闭")
+            except Exception as e:
+                logger.error(f"关闭WebDriver时出错: {e}")
+            finally:
+                self.driver = None
 
-# MongoDB 连接函数
-def get_mongo_connection():
-    """获取 MongoDB 连接"""
-    global _mongo_client, _mongo_db
-    if _mongo_client is None:
-        _mongo_client = MongoClient(MONGO_URI)
-        _mongo_db = _mongo_client[MONGO_DB]
-    return _mongo_db
 
-def create_db():
-    """创建数据库和集合索引（如果不存在）"""
-    try:
-        db = get_mongo_connection()
-        collection = db.javbus_data
-        
-        # 创建索引以提高查询性能
-        collection.create_index("URL", unique=True)
-        collection.create_index("識別碼")
-        collection.create_index("標題")
-        
-        print("MongoDB collection and indexes created successfully")
-        return True
-    except Exception as e:
-        print(f"Error creating MongoDB collection: {e}")
-        return False
-
-def write_data(dict_jav):
-    """写入数据到 MongoDB"""
-    try:
-        db = get_mongo_connection()
-        collection = db.javbus_data
-        
-        # 准备文档数据
-        document = {
-            'URL': dict_jav.get('URL', ''),
-            '識別碼': dict_jav.get('識別碼', ''),
-            '標題': dict_jav.get('標題', ''),
-            '封面': dict_jav.get('封面', ''),
-            '樣品圖像': dict_jav.get('樣品圖像', ''),
-            '發行日期': dict_jav.get('發行日期', ''),
-            '長度': dict_jav.get('長度', ''),
-            '導演': dict_jav.get('導演', ''),
-            '製作商': dict_jav.get('製作商', ''),
-            '發行商': dict_jav.get('發行商', ''),
-            '系列': dict_jav.get('系列', ''),
-            '演員': dict_jav.get('演員', ''),
-            '類別': dict_jav.get('類別', ''),
-            '磁力链接': dict_jav.get('磁力链接', ''),
-            '無碼': dict_jav.get('無碼', 0)
-        }
-        
-        # 使用 upsert 操作，如果 URL 已存在则更新，否则插入
-        result = collection.update_one(
-            {'URL': document['URL']},
-            {'$set': document},
-            upsert=True
-        )
-        
-        if result.upserted_id:
-            print(f"Inserted new document with URL: {document['URL']}")
-        elif result.modified_count > 0:
-            print(f"Updated existing document with URL: {document['URL']}")
-            
-        return True
-        
-    except Exception as e:
-        print(f"Error writing data to MongoDB: {e}")
-        return False
-
-def refresh_data(dict_jav, url):
-    """更新指定 URL 的磁力链接数据"""
-    try:
-        db = get_mongo_connection()
-        collection = db.javbus_data
-        
-        # 更新磁力链接
-        result = collection.update_one(
-            {'URL': {'$regex': f'^{url}$', '$options': 'i'}},  # 不区分大小写匹配
-            {'$set': {'磁力链接': dict_jav.get('磁力链接', '')}}
-        )
-        
-        if result.modified_count > 0:
-            print(f"Updated magnet links for URL: {url}")
-            return True
-        else:
-            print(f"No document found with URL: {url}")
-            return False
-            
-    except Exception as e:
-        print(f"Error refreshing data in MongoDB: {e}")
-        return False
-
-def check_url_not_in_table(url):
-    """检查 URL 是否不在数据库中，如果不存在返回 True，存在返回 False"""
-    try:
-        db = get_mongo_connection()
-        collection = db.javbus_data
-        
-        # 不区分大小写查询
-        result = collection.find_one(
-            {'URL': {'$regex': f'^{url}$', '$options': 'i'}},
-            {'_id': 1}  # 只返回 _id 字段以提高性能
-        )
-        
-        return result is None
-        
-    except Exception as e:
-        print(f"Error checking URL in MongoDB: {e}")
-        return True  # 出错时假设不存在
-
-def read_magnets_from_table(url):
-    """从数据库中读取指定 URL 的磁力链接"""
-    try:
-        db = get_mongo_connection()
-        collection = db.javbus_data
-        
-        # 不区分大小写查询
-        result = collection.find_one(
-            {'URL': {'$regex': f'^{url}$', '$options': 'i'}},
-            {'磁力链接': 1, '_id': 0}  # 只返回磁力链接字段
-        )
-        
-        if result and result.get('磁力链接'):
-            return [(result['磁力链接'],)]  # 返回与原 SQLite 版本兼容的格式
-        else:
-            return None
-            
-    except Exception as e:
-        print(f"Error reading magnets from MongoDB: {e}")
-        return None
-
-def write_actress_data(actress_info, local_image_path=None):
-    """写入女优数据到 MongoDB"""
-    try:
-        db = get_mongo_connection()
-        collection = db.actresses_data
-        
-        # 准备文档数据
-        document = {
-            'name': actress_info.get('name', ''),
-            'code': actress_info.get('code', ''),
-            'detail_url': actress_info.get('detail_url', ''),
-            'image_url': actress_info.get('image_url', ''),
-            'local_image_path': local_image_path or actress_info.get('local_image_path', '')
-        }
-        
-        # 使用 upsert 操作，如果 code 已存在则更新，否则插入
-        result = collection.update_one(
-            {'code': document['code']},
-            {'$set': document},
-            upsert=True
-        )
-        
-        if result.upserted_id:
-            print(f"Inserted new actress: {document['name']} ({document['code']})")
-        elif result.modified_count > 0:
-            print(f"Updated existing actress: {document['name']} ({document['code']})")
-            
-        return True
-        
-    except Exception as e:
-        print(f"Error writing actress data to MongoDB: {e}")
-        return False
-
-def create_actress_db():
-    """创建女优数据库集合和索引"""
-    try:
-        db = get_mongo_connection()
-        collection = db.actresses_data
-        
-        # 创建索引以提高查询性能
-        collection.create_index("code", unique=True)
-        collection.create_index("name")
-        
-        print("Actresses MongoDB collection and indexes created successfully")
-        return True
-    except Exception as e:
-        print(f"Error creating actresses MongoDB collection: {e}")
-        return False
-
-def close_connection():
-    """关闭 MongoDB 连接"""
-    global _mongo_client
-    if _mongo_client:
-        _mongo_client.close()
-        _mongo_client = None
-        print("MongoDB connection closed")
 
 # Selenium 版本的特殊功能
 def get_html_with_selenium(url, headless=True, delay=3):
@@ -876,10 +682,8 @@ def parse_html_with_selenium(url, parser_func, headless=True, delay=3):
         return None
     finally:
         controller.close_driver()
+  
 
-# 在程序退出时自动关闭连接
-import atexit
-atexit.register(close_connection)
 
 # 使用示例
 if __name__ == "__main__":
@@ -889,9 +693,298 @@ if __name__ == "__main__":
         # 测试获取页面内容
         html = controller.get_page_content("https://www.javbus.com")
         if html:
-            print("成功获取页面内容")
-            print(f"页面长度: {len(html)} 字符")
+            logger.info("成功获取页面内容")
+            logger.info(f"页面长度: {len(html)} 字符")
         else:
-            print("获取页面内容失败")
+            logger.info("获取页面内容失败")
     finally:
         controller.close_driver()
+# 在文件末尾添加以下方法
+
+def parse_actress_info(html_content, base_url=None):
+    """解析演员个人信息"""
+    try:
+        soup = BeautifulSoup(html_content, 'html.parser')
+        
+        # 查找演员信息区域
+        avatar_box = soup.find('div', class_='avatar-box')
+        if not avatar_box:
+            logger.info("未找到演员信息区域")
+            return None
+            
+        actress_info = {}
+        
+        # 获取演员头像
+        photo_frame = avatar_box.find('div', class_='photo-frame')
+        if photo_frame:
+            img = photo_frame.find('img')
+            if img:
+                img_src = img.get('src', '')
+                # 构建完整的图片URL
+                if base_url and img_src:
+                    actress_info['image_url'] = urljoin(base_url, img_src)
+                else:
+                    actress_info['image_url'] = img_src
+                actress_info['name'] = img.get('title', '')
+        
+        # 获取演员详细信息
+        photo_info = avatar_box.find('div', class_='photo-info')
+        if photo_info:
+            # 获取演员名称（如果头像中没有获取到）
+            if not actress_info.get('name'):
+                name_span = photo_info.find('span', class_='pb10')
+                if name_span:
+                    actress_info['name'] = name_span.get_text(strip=True)
+            
+            # 获取身体数据
+            info_paragraphs = photo_info.find_all('p')
+            for p in info_paragraphs:
+                text = p.get_text(strip=True)
+                if '身高:' in text:
+                    actress_info['height'] = text.replace('身高:', '').strip()
+                elif '罩杯:' in text:
+                    actress_info['cup_size'] = text.replace('罩杯:', '').strip()
+                elif '胸圍:' in text:
+                    actress_info['bust'] = text.replace('胸圍:', '').strip()
+                elif '腰圍:' in text:
+                    actress_info['waist'] = text.replace('腰圍:', '').strip()
+                elif '臀圍:' in text:
+                    actress_info['hip'] = text.replace('臀圍:', '').strip()
+                elif '愛好:' in text:
+                    actress_info['hobby'] = text.replace('愛好:', '').strip()
+        
+        return actress_info
+        
+    except Exception as e:
+        logger.info(f"解析演员信息时出错: {e}")
+        return None
+
+def parse_actress_movies(html_content):
+    """解析演员的影片列表"""
+    try:
+        soup = BeautifulSoup(html_content, 'html.parser')
+        movies = []
+        
+        # 查找所有影片项目
+        movie_items = soup.find_all('div', class_='item')
+        
+        for item in movie_items:
+            # 跳过演员信息区域
+            if item.find('div', class_='avatar-box'):
+                continue
+                
+            movie_box = item.find('a', class_='movie-box')
+            if not movie_box:
+                continue
+                
+            movie_info = {}
+            
+            # 获取影片链接
+            movie_info['url'] = movie_box.get('href', '')
+            
+            # 获取封面图片
+            photo_frame = movie_box.find('div', class_='photo-frame')
+            if photo_frame:
+                img = photo_frame.find('img')
+                if img:
+                    movie_info['cover_url'] = img.get('src', '')
+                    movie_info['title'] = img.get('title', '')
+            
+            # 获取影片详细信息
+            photo_info = movie_box.find('div', class_='photo-info')
+            if photo_info:
+                # 获取标题（如果封面中没有获取到）
+                if not movie_info.get('title'):
+                    span = photo_info.find('span')
+                    if span:
+                        title_text = span.get_text(strip=True)
+                        # 移除标签信息，只保留标题
+                        if '<br' in str(span):
+                            title_text = title_text.split('\n')[0] if '\n' in title_text else title_text
+                        movie_info['title'] = title_text
+                
+                # 获取标签信息
+                item_tags = photo_info.find('div', class_='item-tag')
+                tags = []
+                if item_tags:
+                    buttons = item_tags.find_all('button')
+                    for button in buttons:
+                        tag_text = button.get_text(strip=True)
+                        if tag_text:
+                            tags.append(tag_text)
+                movie_info['tags'] = tags
+                
+                # 获取识别码和发行日期
+                date_elements = photo_info.find_all('date')
+                if len(date_elements) >= 2:
+                    movie_info['code'] = date_elements[0].get_text(strip=True)
+                    movie_info['release_date'] = date_elements[1].get_text(strip=True)
+                elif len(date_elements) == 1:
+                    # 尝试从文本中分离识别码和日期
+                    date_text = date_elements[0].get_text(strip=True)
+                    if '/' in date_text:
+                        parts = date_text.split('/')
+                        movie_info['code'] = parts[0].strip()
+                        if len(parts) > 1:
+                            movie_info['release_date'] = parts[1].strip()
+                    else:
+                        movie_info['code'] = date_text
+            
+            if movie_info.get('url'):  # 确保有有效的URL
+                movies.append(movie_info)
+        
+        return movies
+        
+    except Exception as e:
+        logger.info(f"解析演员影片列表时出错: {e}")
+        return []
+
+def get_next_page_url_actress(self, current_url, html_content):
+    """获取演员页面的下一页URL"""
+    try:
+        soup = BeautifulSoup(html_content, 'html.parser')
+        
+        # 查找下一页链接
+        next_link = soup.find('a', id='next')
+        if next_link and next_link.get('href'):
+            next_href = next_link.get('href')
+            
+            # 构建完整的URL
+            from urllib.parse import urljoin, urlparse
+            parsed_current = urlparse(current_url)
+            
+            # 如果是相对路径，构建完整URL
+            if next_href.startswith('/'):
+                next_url = f"{parsed_current.scheme}://{parsed_current.netloc}{next_href}"
+            elif next_href.startswith('http'):
+                next_url = next_href
+            else:
+                # 相对路径处理
+                next_url = urljoin(current_url, next_href)
+            
+            return next_url
+        
+        return None
+        
+    except Exception as e:
+        logger.info(f"获取下一页URL时出错: {e}")
+        return None
+
+def update_actress_data(actress_info,code):
+
+    print('========---------')
+    """更新演员数据到数据库"""
+    try:
+        # 准备演员数据
+        actress_data = {
+            'name': actress_info.get('name', ''),
+            'code': code,
+            'detail_url': actress_info.get('detail_url', ''),
+            'image_url': actress_info.get('image_url', ''),
+            'height': actress_info.get('height', ''),
+            'cup_size': actress_info.get('cup_size', ''),
+            'bust': actress_info.get('bust', ''),
+            'waist': actress_info.get('waist', ''),
+            'hip': actress_info.get('hip', ''),
+            'hobby': actress_info.get('hobby', '')
+        }
+        print("============")
+        print(actress_data)
+        # 写入数据库
+        return controler.write_actress_data(actress_data)
+        
+    except Exception as e:
+        logger.info(f"更新演员数据时出错: {e}")
+        return False
+
+def process_actress_page(code, max_pages=None):
+    """处理演员页面，获取演员信息和所有影片"""
+    try:
+        logger.info(f"开始处理演员页面: {code}")
+        current_url = (f'{jav_base_url}/star/{code}')
+        # 创建数据库
+        controler.create_actress_db()
+        controler.create_db()
+        
+        scontroller = SeleniumControler()
+        page_count = 0
+        total_movies = []
+        actress_info = None
+        
+        while current_url and (max_pages is None or page_count < max_pages):
+            logger.info(f"正在处理第 {page_count + 1} 页: {current_url}")
+            
+            # 获取页面内容
+            html_content = scontroller.get_page_content(current_url)
+            if not html_content:
+                logger.info(f"无法获取页面内容: {current_url}")
+                break
+            
+            # 第一页时解析演员信息
+            if page_count == 0:
+                actress_info = parse_actress_info(html_content, jav_base_url)
+                if actress_info:
+                    actress_info['detail_url'] = current_url
+                    logger.info(f"解析到演员信息: {actress_info.get('name', 'Unknown')}")
+                    # 更新演员数据到数据库
+                    update_actress_data(actress_info,code)
+                else:
+                    logger.info("未能解析到演员信息")
+            
+            # 解析影片列表
+            movies =  parse_actress_movies(html_content)
+            logger.info(f"第 {page_count + 1} 页找到 {len(movies)} 部影片")
+            
+            # 处理每部影片（参考homeurl_handler的逻辑）
+            for movie in movies:
+                if movie.get('url'):
+                    try:
+                        # 获取影片详细页面
+                        movie_html =  scontroller.get_page_content(movie['url'])
+                         
+                        if movie_html:
+                            # 使用pageparser解析影片详细信息
+                            import pageparser
+                            movie_detail = pageparser.parser_content(movie_html)
+                            if movie_detail:
+                                # 写入数据库
+                                controler.write_data(movie_detail)
+                                logger.info(f"✓ 已保存影片: {movie_detail.get('識別碼', 'Unknown')}")
+                            else:
+                                logger.info(f"✗ 无法解析影片详情: {movie['url']}")
+                        else:
+                            logger.info(f"✗ 无法获取影片页面: {movie['url']}")
+                    except Exception as e:
+                        logger.info(f"✗ 处理影片时出错 {movie['url']}: {e}")
+                        continue
+            
+            total_movies.extend(movies)
+            
+            # 获取下一页URL
+            next_url =  get_next_page_url_actress(current_url, html_content)
+            if next_url:
+                logger.info(f"找到下一页: {next_url}")
+                current_url = next_url
+                page_count += 1
+                
+                # 添加延迟避免请求过快
+                import time
+                time.sleep(2)
+            else:
+                logger.info("没有更多页面")
+                break
+        
+        logger.info(f"演员页面处理完成，共处理 {page_count + 1} 页，{len(total_movies)} 部影片")
+        
+        return {
+            'actress_info': actress_info,
+            'total_movies': len(total_movies),
+            'total_pages': page_count + 1,
+            'movies': total_movies
+        }
+        
+    except Exception as e:
+        logger.info(f"处理演员页面时出错: {e}")
+        return None
+
+ 
