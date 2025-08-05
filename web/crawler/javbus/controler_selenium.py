@@ -2,6 +2,7 @@
 #-*-coding:utf-8-*-
 
 import os
+import sys
 import time
 import random
 import logging
@@ -17,8 +18,14 @@ import requests
 import json
 import re
 from bs4 import BeautifulSoup
-import db_manger
+
+# 添加上级目录到路径以导入 database 模块
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
+from database import db_manager
 # 导入 MongoDB 操作模块
+ # 在文件开头添加
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+from selenium_base import BaseSeleniumController
 
 # 加载环境变量
 load_dotenv('/root/backup_sehuatang/copy.env')
@@ -36,76 +43,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# 在 SeleniumControler 类中添加大模型处理方法
-class SeleniumControler:
-    def __init__(self, headless=True, delay=3):
-        self.headless = headless
-        self.delay = delay
-        self.driver = None
-        self.max_retries = 3
-        self.page_load_timeout = 60
-        self.implicit_wait = 15
-        
-        # 初始化 WebDriver
-        self.init_webdriver()
-    
-    def init_webdriver(self):
-        """初始化Selenium WebDriver"""
-        try:
-            chrome_options = Options()
-            
-            # 基本配置
-            if self.headless:
-                chrome_options.add_argument('--headless')
-            chrome_options.add_argument('--no-sandbox')
-            chrome_options.add_argument('--disable-dev-shm-usage')
-            chrome_options.add_argument('--disable-gpu')
-            chrome_options.add_argument('--window-size=1920,1080')
-            
-            # 网络相关配置
-            chrome_options.add_argument('--disable-web-security')
-            chrome_options.add_argument('--disable-features=VizDisplayCompositor')
-            chrome_options.add_argument('--disable-extensions')
-            chrome_options.add_argument('--disable-plugins')
-            chrome_options.add_argument('--disable-images')  # 禁用图片加载
-            
-            # 反检测配置
-            chrome_options.add_argument('--disable-blink-features=AutomationControlled')
-            chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
-            chrome_options.add_experimental_option('useAutomationExtension', False)
-            
-            # 用户代理
-            user_agents = [
-                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-            ]
-            selected_ua = random.choice(user_agents)
-            chrome_options.add_argument(f'--user-agent={selected_ua}')
-            
-            # 禁用图片和CSS加载以提高速度
-            prefs = {
-                "profile.managed_default_content_settings.images": 2,
-                "profile.default_content_setting_values.notifications": 2,
-                "profile.managed_default_content_settings.stylesheets": 2
-            }
-            chrome_options.add_experimental_option("prefs", prefs)
-            
-            self.driver = webdriver.Chrome(options=chrome_options)
-            
-            # 执行反检测脚本
-            self.driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
-            
-            # 设置页面加载超时
-            self.driver.set_page_load_timeout(self.page_load_timeout)
-            self.driver.implicitly_wait(self.implicit_wait)
-            
-            logger.info("Selenium WebDriver初始化成功")
-            
-        except Exception as e:
-            logger.error(f"Selenium WebDriver初始化失败: {e}")
-            self.driver = None
-    
+class JavBusSeleniumController(BaseSeleniumController):
+     
     def get_page_content(self, url, max_retries=None):
         """使用Selenium获取页面内容，支持重试机制"""
         if not self.driver:
@@ -878,7 +817,7 @@ def update_actress_data(actress_info,code):
         print("============")
         print(actress_data)
         # 写入数据库
-        return db_manger.write_actress_data(actress_data)
+        return db_manager.write_actress_data(actress_data)
         
     except Exception as e:
         logger.info(f"更新演员数据时出错: {e}")
@@ -889,15 +828,12 @@ def process_actress_page(code, max_pages=None):
     try:
         logger.info(f"开始处理演员页面: {code}")
         current_url = (f'{jav_base_url}/star/{code}')
-        # 创建数据库
-        db_manger.create_actress_db()
-        db_manger.init_db()
          
         page_count = 0
         total_movies = []
         actress_info = None
         
-        controller = SeleniumControler(headless=True, delay=3)
+        controller = JavBusSeleniumController(headless=True, delay=3)
         while current_url and (max_pages is None or page_count < max_pages):
             logger.info(f"正在处理第 {page_count + 1} 页: {current_url}")
             
@@ -924,7 +860,7 @@ def process_actress_page(code, max_pages=None):
              
             for movie in movies: 
                 code = movie['code'] 
-                if code and db_manger.is_movie_crawed(code) == False:
+                if code and db_manager.is_movie_crawed(code) == False:
                     try:
                         # 获取影片详细页面
                         movie_html =  controller.get_page_content(movie['url']) 
@@ -934,7 +870,7 @@ def process_actress_page(code, max_pages=None):
                             movie_detail = pageparser.parser_content(movie_html)
                             if movie_detail:
                                 # 写入数据库
-                                db_manger.write_jav_movie(movie_detail)
+                                db_manager.write_jav_movie(movie_detail)
                                 logger.info(f"✓ 已保存影片: {movie_detail.get('識別碼', 'Unknown')}")
                             else:
                                 logger.info(f"✗ 无法解析影片详情: {movie['url']}")
@@ -977,7 +913,7 @@ def process_actress_page(code, max_pages=None):
 # 使用示例
 if __name__ == "__main__":
     # 测试 Selenium 控制器
-    controller = SeleniumControler(headless=True, delay=3)
+    controller = JavBusSeleniumController(headless=True, delay=3)
     try:
         # 测试获取页面内容
         html = controller.get_page_content("https://www.javbus.com")

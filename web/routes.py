@@ -11,6 +11,7 @@ from movie_search import process_movie_search_results
 from subscription import trigger_subscription_check_async
 from image_proxy import proxy_image
 
+
 def register_routes(app, jellyfin_checker, crawler):
     """注册所有路由"""
     
@@ -317,17 +318,12 @@ def register_routes(app, jellyfin_checker, crawler):
     def crawl_all_star():
         """更新全部演员电影API"""
         try:
-            # 导入爬虫模块
-            import sys
-            import os
-            sys.path.append(os.path.join(os.path.dirname(__file__), 'crawler', 'javbus'))
-            from crawler import craw_all_star
-            
+            import crawler.javbus.crawler as javbus_crawler
             # 在后台线程中执行爬虫任务
             import threading
             def run_crawler():
                 try:
-                    craw_all_star()
+                    javbus_crawler.craw_all_star()
                     print("全部演员电影更新完成")
                 except Exception as e:
                     print(f"全部演员电影更新错误: {e}")
@@ -351,18 +347,13 @@ def register_routes(app, jellyfin_checker, crawler):
     @app.route('/api/crawl-top-star', methods=['POST'])
     def crawl_top_star():
         """更新热门演员API"""
-        try:
-            # 导入爬虫模块
-            import sys
-            import os
-            sys.path.append(os.path.join(os.path.dirname(__file__), 'crawler', 'javbus'))
-            from crawler import craw_top_star
-            
+        try: 
             # 在后台线程中执行爬虫任务
-            import threading
+            import threading 
             def run_crawler():
                 try:
-                    craw_top_star()
+                    import crawler.javbus.crawler as javbus_crawler
+                    javbus_crawler.craw_top_star()
                     print("热门演员更新完成")
                 except Exception as e:
                     print(f"热门演员更新错误: {e}")

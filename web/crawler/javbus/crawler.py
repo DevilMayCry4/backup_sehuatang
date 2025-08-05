@@ -2,13 +2,17 @@
 #-*-coding:utf-8-*-
 
   
-import pageparser
+import os
 import re
+import sys
 from bs4 import BeautifulSoup
 from requests.exceptions import HTTPError
-import controler_selenium 
-import db_manger
+import controler_selenium  as controller 
 from selenium_crawler import logger
+
+# 添加上级目录到路径以导入 database 模块
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
+from database import db_manager
 
 base_url = 'https://www.javbus.com'
  
@@ -61,12 +65,10 @@ def download_actress_image(image_url, actress_code, actress_name):
 def actresses_handler(url):
     """女优ページを爬取して女优情報を抽出し、データベースに保存する"""
   
-    
-    # 女优数据库初始化
-    db_manger.create_actress_db()
+ 
     
     # actresses ページのHTMLを取得
-    entrance_html = controler_selenium.get_html_with_selenium(url)
+    entrance_html = controller.get_html_with_selenium(url)
     print(entrance_html)
     # BeautifulSoupでHTMLを解析
     soup = BeautifulSoup(entrance_html, 'html.parser')
@@ -113,7 +115,7 @@ def actresses_handler(url):
                         'image_url': full_image_url,
                     }
                     
-                    db_manger.write_actress_data(actress_info)
+                    db_manager.write_actress_data(actress_info)
                     actresses_data.append(actress_info)
                     
                      
@@ -134,25 +136,37 @@ def crawl_actresses():
         actresses_handler(url)
 
 def craw_all_star(): 
-    list = db_manger.get_all_star()
-    all_count = len(list)
-    for index,star in enumerate(list):
-        controler_selenium.process_actress_page(star['code'])
+    cursor = db_manager.get_all_star()
+    if cursor is not None:
+        results = list(cursor)  # 将 Cursor 转换为列表
+        all_count = len(results)
+    else:
+        results = []
+        all_count = 0
+    for index,star in enumerate(results):
+        controller.process_actress_page(star['code'])
         logger.info(f"进度：{index}/{all_count} {star['code']}")
 
 
 def craw_top_star():
-    list = db_manger.get_top_star()
-    all_count = len(list)
-    for index,star in enumerate(list):
-        controler_selenium.process_actress_page(star['code'])
+    cursor = db_manager.get_top_star()
+    if cursor is not None:
+        results = list(cursor)  # 将 Cursor 转换为列表
+        print(results)
+        all_count = len(results)
+    else:
+        results = []
+        all_count = 0
+    for index,star in enumerate(results):
+        controller.process_actress_page(star['code'])
         logger.info(f"进度：{index}/{all_count} {star['code']}")
 
 if __name__ == '__main__':
      
     #crawl_actresses()
       
-    craw_star()
+    craw_top_star()
+
     #homeurl_handler('https://www.javbus.com')
     # homeurl_handler('https://www.javbus.com/ja/page/38')
     #homeurl_handler('https://www.javbus.com/ja/uncensored')

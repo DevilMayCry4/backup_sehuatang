@@ -517,29 +517,7 @@ def close_connection():
         _mongo_client.close()
         _mongo_client = None
         print("MongoDB connection closed")
-
-# Selenium 版本的特殊功能
-def get_html_with_selenium(url, headless=True, delay=3):
-    """使用 Selenium 获取 HTML 内容"""
-    controller = SeleniumControler(headless=headless, delay=delay)
-    try:
-        html_content = controller.get_page_content(url)
-        return html_content
-    finally:
-        controller.close_driver()
-
-def parse_html_with_selenium(url, parser_func, headless=True, delay=3):
-    """使用 Selenium 获取页面并用自定义解析函数处理"""
-    controller = SeleniumControler(headless=headless, delay=delay)
-    try:
-        html_content = controller.get_page_content(url)
-        if html_content:
-            soup = BeautifulSoup(html_content, 'html.parser')
-            return parser_func(soup)
-        return None
-    finally:
-        controller.close_driver()
-
+  
 # 在程序退出时自动关闭连接
 import atexit
 atexit.register(close_connection)

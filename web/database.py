@@ -9,6 +9,8 @@ from datetime import datetime
 from bson import ObjectId
 import sys
 import os
+from dotenv import load_dotenv
+import atexit
 
 # 添加父目录到路径
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -21,6 +23,9 @@ class DatabaseManager:
         self.mongo_collection = None
         self.add_movie_collection = None
         self.found_movies_collection = None
+        # JavBus 爬虫相关集合
+        self.javbus_data_collection = None
+        self.actresses_data_collection = None
         
     def init_mongodb(self):
         """初始化MongoDB连接"""
@@ -35,6 +40,10 @@ class DatabaseManager:
             self.add_movie_collection = self.mongo_db['add_movie']
             self.found_movies_collection = self.mongo_db['found_movies']
             
+            # JavBus 爬虫相关集合
+            self.javbus_data_collection = self.mongo_db['javbus_data']
+            self.actresses_data_collection = self.mongo_db['actresses_data']
+            
             # 创建索引
             self.add_movie_collection.create_index("series_name")
             self.add_movie_collection.create_index("movie_code")
@@ -45,6 +54,15 @@ class DatabaseManager:
             self.found_movies_collection.create_index("series_name")
             self.found_movies_collection.create_index("subscription_id")
             self.found_movies_collection.create_index("found_at")
+            
+            # JavBus 数据索引
+            self.javbus_data_collection.create_index("url", unique=True)
+            self.javbus_data_collection.create_index("code")
+            self.javbus_data_collection.create_index("title")
+            
+            # 女优数据索引
+            self.actresses_data_collection.create_index("code", unique=True)
+            self.actresses_data_collection.create_index("name")
             
             print("MongoDB连接成功")
             return True
@@ -159,6 +177,255 @@ class DatabaseManager:
             return False
             
         return self.found_movies_collection.find_one({'movie_code': movie_code}) is not None
+    
+    # ==================== JavBus 爬虫相关方法 ====================
+    
+    def write_jav_movie(self, dict_jav):
+        """写入JAV电影数据到 MongoDB"""
+        try:
+            if self.javbus_data_collection is None:
+                raise Exception('MongoDB未初始化')
+            
+            # 准备文档数据
+            document = {
+                'url': dict_jav.get('URL', ''),
+                'code': dict_jav.get('識別碼', ''),
+                'title': dict_jav.get('標題', ''),
+                'cover': dict_jav.get('封面', ''), 
+                'release_date': dict_jav.get('發行日期', ''),
+                'duration': dict_jav.get('長度', ''),
+                'director': dict_jav.get('導演', ''),
+                'studio': dict_jav.get('製作商', ''),
+                'publisher': dict_jav.get('發行商', ''),
+                'series': dict_jav.get('系列', ''),
+                'actresses': dict_jav.get('演員', ''),
+                'genres': dict_jav.get('類別', ''),
+                'magnet_links': dict_jav.get('磁力链接', ''),
+                'uncensored': dict_jav.get('無碼', 0)
+            }
+            
+            # 使用 upsert 操作，如果 URL 已存在则更新，否则插入
+            result = self.javbus_data_collection.update_one(
+                {'url': document['url']},
+                {'$set': document},
+                upsert=True
+            )
+            
+            if result.upserted_id:
+                print(f"Inserted new document with URL: {document['url']}")
+            elif result.modified_count > 0:
+                print(f"Updated existing document with URL: {document['url']}")
+                
+            return True
+            
+        except Exception as e:
+            print(f"Error writing data to MongoDB: {e}")
+            return False
+    
+    def refresh_data(self, dict_jav, url):
+        """更新指定 URL 的磁力链接数据"""
+        try:
+            if self.javbus_data_collection is None:
+                raise Exception('MongoDB未初始化')
+            
+            # 更新磁力链接
+            result = self.javbus_data_collection.update_one(
+                {'URL': {'$regex': f'^{url}$', '$options': 'i'}},  # 不区分大小写匹配
+                {'$set': {'磁力链接': dict_jav.get('磁力链接', '')}}
+            )
+            
+            if result.modified_count > 0:
+                print(f"Updated magnet links for URL: {url}")
+                return True
+            else:
+                print(f"No document found with URL: {url}")
+                return False
+                
+        except Exception as e:
+            print(f"Error refreshing data in MongoDB: {e}")
+            return False
+    
+    def check_url_not_in_table(self, url):
+        """检查 URL 是否不在数据库中，如果不存在返回 True，存在返回 False"""
+        try:
+            if self.javbus_data_collection is None:
+                return True
+            
+            # 不区分大小写查询
+            result = self.javbus_data_collection.find_one(
+                {'URL': {'$regex': f'^{url}$', '$options': 'i'}},
+                {'_id': 1}  # 只返回 _id 字段以提高性能
+            )
+            
+            return result is None
+            
+        except Exception as e:
+            print(f"Error checking URL in MongoDB: {e}")
+            return True  # 出错时假设不存在
+    
+    def is_movie_crawed(self, code):
+        """检查电影是否已被爬取"""
+        try:
+            if self.javbus_data_collection is None:
+                return False
+            
+            # 不区分大小写查询
+            result = self.javbus_data_collection.find_one(
+                {'code': {'$regex': f'^{code}$', '$options': 'i'}}
+            ) 
+            return result is not None
+                
+        except Exception as e:
+            print(f"Error checking movie crawled status: {e}")
+            return False
+    
+    def read_magnets_from_table(self, url):
+        """从数据库中读取指定 URL 的磁力链接"""
+        try:
+            if self.javbus_data_collection is None:
+                return None
+            
+            # 不区分大小写查询
+            result = self.javbus_data_collection.find_one(
+                {'URL': {'$regex': f'^{url}$', '$options': 'i'}},
+                {'磁力链接': 1, '_id': 0}  # 只返回磁力链接字段
+            )
+            
+            if result and result.get('磁力链接'):
+                return [(result['磁力链接'],)]  # 返回与原 SQLite 版本兼容的格式
+            else:
+                return None
+                
+        except Exception as e:
+            print(f"Error reading magnets from MongoDB: {e}")
+            return None
+    
+    def write_actress_data(self, actress_info, local_image_path=None):
+        """写入女优数据到 MongoDB"""
+        try:
+            if self.actresses_data_collection is None:
+                raise Exception('MongoDB未初始化')
+            
+            # 准备文档数据
+            document = {
+                'name': actress_info.get('name', ''),
+                'code': actress_info.get('code', ''),
+                'detail_url': actress_info.get('detail_url', ''),
+                'image_url': actress_info.get('image_url', ''),
+                'local_image_path': local_image_path or actress_info.get('local_image_path', ''),
+                'height': actress_info.get('height', ''),
+                'cup_size': actress_info.get('cup_size', ''),
+                'bust': actress_info.get('bust', ''),
+                'waist': actress_info.get('waist', ''),
+                'hip': actress_info.get('hip', ''),
+                'hobby': actress_info.get('hobby', '')
+            }
+            
+            # 使用 upsert 操作，如果 code 已存在则更新，否则插入
+            result = self.actresses_data_collection.update_one(
+                {'code': document['code']},
+                {'$set': document},
+                upsert=True
+            )
+            
+            if result.upserted_id:
+                print(f"Inserted new actress: {document['name']} ({document['code']})")
+            elif result.modified_count > 0:
+                print(f"Updated existing actress: {document['name']} ({document['code']})")
+                
+            return True
+            
+        except Exception as e:
+            print(f"Error writing actress data to MongoDB: {e}")
+            return False
+    
+    def get_all_star(self):
+        """获取所有女优数据"""
+        try:
+            if self.actresses_data_collection is None:
+                return None
+            return self.actresses_data_collection.find()
+        except Exception as e:
+            print(f"Error getting all actresses from MongoDB: {e}")
+            return None
+    
+    def get_top_star(self):
+        """获取前10个女优数据"""
+        try:
+            if self.actresses_data_collection is None:
+                return None
+            return self.actresses_data_collection.find().sort("_id", 1).limit(100)
+        except Exception as e:
+            print(f"Error getting top actresses from MongoDB: {e}")
+            return None
+    
+    def close_connection(self):
+        """关闭 MongoDB 连接"""
+        if self.mongo_client:
+            self.mongo_client.close()
+            self.mongo_client = None
+            print("MongoDB connection closed")
 
 # 创建全局数据库管理器实例
 db_manager = DatabaseManager()
+db_manager.init_mongodb()
+
+# 在程序退出时自动关闭连接
+def cleanup_db_connection():
+    db_manager.close_connection()
+
+atexit.register(cleanup_db_connection)
+
+# ==================== 兼容性函数 ====================
+# 为了保持与原 db_manger.py 的兼容性，提供以下函数
+
+def get_mongo_connection():
+    """获取 MongoDB 连接 - 兼容性函数"""
+    if db_manager.mongo_db is None:
+        db_manager.init_mongodb()
+    return db_manager.mongo_db
+
+def init_db():
+    """初始化数据库 - 兼容性函数"""
+    return db_manager.init_mongodb()
+
+def write_jav_movie(dict_jav):
+    """写入JAV电影数据 - 兼容性函数"""
+    return db_manager.write_jav_movie(dict_jav)
+
+def refresh_data(dict_jav, url):
+    """更新磁力链接数据 - 兼容性函数"""
+    return db_manager.refresh_data(dict_jav, url)
+
+def check_url_not_in_table(url):
+    """检查URL是否不在表中 - 兼容性函数"""
+    return db_manager.check_url_not_in_table(url)
+
+def is_movie_crawed(code):
+    """检查电影是否已爬取 - 兼容性函数"""
+    return db_manager.is_movie_crawed(code)
+
+def read_magnets_from_table(url):
+    """读取磁力链接 - 兼容性函数"""
+    return db_manager.read_magnets_from_table(url)
+
+def write_actress_data(actress_info, local_image_path=None):
+    """写入女优数据 - 兼容性函数"""
+    return db_manager.write_actress_data(actress_info, local_image_path)
+
+def create_actress_db():
+    """创建女优数据库 - 兼容性函数"""
+    # 索引创建已在 init_mongodb 中处理
+    return True
+
+def close_connection():
+    """关闭连接 - 兼容性函数"""
+    return db_manager.close_connection()
+
+def get_all_star():
+    """获取所有女优 - 兼容性函数"""
+    return db_manager.get_all_star()
+
+def get_top_star():
+    """获取热门女优 - 兼容性函数"""
+    return db_manager.get_top_star()

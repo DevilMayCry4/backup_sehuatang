@@ -1,0 +1,134 @@
+2025-08-05 08:53:17,762 - INFO - Selenium WebDriver初始化成功
+2025-08-05 08:57:09,446 - INFO - Selenium WebDriver初始化成功
+2025-08-05 08:57:15,017 - ERROR - MongoDB连接失败: No servers found yet, Timeout: 5.0s, Topology Description: <TopologyDescription id: 6891c76545efdabff87551c1, topology_type: Unknown, servers: [<ServerDescription ('dudu213.duckdns.org', 38234) server_type: Unknown, rtt: None>]>
+2025-08-05 08:57:20,869 - INFO - Selenium WebDriver初始化成功
+2025-08-05 08:57:24,313 - INFO - 开始从URL爬取: https://sehuatang.org/forum.php?mod=forumdisplay&fid=103&filter=typeid&typeid=480&page=0
+2025-08-05 08:57:24,313 - INFO - 正在访问: https://sehuatang.org/forum.php?mod=forumdisplay&fid=103&filter=typeid&typeid=480&page=0
+2025-08-05 08:57:26,466 - INFO - 检测到年龄确认页面，正在点击确认按钮...
+2025-08-05 08:57:29,561 - INFO - 已点击年龄确认按钮
+2025-08-05 08:57:32,425 - INFO - 已获取年龄确认后的新页面数据
+2025-08-05 08:57:32,427 - INFO - 找到 30 个详情页链接
+2025-08-05 08:57:32,427 - INFO - 进度: 1/30
+2025-08-05 08:57:32,427 - INFO - 正在爬取: https://sehuatang.org/forum.php?mod=viewthread&tid=2933162&extra=page%3D1%26filter%3Dtypeid%26typeid%3D480
+2025-08-05 08:57:32,428 - INFO - 正在访问: https://sehuatang.org/forum.php?mod=viewthread&tid=2933162&extra=page%3D1%26filter%3Dtypeid%26typeid%3D480
+2025-08-05 08:57:35,969 - WARNING - MongoDB未连接，跳过数据保存
+2025-08-05 08:57:35,969 - INFO - 成功提取: START-350  [自提征用]送货期间的 NTR：一名新婚妻子在陪同已婚老司机送货时 小湊よつ葉
+2025-08-05 08:57:37,223 - INFO - 进度: 2/30
+2025-08-05 08:57:37,224 - INFO - 正在爬取: https://sehuatang.org/forum.php?mod=viewthread&tid=2937029&extra=page%3D1%26filter%3Dtypeid%26typeid%3D480
+2025-08-05 08:57:37,225 - INFO - 正在访问: https://sehuatang.org/forum.php?mod=viewthread&tid=2937029&extra=page%3D1%26filter%3Dtypeid%26typeid%3D480
+2025-08-05 08:57:40,795 - WARNING - MongoDB未连接，跳过数据保存
+2025-08-05 08:57:40,795 - INFO - 成功提取: IPZZ-600  [自提征用]渴望被轮奸的抖M美少女，越被侵犯越上瘾，彻底被快感征服 樱若菜
+2025-08-05 08:57:42,733 - INFO - 进度: 3/30
+2025-08-05 08:57:42,733 - INFO - 正在爬取: https://sehuatang.org/forum.php?mod=viewthread&tid=2933156&extra=page%3D1%26filter%3Dtypeid%26typeid%3D480
+2025-08-05 08:57:42,734 - INFO - 正在访问: https://sehuatang.org/forum.php?mod=viewthread&tid=2933156&extra=page%3D1%26filter%3Dtypeid%26typeid%3D480
+2025-08-05 08:57:43,337 - WARNING - Retrying (Retry(total=2, connect=None, read=None, redirect=None, status=None)) after connection broken by 'ConnectionResetError(104, 'Connection reset by peer')': /session/ba10379b2e4d38f2529d66717be01424
+2025-08-05 08:57:43,339 - WARNING - Retrying (Retry(total=1, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f73ce912ef0>: Failed to establish a new connection: [Errno 111] Connection refused')': /session/ba10379b2e4d38f2529d66717be01424
+2025-08-05 08:57:43,340 - WARNING - Retrying (Retry(total=0, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f73ce911bd0>: Failed to establish a new connection: [Errno 111] Connection refused')': /session/ba10379b2e4d38f2529d66717be01424
+2025-08-05 08:57:43,348 - INFO - Selenium WebDriver已关闭
+2025-08-05 09:27:02,181 - INFO - Selenium WebDriver初始化成功
+2025-08-05 09:27:05,298 - INFO - MongoDB连接成功: mongodb://dudu213.duckdns.org:38234/
+2025-08-05 09:27:43,689 - INFO - Selenium WebDriver初始化成功
+2025-08-05 09:27:49,875 - INFO - 开始从URL爬取: https://sehuatang.org/forum.php?mod=forumdisplay&fid=103&filter=typeid&typeid=480&page=0
+2025-08-05 09:27:49,876 - INFO - 正在访问: https://sehuatang.org/forum.php?mod=forumdisplay&fid=103&filter=typeid&typeid=480&page=0
+2025-08-05 09:28:58,582 - ERROR - 页面加载超时: https://sehuatang.org/forum.php?mod=forumdisplay&fid=103&filter=typeid&typeid=480&page=0 (尝试1/3)
+2025-08-05 09:28:59,266 - INFO - 第2次重试，等待13.0秒...
+2025-08-05 09:29:12,281 - INFO - 正在访问: https://sehuatang.org/forum.php?mod=forumdisplay&fid=103&filter=typeid&typeid=480&page=0
+2025-08-05 09:33:58,785 - INFO - Selenium WebDriver初始化成功
+2025-08-05 09:34:01,991 - INFO - MongoDB连接成功: mongodb://dudu213.duckdns.org:38234/
+2025-08-05 09:34:04,608 - INFO - Selenium WebDriver初始化成功
+2025-08-05 09:34:04,608 - INFO - 开始从URL爬取: https://sehuatang.org/forum.php?mod=forumdisplay&fid=103&filter=typeid&typeid=480&page=0
+2025-08-05 09:34:04,608 - INFO - 正在访问: https://sehuatang.org/forum.php?mod=forumdisplay&fid=103&filter=typeid&typeid=480&page=0
+2025-08-05 09:34:09,824 - INFO - 检测到年龄确认页面，正在点击确认按钮...
+2025-08-05 09:34:13,406 - INFO - 已点击年龄确认按钮
+2025-08-05 09:34:16,258 - INFO - 已获取年龄确认后的新页面数据
+2025-08-05 09:34:20,076 - INFO - 找到 30 个详情页链接
+2025-08-05 09:34:20,077 - INFO - 进度: 1/30
+2025-08-05 09:34:20,077 - INFO - 正在爬取: https://sehuatang.org/forum.php?mod=viewthread&tid=2935227&extra=page%3D1%26filter%3Dtypeid%26typeid%3D480
+2025-08-05 09:34:20,077 - INFO - 正在访问: https://sehuatang.org/forum.php?mod=viewthread&tid=2935227&extra=page%3D1%26filter%3Dtypeid%26typeid%3D480
+2025-08-05 09:34:22,823 - INFO - 保存到MongoDB: PRED-781  [自提征用]突击报导 亲身潜入 揭露地下风俗实况 山岸绮花
+2025-08-05 09:34:22,823 - INFO - 成功提取: PRED-781  [自提征用]突击报导 亲身潜入 揭露地下风俗实况 山岸绮花
+2025-08-05 09:34:27,469 - INFO - 进度: 2/30
+2025-08-05 09:34:27,470 - INFO - 正在爬取: https://sehuatang.org/forum.php?mod=viewthread&tid=2933151&extra=page%3D1%26filter%3Dtypeid%26typeid%3D480
+2025-08-05 09:34:27,470 - INFO - 正在访问: https://sehuatang.org/forum.php?mod=viewthread&tid=2933151&extra=page%3D1%26filter%3Dtypeid%26typeid%3D480
+2025-08-05 09:34:30,583 - INFO - 保存到MongoDB: LULU-387  [自提征用]善良到过分的敏感巨乳妻子，被邻居垃圾屋巨根渣男紧紧拥抱-小坂ひまり
+2025-08-05 09:34:30,584 - INFO - 成功提取: LULU-387  [自提征用]善良到过分的敏感巨乳妻子，被邻居垃圾屋巨根渣男紧紧拥抱-小坂ひまり
+2025-08-05 09:34:32,490 - INFO - 进度: 3/30
+2025-08-05 09:34:32,491 - INFO - 正在爬取: https://sehuatang.org/forum.php?mod=viewthread&tid=2937039&extra=page%3D1%26filter%3Dtypeid%26typeid%3D480
+2025-08-05 09:34:32,491 - INFO - 正在访问: https://sehuatang.org/forum.php?mod=viewthread&tid=2937039&extra=page%3D1%26filter%3Dtypeid%26typeid%3D480
+2025-08-05 09:34:35,096 - INFO - 保存到MongoDB: SQTE-617   [自提征用]和女朋友度假。她性欲旺盛，比起泡温泉，她更喜欢做爱 北野未奈
+2025-08-05 09:34:35,096 - INFO - 成功提取: SQTE-617   [自提征用]和女朋友度假。她性欲旺盛，比起泡温泉，她更喜欢做爱 北野未奈
+2025-08-05 09:34:39,920 - INFO - 进度: 4/30
+2025-08-05 09:34:39,920 - INFO - 正在爬取: https://sehuatang.org/forum.php?mod=viewthread&tid=2933162&extra=page%3D1%26filter%3Dtypeid%26typeid%3D480
+2025-08-05 09:34:39,920 - INFO - 正在访问: https://sehuatang.org/forum.php?mod=viewthread&tid=2933162&extra=page%3D1%26filter%3Dtypeid%26typeid%3D480
+2025-08-05 09:34:42,645 - WARNING - Retrying (Retry(total=2, connect=None, read=None, redirect=None, status=None)) after connection broken by 'ConnectionResetError(104, 'Connection reset by peer')': /session/fea2a849086cee2a760a078db8afda6a
+2025-08-05 09:34:42,649 - WARNING - Retrying (Retry(total=1, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f2730e63460>: Failed to establish a new connection: [Errno 111] Connection refused')': /session/fea2a849086cee2a760a078db8afda6a
+2025-08-05 09:34:42,653 - WARNING - Retrying (Retry(total=0, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f2730e63070>: Failed to establish a new connection: [Errno 111] Connection refused')': /session/fea2a849086cee2a760a078db8afda6a
+2025-08-05 09:34:42,663 - INFO - Selenium WebDriver已关闭
+2025-08-05 09:34:42,675 - INFO - MongoDB连接已关闭
+2025-08-05 09:46:56,657 - INFO - Selenium WebDriver初始化成功
+2025-08-05 09:46:56,905 - INFO - MongoDB连接成功: mongodb://dudu213.duckdns.org:38234/
+2025-08-05 09:46:58,092 - INFO - Selenium WebDriver初始化成功
+2025-08-05 09:46:58,092 - INFO - 开始从URL爬取: https://sehuatang.org/forum.php?mod=forumdisplay&fid=103&filter=typeid&typeid=480&page=0
+2025-08-05 09:46:58,092 - INFO - 正在访问: https://sehuatang.org/forum.php?mod=forumdisplay&fid=103&filter=typeid&typeid=480&page=0
+2025-08-05 09:47:05,173 - INFO - 检测到年龄确认页面，正在点击确认按钮...
+2025-08-05 09:47:08,018 - INFO - 已点击年龄确认按钮
+2025-08-05 09:47:11,153 - INFO - 已获取年龄确认后的新页面数据
+2025-08-05 09:47:11,617 - INFO - 跳过已存在的记录: tid=2937039
+2025-08-05 09:47:12,117 - INFO - 跳过已存在的记录: tid=2935227
+2025-08-05 09:47:12,346 - INFO - 跳过已存在的记录: tid=2933151
+2025-08-05 09:47:12,443 - INFO - 找到 27 个详情页链接
+2025-08-05 09:47:12,443 - INFO - 进度: 1/27
+2025-08-05 09:47:12,443 - INFO - 正在爬取: https://sehuatang.org/forum.php?mod=viewthread&tid=2935237&extra=page%3D1%26filter%3Dtypeid%26typeid%3D480
+2025-08-05 09:47:12,443 - INFO - 正在访问: https://sehuatang.org/forum.php?mod=viewthread&tid=2935237&extra=page%3D1%26filter%3Dtypeid%26typeid%3D480
+2025-08-05 09:47:16,943 - INFO - 保存到MongoDB: PRST-021  [自提征用]溢满淫荡汁液150% 高潮绝顶的女人 椎名ななみ
+2025-08-05 09:47:16,943 - INFO - 成功提取: PRST-021  [自提征用]溢满淫荡汁液150% 高潮绝顶的女人 椎名ななみ
+2025-08-05 09:47:19,498 - INFO - 进度: 2/27
+2025-08-05 09:47:19,498 - INFO - 正在爬取: https://sehuatang.org/forum.php?mod=viewthread&tid=2933146&extra=page%3D1%26filter%3Dtypeid%26typeid%3D480
+2025-08-05 09:47:19,499 - INFO - 正在访问: https://sehuatang.org/forum.php?mod=viewthread&tid=2933146&extra=page%3D1%26filter%3Dtypeid%26typeid%3D480
+2025-08-05 09:47:22,390 - INFO - 保存到MongoDB: ADN-708  [自提征用]侵入者 向井藍
+2025-08-05 09:47:22,390 - INFO - 成功提取: ADN-708  [自提征用]侵入者 向井藍
+2025-08-05 09:47:26,697 - INFO - 进度: 3/27
+2025-08-05 09:47:26,698 - INFO - 正在爬取: https://sehuatang.org/forum.php?mod=viewthread&tid=2937028&extra=page%3D1%26filter%3Dtypeid%26typeid%3D480
+2025-08-05 09:47:26,698 - INFO - 正在访问: https://sehuatang.org/forum.php?mod=viewthread&tid=2937028&extra=page%3D1%26filter%3Dtypeid%26typeid%3D480
+2025-08-05 09:47:29,294 - INFO - 保存到MongoDB: IPZZ-383  [自提征用]与在校任教的H罩杯写真偶像学生发生关系的那天起...望乃るい
+2025-08-05 09:47:29,294 - INFO - 成功提取: IPZZ-383  [自提征用]与在校任教的H罩杯写真偶像学生发生关系的那天起...望乃るい
+2025-08-05 09:47:32,740 - INFO - 进度: 4/27
+2025-08-05 09:47:32,740 - INFO - 正在爬取: https://sehuatang.org/forum.php?mod=viewthread&tid=2937045&extra=page%3D1%26filter%3Dtypeid%26typeid%3D480
+2025-08-05 09:47:32,741 - INFO - 正在访问: https://sehuatang.org/forum.php?mod=viewthread&tid=2937045&extra=page%3D1%26filter%3Dtypeid%26typeid%3D480
+2025-08-05 09:47:35,775 - INFO - 保存到MongoDB: START-338  [自提征用]被媚药洗脑的赛车女郎，狂野色情的一面！ 綾瀬天
+2025-08-05 09:47:35,776 - INFO - 成功提取: START-338  [自提征用]被媚药洗脑的赛车女郎，狂野色情的一面！ 綾瀬天
+2025-08-05 09:47:36,881 - INFO - 进度: 5/27
+2025-08-05 09:47:36,881 - INFO - 正在爬取: https://sehuatang.org/forum.php?mod=viewthread&tid=2935236&extra=page%3D1%26filter%3Dtypeid%26typeid%3D480
+2025-08-05 09:47:36,882 - INFO - 正在访问: https://sehuatang.org/forum.php?mod=viewthread&tid=2935236&extra=page%3D1%26filter%3Dtypeid%26typeid%3D480
+2025-08-05 09:47:40,420 - INFO - 保存到MongoDB: PRED-790  [自提征用]拥有绝伦身材的新人女教师被校园混混当成一样肉便器-蒼乃美月
+2025-08-05 09:47:40,420 - INFO - 成功提取: PRED-790  [自提征用]拥有绝伦身材的新人女教师被校园混混当成一样肉便器-蒼乃美月
+2025-08-05 09:47:40,645 - WARNING - Retrying (Retry(total=2, connect=None, read=None, redirect=None, status=None)) after connection broken by 'ConnectionResetError(104, 'Connection reset by peer')': /session/612b273d86f224bc8327d3ebc7f899a3
+2025-08-05 09:47:40,650 - WARNING - Retrying (Retry(total=1, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7fc106ae5c30>: Failed to establish a new connection: [Errno 111] Connection refused')': /session/612b273d86f224bc8327d3ebc7f899a3
+2025-08-05 09:47:40,658 - WARNING - Retrying (Retry(total=0, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7fc106ae5db0>: Failed to establish a new connection: [Errno 111] Connection refused')': /session/612b273d86f224bc8327d3ebc7f899a3
+2025-08-05 09:47:40,666 - INFO - Selenium WebDriver已关闭
+2025-08-05 09:47:40,675 - INFO - MongoDB连接已关闭
+2025-08-05 09:56:36,548 - INFO - Selenium WebDriver初始化成功
+2025-08-05 09:56:36,628 - INFO - MongoDB连接成功: mongodb://dudu213.duckdns.org:38234/
+2025-08-05 09:56:37,314 - INFO - Selenium WebDriver初始化成功
+2025-08-05 09:56:37,314 - INFO - 开始从URL爬取: https://sehuatang.org/forum.php?mod=forumdisplay&fid=103&filter=typeid&typeid=480&page=0
+2025-08-05 09:56:37,315 - INFO - 正在访问: https://sehuatang.org/forum.php?mod=forumdisplay&fid=103&filter=typeid&typeid=480&page=0
+2025-08-05 09:56:43,260 - INFO - 检测到年龄确认页面，正在点击确认按钮...
+2025-08-05 09:56:48,966 - INFO - 已点击年龄确认按钮
+2025-08-05 09:56:52,401 - INFO - 已获取年龄确认后的新页面数据
+2025-08-05 09:56:52,743 - INFO - 跳过已存在的记录: tid=2937045
+2025-08-05 09:56:52,800 - INFO - 跳过已存在的记录: tid=2937039
+2025-08-05 09:56:52,916 - INFO - 跳过已存在的记录: tid=2937028
+2025-08-05 09:56:52,987 - INFO - 跳过已存在的记录: tid=2935237
+2025-08-05 09:56:53,005 - INFO - 跳过已存在的记录: tid=2935236
+2025-08-05 09:56:53,094 - INFO - 跳过已存在的记录: tid=2935227
+2025-08-05 09:56:53,238 - INFO - 跳过已存在的记录: tid=2933151
+2025-08-05 09:56:53,333 - INFO - 跳过已存在的记录: tid=2933146
+2025-08-05 09:56:53,352 - INFO - 找到 22 个详情页链接
+2025-08-05 09:56:53,353 - INFO - 进度: 1/22
+2025-08-05 09:56:53,353 - INFO - 正在爬取: https://sehuatang.org/forum.php?mod=viewthread&tid=2937030&extra=page%3D1%26filter%3Dtypeid%26typeid%3D480
+2025-08-05 09:56:53,353 - INFO - 正在访问: https://sehuatang.org/forum.php?mod=viewthread&tid=2937030&extra=page%3D1%26filter%3Dtypeid%26typeid%3D480
+2025-08-05 09:57:00,147 - INFO - 保存到MongoDB: LULU-383  [自提征用]我不能忍受大乳房女孩的不自觉的透明胸罩的挑衅。 佐山由依
+2025-08-05 09:57:00,149 - INFO - 成功提取: LULU-383  [自提征用]我不能忍受大乳房女孩的不自觉的透明胸罩的挑衅。 佐山由依
+2025-08-05 09:57:04,555 - INFO - 进度: 2/22
+2025-08-05 09:57:04,555 - INFO - 正在爬取: https://sehuatang.org/forum.php?mod=viewthread&tid=2937027&extra=page%3D1%26filter%3Dtypeid%26typeid%3D480
+2025-08-05 09:57:04,556 - INFO - 正在访问: https://sehuatang.org/forum.php?mod=viewthread&tid=2937027&extra=page%3D1%26filter%3Dtypeid%26typeid%3D480

@@ -22,7 +22,12 @@ import random
 import logging
 from logging.handlers import RotatingFileHandler
 import os
-from config import config  # 导入配置
+import sys
+
+# 添加上级目录到路径以导入 database 模块
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
+from config import config  
+ # 导入配置
 
 # 配置日志
 # 创建日志目录
@@ -53,104 +58,12 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-class SeleniumWebCrawler:
-    def __init__(self, base_url=None, delay=None, mongo_uri=None, headless=None):
-        # 从配置文件获取默认值
-        crawler_config = config.get_crawler_config()
-        mongo_config = config.get_mongo_config()
-        
-        self.base_url = crawler_config['base_url']
-        self.delay = delay if delay is not None else crawler_config['delay']
-        self.mongo_uri = mongo_uri or mongo_config['uri']
-        self.headless = headless if headless is not None else crawler_config['headless']
-        self.max_retries = crawler_config['max_retries']
-        self.page_load_timeout = crawler_config['page_load_timeout']
-        self.implicit_wait = crawler_config['implicit_wait']
-        
-        # MongoDB配置
-        self.mongo_db_name = mongo_config['db_name']
-        self.mongo_collection_name = mongo_config['collection_name']
-        
-        self.driver = None
-        
-        # 初始化MongoDB连接
-        self.mongo_client = None
-        self.db = None
-        self.collection = None
-        self.init_mongodb()
-        
-        # 初始化Selenium WebDriver
-        self.init_webdriver()
+# 修改类名和继承
+from selenium_base import BaseSeleniumController
 
-    def init_webdriver(self):
-        """初始化Selenium WebDriver"""
-        try:
-            chrome_options = Options()
-            
-            # 基本配置
-            if self.headless:
-                chrome_options.add_argument('--headless')
-            chrome_options.add_argument('--no-sandbox')
-            chrome_options.add_argument('--disable-dev-shm-usage')
-            chrome_options.add_argument('--disable-gpu')
-            chrome_options.add_argument('--window-size=1920,1080')
-            
-            # 网络相关配置
-            chrome_options.add_argument('--disable-web-security')
-            chrome_options.add_argument('--disable-features=VizDisplayCompositor')
-            chrome_options.add_argument('--disable-extensions')
-            chrome_options.add_argument('--disable-plugins')
-            chrome_options.add_argument('--disable-images')  # 禁用图片加载
-            
-            # 反检测配置
-            chrome_options.add_argument('--disable-blink-features=AutomationControlled')
-            chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
-            chrome_options.add_experimental_option('useAutomationExtension', False)
-            
-            # 用户代理（使用更常见的用户代理）
-            user_agents = [
-                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-            ]
-            selected_ua = random.choice(user_agents)
-            chrome_options.add_argument(f'--user-agent={selected_ua}')
-            
-            # 禁用图片和CSS加载以提高速度
-            prefs = {
-                "profile.managed_default_content_settings.images": 2,
-                "profile.default_content_setting_values.notifications": 2,
-                "profile.managed_default_content_settings.stylesheets": 2
-            }
-            chrome_options.add_experimental_option("prefs", prefs)
-            
-            self.driver = webdriver.Chrome(options=chrome_options)
-            
-            # 执行反检测脚本
-            self.driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
-            
-            # 设置页面加载超时
-            self.driver.set_page_load_timeout(60)
-            self.driver.implicitly_wait(15)
-            
-            logger.info("Selenium WebDriver初始化成功")
-            
-        except Exception as e:
-            logger.error(f"Selenium WebDriver初始化失败: {e}")
-            self.driver = None
-    
-    def init_mongodb(self):
-        """初始化MongoDB连接"""
-        try:
-            self.mongo_client = MongoClient(self.mongo_uri, serverSelectionTimeoutMS=5000)
-            # 测试连接
-            self.mongo_client.admin.command('ping')
-            self.db = self.mongo_client['sehuatang_crawler']
-            self.collection = self.db['thread_details']
-            logger.info(f"MongoDB连接成功: {self.mongo_uri}")
-        except Exception as e:
-            logger.error(f"MongoDB连接失败: {e}")
-            self.mongo_client = None
+class ForumSeleniumCrawler(BaseSeleniumController):
+    """专门用于论坛爬虫的 Selenium 控制器"""
+     
     
     def save_to_mongodb(self, data):
         """保存数据到MongoDB"""
@@ -413,21 +326,11 @@ class SeleniumWebCrawler:
                 time.sleep(max(1, delay_time))
          
         logger.info(f"爬取完成，共获取 {len(results)} 条有效数据")
-        logger.info(f"数据已保存到MongoDB")
- 
+        logger.info(f"数据已保存到MongoDB") 
         
         return results
     
-    def test_network_connection(self, url):
-        """测试网络连接"""
-        try:
-            import requests
-            response = requests.get(url, timeout=10)
-            logger.info(f"网络连接测试成功: {response.status_code}")
-            return True
-        except Exception as e:
-            logger.error(f"网络连接测试失败: {e}")
-            return False
+    
     
     def crawl_from_url(self, home_url):
         """从网络URL开始爬取"""
@@ -470,22 +373,7 @@ class SeleniumWebCrawler:
         
         return results
     
- 
-    def test_with_local_files(self, home_file='home.html', test_file='test.html'):
-        """使用本地文件进行测试"""
-        logger.info("开始本地文件测试")
-        
-        # 测试从test.html提取标题和磁力链接
-        try:
-            with open(test_file, 'r', encoding='utf-8') as f:
-                test_content = f.read()
-            
-            title, magnet_links = self.extract_title_and_magnet(test_content)
-            logger.info(f"测试提取结果:")
-            logger.info(f"标题: {title}")
-            logger.info(f"磁力链接: {magnet_links}")
-        except Exception as e:
-            logger.error(f"测试文件读取失败: {e}")
+  
     
     def close_connection(self):
         """关闭连接"""
@@ -498,7 +386,7 @@ class SeleniumWebCrawler:
             logger.info("MongoDB连接已关闭")
 
     def update_subscription(self):
-         crawler = SeleniumWebCrawler()  
+         crawler = ForumSeleniumCrawler()  
          pageNumbers = 50
          for pageNumber in range(0, pageNumbers + 1):
             url = f"{crawler.base_url}&page={pageNumber}"
@@ -509,57 +397,18 @@ class SeleniumWebCrawler:
 
 def main():
     """主函数"""
-    # 询问是否使用无头模式
-    headless_choice = input("是否使用无头模式？(y/n，默认y): ").strip().lower()
-    headless = headless_choice != 'n'
+ 
+    headless = True
+    crawler = ForumSeleniumCrawler(delay=3, headless=headless)  # 设置3秒延时
     
-    crawler = SeleniumWebCrawler(delay=3, headless=headless)  # 设置3秒延时
-    
-    try:
-        # 选择运行模式
-        print("请选择运行模式:")
-        print("1. 从在线论坛爬取 (默认)")
-        print("2. 从本地home.html文件爬取")
-        print("3. 从自定义网络URL爬取")
-        print("4. 本地文件测试")
-        
-        choice = input("请输入选择 (1/2/3/4，默认为1): ").strip()
-        if not choice:
-            choice = '1'
-        
-        if choice == '1':
-            # 从在线论坛爬取
-            pageNumbers = 100
-            for pageNumber in range(0, pageNumbers + 1):
-                url = f"{crawler.base_url}&page={pageNumber}"
-                results = crawler.crawl_from_url(url)
-                if results:
-                    print(f"\n第 {pageNumber} 页爬取完成，共获取 {len(results)} 条数据")
-            self.logger.info(f"完成全部爬取")
-        
-        elif choice == '2':
-            # 从本地文件爬取
-            results = crawler.crawl_from_file('home.html')
+    try: 
+        pageNumbers = 100
+        for pageNumber in range(0, pageNumbers + 1):
+            url = f"{crawler.base_url}&page={pageNumber}"
+            results = crawler.crawl_from_url(url)
             if results:
-                print(f"\n爬取完成，共获取 {len(results)} 条数据")
-                for i, result in enumerate(results[:5], 1):  # 显示前5条
-                    print(f"{i}. {result['title']}")
-                    print(f"   磁力链接数量: {len(result['magnet_links'])}")
-        
-        elif choice == '3':
-            # 从自定义网络URL爬取
-            url = input("请输入首页URL: ").strip()
-            if url:
-                results = crawler.crawl_from_url(url)
-                if results:
-                    print(f"\n爬取完成，共获取 {len(results)} 条数据")
-        
-        elif choice == '4':
-            # 本地文件测试
-            crawler.test_with_local_files()
-        
-        else:
-            print("无效选择")
+                print(f"\n第 {pageNumber} 页爬取完成，共获取 {len(results)} 条数据")
+        self.logger.info(f"完成全部爬取")
     
     finally:
         # 确保关闭所有连接
