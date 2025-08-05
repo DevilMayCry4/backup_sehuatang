@@ -3,9 +3,6 @@
 """
 后台运行爬虫脚本 - 非交互版本
 """
-
-import sys
-import os
 from selenium_crawler import SeleniumWebCrawler
 import logging
 

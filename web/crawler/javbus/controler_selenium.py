@@ -17,11 +17,12 @@ import requests
 import json
 import re
 from bs4 import BeautifulSoup
+import db_manger
 # 导入 MongoDB 操作模块
-import controler
 
 # 加载环境变量
 load_dotenv('/root/backup_sehuatang/copy.env')
+ 
 
 # 大模型API配置
 llm_api_url = os.getenv('LLM_API_URL', 'https://open.bigmodel.cn/api/paas/v4/chat/completions')
@@ -685,21 +686,7 @@ def parse_html_with_selenium(url, parser_func, headless=True, delay=3):
   
 
 
-# 使用示例
-if __name__ == "__main__":
-    # 测试 Selenium 控制器
-    controller = SeleniumControler(headless=True, delay=3)
-    try:
-        # 测试获取页面内容
-        html = controller.get_page_content("https://www.javbus.com")
-        if html:
-            logger.info("成功获取页面内容")
-            logger.info(f"页面长度: {len(html)} 字符")
-        else:
-            logger.info("获取页面内容失败")
-    finally:
-        controller.close_driver()
-# 在文件末尾添加以下方法
+
 
 def parse_actress_info(html_content, base_url=None):
     """解析演员个人信息"""
@@ -839,7 +826,7 @@ def parse_actress_movies(html_content):
         logger.info(f"解析演员影片列表时出错: {e}")
         return []
 
-def get_next_page_url_actress(self, current_url, html_content):
+def get_next_page_url_actress(current_url, html_content):
     """获取演员页面的下一页URL"""
     try:
         soup = BeautifulSoup(html_content, 'html.parser')
@@ -891,7 +878,7 @@ def update_actress_data(actress_info,code):
         print("============")
         print(actress_data)
         # 写入数据库
-        return controler.write_actress_data(actress_data)
+        return db_manger.write_actress_data(actress_data)
         
     except Exception as e:
         logger.info(f"更新演员数据时出错: {e}")
@@ -903,19 +890,19 @@ def process_actress_page(code, max_pages=None):
         logger.info(f"开始处理演员页面: {code}")
         current_url = (f'{jav_base_url}/star/{code}')
         # 创建数据库
-        controler.create_actress_db()
-        controler.create_db()
-        
-        scontroller = SeleniumControler()
+        db_manger.create_actress_db()
+        db_manger.init_db()
+         
         page_count = 0
         total_movies = []
         actress_info = None
         
+        controller = SeleniumControler(headless=True, delay=3)
         while current_url and (max_pages is None or page_count < max_pages):
             logger.info(f"正在处理第 {page_count + 1} 页: {current_url}")
             
             # 获取页面内容
-            html_content = scontroller.get_page_content(current_url)
+            html_content = controller.get_page_content(current_url)
             if not html_content:
                 logger.info(f"无法获取页面内容: {current_url}")
                 break
@@ -934,21 +921,20 @@ def process_actress_page(code, max_pages=None):
             # 解析影片列表
             movies =  parse_actress_movies(html_content)
             logger.info(f"第 {page_count + 1} 页找到 {len(movies)} 部影片")
-            
-            # 处理每部影片（参考homeurl_handler的逻辑）
-            for movie in movies:
-                if movie.get('url'):
+             
+            for movie in movies: 
+                code = movie['code'] 
+                if code and db_manger.is_movie_crawed(code) == False:
                     try:
                         # 获取影片详细页面
-                        movie_html =  scontroller.get_page_content(movie['url'])
-                         
+                        movie_html =  controller.get_page_content(movie['url']) 
                         if movie_html:
                             # 使用pageparser解析影片详细信息
                             import pageparser
                             movie_detail = pageparser.parser_content(movie_html)
                             if movie_detail:
                                 # 写入数据库
-                                controler.write_data(movie_detail)
+                                db_manger.write_jav_movie(movie_detail)
                                 logger.info(f"✓ 已保存影片: {movie_detail.get('識別碼', 'Unknown')}")
                             else:
                                 logger.info(f"✗ 无法解析影片详情: {movie['url']}")
@@ -957,7 +943,8 @@ def process_actress_page(code, max_pages=None):
                     except Exception as e:
                         logger.info(f"✗ 处理影片时出错 {movie['url']}: {e}")
                         continue
-            
+                else:
+                    logger.info(f"跳过已处理的影片: {movie['url']}")
             total_movies.extend(movies)
             
             # 获取下一页URL
@@ -987,4 +974,18 @@ def process_actress_page(code, max_pages=None):
         logger.info(f"处理演员页面时出错: {e}")
         return None
 
- 
+# 使用示例
+if __name__ == "__main__":
+    # 测试 Selenium 控制器
+    controller = SeleniumControler(headless=True, delay=3)
+    try:
+        # 测试获取页面内容
+        html = controller.get_page_content("https://www.javbus.com")
+        if html:
+            logger.info("成功获取页面内容")
+            logger.info(f"页面长度: {len(html)} 字符")
+        else:
+            logger.info("获取页面内容失败")
+    finally:
+        controller.close_driver()
+# 在文件末尾添加以下方法

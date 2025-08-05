@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 #-*-coding:utf-8-*-
 
+from operator import le
 import os
 from pymongo import MongoClient
 from dotenv import load_dotenv
@@ -24,16 +25,16 @@ def get_mongo_connection():
         _mongo_db = _mongo_client[MONGO_DB]
     return _mongo_db
 
-def create_db():
+def init_db():
     """创建数据库和集合索引（如果不存在）"""
     try:
         db = get_mongo_connection()
         collection = db.javbus_data
         
         # 创建索引以提高查询性能
-        collection.create_index("URL", unique=True)
-        collection.create_index("識別碼")
-        collection.create_index("標題")
+        collection.create_index("url", unique=True)
+        collection.create_index("code")
+        collection.create_index("title")
         
         print("MongoDB collection and indexes created successfully")
         return True
@@ -41,7 +42,8 @@ def create_db():
         print(f"Error creating MongoDB collection: {e}")
         return False
 
-def write_data(dict_jav):
+ 
+def write_jav_movie(dict_jav):
     """写入数据到 MongoDB"""
     try:
         db = get_mongo_connection()
@@ -49,40 +51,40 @@ def write_data(dict_jav):
         
         # 准备文档数据
         document = {
-            'URL': dict_jav.get('URL', ''),
-            '識別碼': dict_jav.get('識別碼', ''),
-            '標題': dict_jav.get('標題', ''),
-            '封面': dict_jav.get('封面', ''),
-            '樣品圖像': dict_jav.get('樣品圖像', ''),
-            '發行日期': dict_jav.get('發行日期', ''),
-            '長度': dict_jav.get('長度', ''),
-            '導演': dict_jav.get('導演', ''),
-            '製作商': dict_jav.get('製作商', ''),
-            '發行商': dict_jav.get('發行商', ''),
-            '系列': dict_jav.get('系列', ''),
-            '演員': dict_jav.get('演員', ''),
-            '類別': dict_jav.get('類別', ''),
-            '磁力链接': dict_jav.get('磁力链接', ''),
-            '無碼': dict_jav.get('無碼', 0)
+            'url': dict_jav.get('URL', ''),
+            'code': dict_jav.get('識別碼', ''),
+            'title': dict_jav.get('標題', ''),
+            'cover': dict_jav.get('封面', ''), 
+            'release_date': dict_jav.get('發行日期', ''),
+            'duration': dict_jav.get('長度', ''),
+            'director': dict_jav.get('導演', ''),
+            'studio': dict_jav.get('製作商', ''),
+            'publisher': dict_jav.get('發行商', ''),
+            'series': dict_jav.get('系列', ''),
+            'actresses': dict_jav.get('演員', ''),
+            'genres': dict_jav.get('類別', ''),
+            'magnet_links': dict_jav.get('磁力链接', ''),
+            'uncensored': dict_jav.get('無碼', 0)
         }
         
         # 使用 upsert 操作，如果 URL 已存在则更新，否则插入
         result = collection.update_one(
-            {'URL': document['URL']},
+            {'url': document['url']},
             {'$set': document},
             upsert=True
         )
         
         if result.upserted_id:
-            print(f"Inserted new document with URL: {document['URL']}")
+            print(f"Inserted new document with URL: {document['url']}")
         elif result.modified_count > 0:
-            print(f"Updated existing document with URL: {document['URL']}")
+            print(f"Updated existing document with URL: {document['url']}")
             
         return True
         
     except Exception as e:
         print(f"Error writing data to MongoDB: {e}")
-        return False
+        re
+
 
 def refresh_data(dict_jav, url):
     """更新指定 URL 的磁力链接数据"""
@@ -124,6 +126,22 @@ def check_url_not_in_table(url):
     except Exception as e:
         print(f"Error checking URL in MongoDB: {e}")
         return True  # 出错时假设不存在
+
+
+def is_movie_crawed(code):
+    try:
+        db = get_mongo_connection()
+        collection = db.javbus_data
+        
+        # 不区分大小写查询
+        result = collection.find_one(
+            {'code': {'$regex': f'^{code}$', '$options': 'i'}}
+        ) 
+        return result != None and (result) > 0
+            
+    except Exception as e:
+        print(f"Error reading magnets from MongoDB: {e}")
+        return False
 
 def read_magnets_from_table(url):
     """从数据库中读取指定 URL 的磁力链接"""

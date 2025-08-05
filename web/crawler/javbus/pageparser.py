@@ -3,11 +3,21 @@
 
 from bs4 import BeautifulSoup
 from urllib.parse import urlparse
-import downloader
 import re
 import os
 import requests
-from urllib.parse import urljoin
+from bs4 import BeautifulSoup
+from urllib.parse import urlparse
+import re
+import os
+import requests
+
+
+
+
+
+
+
 
 def _get_cili_url(soup):
     """get_cili(soup).get the ajax url and Referer url of request"""
@@ -98,25 +108,18 @@ def parser_homeurl(html):
     for url in soup.select('a[class="movie-box"]'):
         yield url['href']
 
-
-#!/usr/bin/env python
-#-*-coding:utf-8-*-
-
-from bs4 import BeautifulSoup
-from urllib.parse import urlparse
-import downloader
-import re
-import os
-import requests
-from urllib.parse import urljoin
-
 # 添加图片下载函数
 def download_image(image_url, save_path, filename):
     """下载图片到本地"""
     try:
         # 创建保存目录
         os.makedirs(save_path, exist_ok=True)
-        
+        file_path = os.path.join(save_path, filename)
+        if(os.path.exists(file_path)):
+            print(f'文件已存在:{file_path}')
+            return file_path
+        else:
+            print(f'开始下载图片:{image_url} 路径:{file_path}')
         # 设置请求头
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
@@ -128,7 +131,7 @@ def download_image(image_url, save_path, filename):
         response.raise_for_status()
         
         # 保存图片
-        file_path = os.path.join(save_path, filename)
+        
         with open(file_path, 'wb') as f:
             f.write(response.content)
         
@@ -150,7 +153,6 @@ def parser_content(html):
     """parser_content(html),parser page's content of every url and yield the dict of content"""
 
     soup = BeautifulSoup(html, "html.parser")
-    print("sssss")
     '''获取lang'''
     lang_pattern = re.compile(r"var lang = '.*?'")
     match = lang_pattern.findall(soup.prettify())
@@ -159,53 +161,55 @@ def parser_content(html):
     categories = {}
 
     if lang == 'zh':
-        code_name_doc = soup.find('span', text=re.compile("識別碼:"))
-        code_name = code_name_doc.parent.contents[3].text.strip() if code_name_doc else ''
+        # 使用正则表达式解析識別碼
+        code_pattern = re.compile(r'<span class="header">識別碼:</span>\s*<span[^>]*>([^<]+)</span>')
+        code_match = code_pattern.search(html)
+        code_name = code_match.group(1).strip() if code_match else ''
         categories['識別碼'] = code_name
-        #code_name = soup.find('span', text="識別碼:").parent.contents[2].text if soup.find('span', text="識別碼:") else ''
         if code_name == '':
             return
 
-        date_issue_doc = soup.find('span', text=re.compile("發行日期:"))
-        date_issue = date_issue_doc.parent.contents[2].strip() if date_issue_doc else ''
+        # 使用正则表达式解析發行日期
+        date_pattern = re.compile(r'<span class="header">發行日期:</span>\s*([^<]+)')
+        date_match = date_pattern.search(html)
+        date_issue = date_match.group(1).strip() if date_match else ''
         categories['發行日期'] = date_issue
-        #date_issue = soup.find('span', text="發行日期:").parent.contents[1].strip() if soup.find('span', text="發行日期:") else ''
 
-        duration_doc = soup.find('span', text=re.compile("長度:"))
-        duration = duration_doc.parent.contents[2].strip() if duration_doc else ''
+        # 使用正则表达式解析長度
+        duration_pattern = re.compile(r'<span class="header">長度:</span>\s*([^<]+)')
+        duration_match = duration_pattern.search(html)
+        duration = duration_match.group(1).strip() if duration_match else ''
         categories['長度'] = duration
-        #duration = soup.find('span', text="長度:").parent.contents[1].strip() if soup.find('span', text="長度:") else ''
 
-        director_doc = soup.find('span', text=re.compile("導演:"))
-        if hasattr(director_doc,'parent'):
-            if len(director_doc.parent.contents) > 3:
-                director = director_doc.parent.contents[3].text.strip() if director_doc else ''
-            else:
-                director = ''
-        else:
-            director = ''
+        # 使用正则表达式解析導演
+        director_pattern = re.compile(r'<span class="header">導演:</span>\s*<a[^>]*>([^<]+)</a>')
+        director_match = director_pattern.search(html)
+        director = director_match.group(1).strip() if director_match else ''
         categories['導演'] = director
-        #director = soup.find('span', text="導演:").parent.contents[2].text if soup.find('span', text="導演:") else ''
 
-        manufacturer_doc = soup.find('span', text=re.compile("製作商:"))
-        manufacturer = manufacturer_doc.parent.contents[3].text.strip() if manufacturer_doc else ''
-        categories['製作商'] = manufacturer
-        #manufacturer = soup.find('span', text="製作商:").parent.contents[2].text if soup.find('span', text="製作商:") else ''
-        if hasattr(manufacturer_doc,'parent'):
-            is_uncensored = 1 if 'uncensored' in manufacturer_doc.parent.contents[3]['href'] else 0
+        # 使用正则表达式解析製作商
+        manufacturer_pattern = re.compile(r'<span class="header">製作商:</span>\s*<a[^>]*href="([^"]*)">([^<]+)</a>')
+        manufacturer_match = manufacturer_pattern.search(html)
+        if manufacturer_match:
+            manufacturer_href = manufacturer_match.group(1)
+            manufacturer = manufacturer_match.group(2).strip()
+            is_uncensored = 1 if 'uncensored' in manufacturer_href else 0
         else:
+            manufacturer = ''
             is_uncensored = 0
+        categories['製作商'] = manufacturer
         categories['無碼'] = is_uncensored
 
-        publisher_doc = soup.find('span', text=re.compile("發行商:"))
-        publisher = publisher_doc.parent.contents[3].text.strip()  if publisher_doc else ''
+        # 使用正则表达式解析發行商
+        publisher_pattern = re.compile(r'<span class="header">發行商:</span>\s*<a[^>]*>([^<]+)</a>')
+        publisher_match = publisher_pattern.search(html)
+        publisher = publisher_match.group(1).strip() if publisher_match else ''
         categories['發行商'] = publisher
-        #publisher = soup.find('span', text="發行商:").parent.contents[2].text if soup.find('span', text="發行商:") else ''
 
-        series_doc = soup.find('span', text=re.compile("系列:"))
-        series = series_doc.parent.contents[3].text.strip()  if series_doc else ''
-        categories['系列'] = series
-        #series = soup.find('span', text="系列:").parent.contents[2].text if soup.find('span', text="系列:") else ''
+        # 使用正则表达式解析系列
+        series_pattern = re.compile(r'<span class="header">系列:</span>\s*<a[^>]*>([^<]+)</a>')
+        series_match = series_pattern.search(html)
+        series = series_match.group(1).strip() if series_match else ''
 
         genre_doc = soup.select_one('p[class=header]', text=re.compile('類別:'))
         genre =(i.text.strip() for i in genre_doc.find_next('p').select('a')) if genre_doc else ''
@@ -321,9 +325,8 @@ def parser_content(html):
         cover_filename = f"{code_name}_cover.{ext}"
         
         # 下载封面
-        local_cover_path = download_image(bigimage_url, save_dir, cover_filename)
-        if local_cover_path:
-            categories['本地封面路径'] = local_cover_path
+        download_image(bigimage_url, save_dir, cover_filename)
+        
  
 
     #標題加入字典
