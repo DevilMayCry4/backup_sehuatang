@@ -104,10 +104,47 @@
                         <button type="button" class="btn btn-outline-light" id="viewSubscriptionsBtn">
                             <i class="bi bi-list"></i> 查看订阅列表
                         </button>
-                        <button type="button" class="btn btn-warning" id="triggerCheckBtn" style="margin-left: 8px;">
+                        <button type="button" class="btn btn-warning d-none d-md-inline-block" id="triggerCheckBtn" style="margin-left: 8px;">
                             <i class="bi bi-play-circle"></i> 手动检查
                         </button>
                     </div>
+                </div>
+                
+                <!-- 移动端按钮区域 -->
+                <div class="d-md-none mt-3">
+                    <div class="d-grid gap-2">
+                        <button type="button" class="btn btn-warning" id="triggerCheckBtnMobile">
+                            <i class="bi bi-play-circle"></i> 手动检查
+                        </button>
+                        <button type="button" class="btn btn-info" id="crawlAllStarBtnMobile">
+                            <i class="bi bi-people"></i> 更新全部演员电影
+                        </button>
+                        <button type="button" class="btn btn-success" id="crawlTopStarBtnMobile">
+                            <i class="bi bi-star"></i> 更新热门演员
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- 桌面端爬虫功能按钮区域 -->
+                <div class="row mt-3 d-none d-md-flex">
+                    <div class="col-md-6">
+                        <button type="button" class="btn btn-info" id="crawlAllStarBtn">
+                            <i class="bi bi-people"></i> 更新全部演员电影
+                        </button>
+                    </div>
+                    <div class="col-md-6">
+                        <button type="button" class="btn btn-success" id="crawlTopStarBtn">
+                            <i class="bi bi-star"></i> 更新热门演员
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- 爬虫状态提示 -->
+                <div id="crawlerStatus" class="d-none mt-3">
+                    <div class="spinner-border spinner-border-sm text-light me-2" role="status">
+                        <span class="visually-hidden">处理中...</span>
+                    </div>
+                    <span id="crawlerStatusText">正在执行爬虫任务...</span>
                 </div>
             </form>
             
@@ -241,6 +278,15 @@ document.addEventListener('DOMContentLoaded', function() {
     const subscriptionsContent = document.getElementById('subscriptionsContent');
     const triggerCheckBtn = document.getElementById('triggerCheckBtn'); // 添加手动触发按钮元素
     
+    // 爬虫功能相关元素
+    const crawlAllStarBtn = document.getElementById('crawlAllStarBtn');
+    const crawlTopStarBtn = document.getElementById('crawlTopStarBtn');
+    const crawlAllStarBtnMobile = document.getElementById('crawlAllStarBtnMobile');
+    const crawlTopStarBtnMobile = document.getElementById('crawlTopStarBtnMobile');
+    const triggerCheckBtnMobile = document.getElementById('triggerCheckBtnMobile');
+    const crawlerStatus = document.getElementById('crawlerStatus');
+    const crawlerStatusText = document.getElementById('crawlerStatusText');
+    
     let currentMovies = []; // 存储当前搜索结果
     
     // 订阅系列表单提交
@@ -259,6 +305,38 @@ document.addEventListener('DOMContentLoaded', function() {
     // 手动触发订阅检查 - 添加事件监听器
     if (triggerCheckBtn) {
         triggerCheckBtn.addEventListener('click', function() {
+            triggerSubscriptionCheck();
+        });
+    }
+    
+    // 爬虫功能按钮事件监听器
+    if (crawlAllStarBtn) {
+        crawlAllStarBtn.addEventListener('click', function() {
+            crawlAllStar();
+        });
+    }
+    
+    if (crawlTopStarBtn) {
+        crawlTopStarBtn.addEventListener('click', function() {
+            crawlTopStar();
+        });
+    }
+    
+    // 移动端按钮事件监听器
+    if (crawlAllStarBtnMobile) {
+        crawlAllStarBtnMobile.addEventListener('click', function() {
+            crawlAllStar();
+        });
+    }
+    
+    if (crawlTopStarBtnMobile) {
+        crawlTopStarBtnMobile.addEventListener('click', function() {
+            crawlTopStar();
+        });
+    }
+    
+    if (triggerCheckBtnMobile) {
+        triggerCheckBtnMobile.addEventListener('click', function() {
             triggerSubscriptionCheck();
         });
     }
@@ -409,6 +487,75 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.body.removeChild(toast);
             }
         }, 3000);
+    }
+    
+    // 爬虫功能函数
+    async function crawlAllStar() {
+        if (!confirm('确定要开始更新全部演员电影吗？这可能需要较长时间。')) return;
+        
+        // 显示加载状态
+        crawlerStatus.classList.remove('d-none');
+        crawlerStatusText.textContent = '正在更新全部演员电影...';
+        if (crawlAllStarBtn) crawlAllStarBtn.disabled = true;
+        if (crawlAllStarBtnMobile) crawlAllStarBtnMobile.disabled = true;
+        
+        try {
+            const response = await fetch('/api/crawl-all-star', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                showToast(data.message, 'success');
+            } else {
+                showToast(data.error || '启动失败', 'error');
+            }
+        } catch (err) {
+            console.error('更新全部演员电影错误:', err);
+            showToast('网络错误，请稍后重试', 'error');
+        } finally {
+            crawlerStatus.classList.add('d-none');
+            if (crawlAllStarBtn) crawlAllStarBtn.disabled = false;
+            if (crawlAllStarBtnMobile) crawlAllStarBtnMobile.disabled = false;
+        }
+    }
+    
+    async function crawlTopStar() {
+        if (!confirm('确定要开始更新热门演员吗？这可能需要较长时间。')) return;
+        
+        // 显示加载状态
+        crawlerStatus.classList.remove('d-none');
+        crawlerStatusText.textContent = '正在更新热门演员...';
+        if (crawlTopStarBtn) crawlTopStarBtn.disabled = true;
+        if (crawlTopStarBtnMobile) crawlTopStarBtnMobile.disabled = true;
+        
+        try {
+            const response = await fetch('/api/crawl-top-star', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                showToast(data.message, 'success');
+            } else {
+                showToast(data.error || '启动失败', 'error');
+            }
+        } catch (err) {
+            console.error('更新热门演员错误:', err);
+            showToast('网络错误，请稍后重试', 'error');
+        } finally {
+            crawlerStatus.classList.add('d-none');
+            if (crawlTopStarBtn) crawlTopStarBtn.disabled = false;
+            if (crawlTopStarBtnMobile) crawlTopStarBtnMobile.disabled = false;
+        }
     }
     
     // 搜索表单提交

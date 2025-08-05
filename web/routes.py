@@ -312,6 +312,76 @@ def register_routes(app, jellyfin_checker, crawler):
                 'success': False,
                 'error': '服务器内部错误'
             })
+    
+    @app.route('/api/crawl-all-star', methods=['POST'])
+    def crawl_all_star():
+        """更新全部演员电影API"""
+        try:
+            # 导入爬虫模块
+            import sys
+            import os
+            sys.path.append(os.path.join(os.path.dirname(__file__), 'crawler', 'javbus'))
+            from crawler import craw_all_star
+            
+            # 在后台线程中执行爬虫任务
+            import threading
+            def run_crawler():
+                try:
+                    craw_all_star()
+                    print("全部演员电影更新完成")
+                except Exception as e:
+                    print(f"全部演员电影更新错误: {e}")
+            
+            thread = threading.Thread(target=run_crawler)
+            thread.daemon = True
+            thread.start()
+            
+            return jsonify({
+                'success': True,
+                'message': '全部演员电影更新任务已开始执行，请查看控制台日志了解进度'
+            })
+            
+        except Exception as e:
+            print(f"启动全部演员电影更新错误: {e}")
+            return jsonify({
+                'success': False,
+                'error': f'启动失败: {str(e)}'
+            })
+    
+    @app.route('/api/crawl-top-star', methods=['POST'])
+    def crawl_top_star():
+        """更新热门演员API"""
+        try:
+            # 导入爬虫模块
+            import sys
+            import os
+            sys.path.append(os.path.join(os.path.dirname(__file__), 'crawler', 'javbus'))
+            from crawler import craw_top_star
+            
+            # 在后台线程中执行爬虫任务
+            import threading
+            def run_crawler():
+                try:
+                    craw_top_star()
+                    print("热门演员更新完成")
+                except Exception as e:
+                    print(f"热门演员更新错误: {e}")
+            
+            thread = threading.Thread(target=run_crawler)
+            thread.daemon = True
+            thread.start()
+            
+            return jsonify({
+                'success': True,
+                'message': '热门演员更新任务已开始执行，请查看控制台日志了解进度'
+            })
+            
+        except Exception as e:
+            print(f"启动热门演员更新错误: {e}")
+            return jsonify({
+                'success': False,
+                'error': f'启动失败: {str(e)}'
+            })
 
  
  

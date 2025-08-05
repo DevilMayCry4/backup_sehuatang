@@ -227,6 +227,24 @@ def close_connection():
         _mongo_client = None
         print("MongoDB connection closed")
 
+def get_all_star():
+    try:
+        db = get_mongo_connection()
+        collection = db.actresses_data
+        return collection.find()
+    except Exception as e:
+        print(f"Error getting all actresses from MongoDB: {e}")
+        return None
+
+def get_top_star():
+    try:
+        db = get_mongo_connection()
+        collection = db.actresses_data
+        return collection.find().sort("_id", 1).limit(10)
+    except Exception as e:
+        print(f"Error getting top actresses from MongoDB: {e}")
+        return None
+
 # 在程序退出时自动关闭连接
 import atexit
 atexit.register(close_connection)

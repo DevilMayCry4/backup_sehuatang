@@ -8,12 +8,9 @@ from bs4 import BeautifulSoup
 from requests.exceptions import HTTPError
 import controler_selenium 
 import db_manger
+from selenium_crawler import logger
 
 base_url = 'https://www.javbus.com'
-
-
- 
- 
  
 def download_actress_image(image_url, actress_code, actress_name):
     """下载演员头像到本地"""
@@ -136,8 +133,20 @@ def crawl_actresses():
         url = f"{base_url}/actresses/{i}"
         actresses_handler(url)
 
-def craw_star():
-    result = controler_selenium.process_actress_page('reg',max_pages=1000)
+def craw_all_star(): 
+    list = db_manger.get_all_star()
+    all_count = len(list)
+    for index,star in enumerate(list):
+        controler_selenium.process_actress_page(star['code'])
+        logger.info(f"进度：{index}/{all_count} {star['code']}")
+
+
+def craw_top_star():
+    list = db_manger.get_top_star()
+    all_count = len(list)
+    for index,star in enumerate(list):
+        controler_selenium.process_actress_page(star['code'])
+        logger.info(f"进度：{index}/{all_count} {star['code']}")
 
 if __name__ == '__main__':
      

@@ -2696,3 +2696,9 @@ Jellyfin中 ✅ 找到 1 部相关电影:
    📚 所在库: Jav
    📁 路径: /115/Jellyfin/output/若菜奈央/JUY-168/JUY-168-C.mp4
    🔗 链接: http://dudu213.duckdns.org:8096/web/index.html#!/details?id=77e8c25649838d5758e4ae593dbedcdf
+[2025-08-05 06:16:32 +0000] [360187] [INFO] Handling signal: term
+[2025-08-05 06:16:32 +0000] [360189] [INFO] Worker exiting (pid: 360189)
+[2025-08-05 06:16:32 +0000] [360190] [INFO] Worker exiting (pid: 360190)
+[2025-08-05 06:16:32 +0000] [360192] [INFO] Worker exiting (pid: 360192)
+[2025-08-05 06:16:32 +0000] [360191] [INFO] Worker exiting (pid: 360191)
+[2025-08-05 06:16:33 +0000] [360187] [INFO] Shutting down: Master
