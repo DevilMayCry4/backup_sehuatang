@@ -132,3 +132,13 @@
 2025-08-05 09:57:04,555 - INFO - 进度: 2/22
 2025-08-05 09:57:04,555 - INFO - 正在爬取: https://sehuatang.org/forum.php?mod=viewthread&tid=2937027&extra=page%3D1%26filter%3Dtypeid%26typeid%3D480
 2025-08-05 09:57:04,556 - INFO - 正在访问: https://sehuatang.org/forum.php?mod=viewthread&tid=2937027&extra=page%3D1%26filter%3Dtypeid%26typeid%3D480
+2025-08-05 09:57:07,514 - INFO - 保存到MongoDB: HSODA-073  [自提征用]我不会忘记你告白的那一天。两情相悦的我们擦肩而过。 虹村ゆみ
+2025-08-05 09:57:07,514 - INFO - 成功提取: HSODA-073  [自提征用]我不会忘记你告白的那一天。两情相悦的我们擦肩而过。 虹村ゆみ
+2025-08-05 09:57:09,929 - INFO - 进度: 3/22
+2025-08-05 09:57:09,930 - INFO - 正在爬取: https://sehuatang.org/forum.php?mod=viewthread&tid=2935235&extra=page%3D1%26filter%3Dtypeid%26typeid%3D480
+2025-08-05 09:57:09,930 - INFO - 正在访问: https://sehuatang.org/forum.php?mod=viewthread&tid=2935235&extra=page%3D1%26filter%3Dtypeid%26typeid%3D480
+2025-08-05 09:57:13,153 - WARNING - Retrying (Retry(total=2, connect=None, read=None, redirect=None, status=None)) after connection broken by 'RemoteDisconnected('Remote end closed connection without response')': /session/90480dd5373959528a5a16ca7258dd70
+2025-08-05 09:57:13,159 - WARNING - Retrying (Retry(total=1, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7fe2e21c2710>: Failed to establish a new connection: [Errno 111] Connection refused')': /session/90480dd5373959528a5a16ca7258dd70
+2025-08-05 09:57:13,169 - WARNING - Retrying (Retry(total=0, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7fe2e21c2fe0>: Failed to establish a new connection: [Errno 111] Connection refused')': /session/90480dd5373959528a5a16ca7258dd70
+2025-08-05 09:57:13,175 - INFO - Selenium WebDriver已关闭
+2025-08-05 09:57:13,186 - INFO - MongoDB连接已关闭

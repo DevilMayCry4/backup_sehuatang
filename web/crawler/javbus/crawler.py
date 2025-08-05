@@ -7,7 +7,13 @@ import re
 import sys
 from bs4 import BeautifulSoup
 from requests.exceptions import HTTPError
-import controler_selenium  as controller 
+
+# 添加当前目录到路径以确保能找到 controler_selenium
+current_dir = os.path.dirname(os.path.abspath(__file__))
+if current_dir not in sys.path:
+    sys.path.insert(0, current_dir)
+
+import controler_selenium as controller
 from selenium_crawler import logger
 
 # 添加上级目录到路径以导入 database 模块
