@@ -429,67 +429,84 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // 显示电影详情
+    // 修改 showMovieDetails 函数，在原有代码基础上添加移动端检测
+    
+    // 检测是否为移动设备
+    function isMobileDevice() {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) 
+           || window.innerWidth <= 768;
+    }
+    
+    // 修改 showMovieDetails 函数
     window.showMovieDetails = function(index) {
-        const movie = currentMovies[index];
-        if (!movie) return;
-        
-        const modalTitle = document.getElementById('movieModalTitle');
-        const modalBody = document.getElementById('movieModalBody');
-        
-        modalTitle.textContent = movie.title || '未知标题';
-        
-        const foundAt = movie.found_at ? 
-            new Date(movie.found_at).toLocaleString('zh-CN') : '未知时间';
-        
-        modalBody.innerHTML = `
-            <div class="row">
-                <div class="col-md-4 text-center">
-                    ${movie.image_url ? 
-                        `<img src="${movie.image_url}" alt="${movie.title}" class="img-fluid" 
-                             style="max-width: 200px; border-radius: 8px;"
-                             onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjI4MCIgdmlld0JveD0iMCAwIDIwMCAyODAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMjgwIiBmaWxsPSIjRjhGOUZBIi8+CjxwYXRoIGQ9Ik03MCA5MEwxMzAgOTBMMTAwIDEzMEw3MCA5MFoiIGZpbGw9IiNEMUQ1REIiLz4KPC9zdmc+'">` :
-                        `<div class="d-flex align-items-center justify-content-center bg-light text-muted" style="width:200px;height:280px; border-radius: 8px; margin: 0 auto;">
-                            <i class="bi bi-film" style="font-size: 4rem;"></i>
-                        </div>`
-                    }
-                </div>
-                <div class="col-md-8">
-                    <table class="table table-borderless">
-                        <tr>
-                            <td><strong>电影编号:</strong></td>
-                            <td>${movie.movie_code || 'N/A'}</td>
-                        </tr>
-                        <tr>
-                            <td><strong>标题:</strong></td>
-                            <td>${movie.title || '未知标题'}</td>
-                        </tr>
-                        <tr>
-                            <td><strong>发现时间:</strong></td>
-                            <td>${foundAt}</td>
-                        </tr>
-                        <tr>
-                            <td><strong>磁力链接:</strong></td>
-                            <td>
-                                ${movie.magnet_link ? 
-                                    `<div class="input-group input-group-sm">
-                                        <input type="text" class="form-control" value="${movie.magnet_link}" readonly>
-                                        <button class="btn btn-outline-secondary" type="button" 
-                                                onclick="copyToClipboard('${movie.magnet_link.replace(/'/g, "\\'")}')" 
-                                                title="复制磁力链接">
-                                            <i class="bi bi-copy"></i>
-                                        </button>
-                                    </div>` :
-                                    '<span class="text-muted">无磁力链接</span>'
-                                }
-                            </td>
-                        </tr>
-                    </table>
-                </div>
+    const movie = currentMovies[index];
+    if (!movie) return;
+    
+    // 如果是移动设备，跳转到独立页面
+    if (isMobileDevice()) {
+        const currentSeriesName = document.getElementById('moviesTitle').textContent.replace('电影列表 - ', '');
+        window.location.href = `/mobile/movie-detail/${encodeURIComponent(currentSeriesName)}/${index}`;
+        return;
+    }
+    
+    // 桌面端继续使用模态框
+    const modalTitle = document.getElementById('movieModalTitle');
+    const modalBody = document.getElementById('movieModalBody');
+    
+    modalTitle.textContent = movie.title || '未知标题';
+    
+    const foundAt = movie.found_at ? 
+        new Date(movie.found_at).toLocaleString('zh-CN') : '未知时间';
+    
+    modalBody.innerHTML = `
+        <div class="row">
+            <div class="col-md-4 text-center">
+                ${movie.image_url ? 
+                    `<img src="${movie.image_url}" alt="${movie.title}" class="img-fluid" 
+                         style="max-width: 200px; border-radius: 8px;"
+                         onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjI4MCIgdmlld0JveD0iMCAwIDIwMCAyODAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMjgwIiBmaWxsPSIjRjhGOUZBIi8+CjxwYXRoIGQ9Ik03MCA5MEwxMzAgOTBMMTAwIDEzMEw3MCA5MFoiIGZpbGw9IiNEMUQ1REIiLz4KPC9zdmc+'">` :
+                    `<div class="d-flex align-items-center justify-content-center bg-light text-muted" style="width:200px;height:280px; border-radius: 8px; margin: 0 auto;">
+                        <i class="bi bi-film" style="font-size: 4rem;"></i>
+                    </div>`
+                }
             </div>
-        `;
-        
-        const modal = new bootstrap.Modal(document.getElementById('movieModal'));
-        modal.show();
+            <div class="col-md-8">
+                <table class="table table-borderless">
+                    <tr>
+                        <td><strong>电影编号:</strong></td>
+                        <td>${movie.movie_code || 'N/A'}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>标题:</strong></td>
+                        <td>${movie.title || '未知标题'}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>发现时间:</strong></td>
+                        <td>${foundAt}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>磁力链接:</strong></td>
+                        <td>
+                            ${movie.magnet_link ? 
+                                `<div class="input-group input-group-sm">
+                                    <input type="text" class="form-control" value="${movie.magnet_link}" readonly>
+                                    <button class="btn btn-outline-secondary" type="button" 
+                                            onclick="copyToClipboard('${movie.magnet_link.replace(/'/g, "\\'")}')" 
+                                            title="复制磁力链接">
+                                        <i class="bi bi-copy"></i>
+                                    </button>
+                                </div>` :
+                                '<span class="text-muted">无磁力链接</span>'
+                            }
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    `;
+    
+    const modal = new bootstrap.Modal(document.getElementById('movieModal'));
+    modal.show();
     };
     
     // 复制到剪贴板

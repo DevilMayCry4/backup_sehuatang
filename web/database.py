@@ -60,7 +60,7 @@ class DatabaseManager:
             self.javbus_data_collection.create_index("code")
             self.javbus_data_collection.create_index("title")
             
-            # 女优数据索引
+            # 演员数据索引
             self.actresses_data_collection.create_index("code", unique=True)
             self.actresses_data_collection.create_index("name")
             
@@ -301,7 +301,7 @@ class DatabaseManager:
             return None
     
     def write_actress_data(self, actress_info, local_image_path=None):
-        """写入女优数据到 MongoDB"""
+        """写入演员数据到 MongoDB"""
         try:
             if self.actresses_data_collection is None:
                 raise Exception('MongoDB未初始化')
@@ -339,18 +339,23 @@ class DatabaseManager:
             print(f"Error writing actress data to MongoDB: {e}")
             return False
     
-    def get_all_star(self):
-        """获取所有女优数据"""
+    def get_paginated_actresses(self, page=1, per_page=20):
+        """获取分页演员数据"""
         try:
             if self.actresses_data_collection is None:
-                return None
-            return self.actresses_data_collection.find()
+                return None, 0
+                
+            actresses = list(self.actresses_data_collection.find()
+                            .skip((page-1)*per_page)
+                            .limit(per_page))
+            total = self.actresses_data_collection.count_documents({})
+            return actresses, total
         except Exception as e:
-            print(f"Error getting all actresses from MongoDB: {e}")
-            return None
+            print(f"获取分页演员数据错误: {e}")
+            return None, 0
     
     def get_top_star(self):
-        """获取前10个女优数据"""
+        """获取前10个演员数据"""
         try:
             if self.actresses_data_collection is None:
                 return None
@@ -359,6 +364,45 @@ class DatabaseManager:
             print(f"Error getting top actresses from MongoDB: {e}")
             return None
     
+    def add_retry_url(self, url, error_type, error_message):
+        """添加失败URL到重试表"""
+        try:
+            self.retry_collection.insert_one({
+                'url': url,
+                'error_type': error_type,
+                'error_message': error_message,
+                'retry_count': 0,
+                'last_retry_time': None,
+                'created_at': datetime.now(),
+                'status': 'pending'
+            })
+            return True
+        except Exception as e:
+            logger.error(f"添加重试URL失败: {url}, 错误: {e}")
+            return False
+
+    def get_pending_retry_urls(self, limit=100):
+        """获取待重试的URL"""
+        return list(self.retry_collection.find({
+            'status': 'pending'
+        }).limit(limit))
+
+    def update_retry_status(self, url, success, retry_count):
+        """更新重试状态"""
+        try:
+            self.retry_collection.update_one(
+                {'url': url},
+                {'$set': {
+                    'status': 'success' if success else 'failed',
+                    'retry_count': retry_count + 1,
+                    'last_retry_time': datetime.now()
+                }}
+            )
+            return True
+        except Exception as e:
+            logger.error(f"更新重试状态失败: {url}, 错误: {e}")
+            return False
+
     def close_connection(self):
         """关闭 MongoDB 连接"""
         if self.mongo_client:
@@ -410,11 +454,11 @@ def read_magnets_from_table(url):
     return db_manager.read_magnets_from_table(url)
 
 def write_actress_data(actress_info, local_image_path=None):
-    """写入女优数据 - 兼容性函数"""
+    """写入演员数据 - 兼容性函数"""
     return db_manager.write_actress_data(actress_info, local_image_path)
 
 def create_actress_db():
-    """创建女优数据库 - 兼容性函数"""
+    """创建演员数据库 - 兼容性函数"""
     # 索引创建已在 init_mongodb 中处理
     return True
 
@@ -423,9 +467,11 @@ def close_connection():
     return db_manager.close_connection()
 
 def get_all_star():
-    """获取所有女优 - 兼容性函数"""
+    """获取所有演员 - 兼容性函数"""
     return db_manager.get_all_star()
 
 def get_top_star():
-    """获取热门女优 - 兼容性函数"""
+    """获取热门演员 - 兼容性函数"""
     return db_manager.get_top_star()
+
+

@@ -373,6 +373,43 @@ def register_routes(app, jellyfin_checker, crawler):
                 'success': False,
                 'error': f'启动失败: {str(e)}'
             })
+    
+    # 在 register_routes 函数中添加新路由
+    
+    @app.route('/mobile/movie-detail/<series_name>/<int:movie_index>')
+    def mobile_movie_detail(series_name, movie_index):
+        """移动端电影详情页面"""
+        try:
+            # 获取订阅的电影列表
+            movies_docs = db_manager.get_subscription_movies(series_name)
+            
+            if not movies_docs or movie_index >= len(movies_docs):
+                return render_template('error.html', 
+                                     error_message='电影不存在'), 404
+            
+            movie = movies_docs[movie_index]
+            
+            return render_template('movie_detail_mobile.html', 
+                                 movie=movie, 
+                                 series_name=series_name)
+            
+        except Exception as e:
+            print(f"获取移动端电影详情错误: {e}")
+            return render_template('error.html', 
+                                 error_message='加载电影详情失败'), 500
+    
+    @app.route('/actresses')
+    def actresses_list():
+        page = request.args.get('page', 1, type=int)
+        per_page = 20
+        
+        actresses, total = db_manager.get_paginated_actresses(page, per_page)
+        
+        return render_template('actresses.html', 
+                             actresses=actresses,
+                             page=page,
+                             per_page=per_page,
+                             total=total)
 
  
  

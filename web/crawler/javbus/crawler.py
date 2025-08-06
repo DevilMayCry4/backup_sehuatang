@@ -69,7 +69,7 @@ def download_actress_image(image_url, actress_code, actress_name):
 
 # 修改actresses_handler函数中的相关部分
 def actresses_handler(url):
-    """女优ページを爬取して女优情報を抽出し、データベースに保存する"""
+    """演员ページを爬取して演员情報を抽出し、データベースに保存する"""
   
  
     
@@ -79,12 +79,12 @@ def actresses_handler(url):
     # BeautifulSoupでHTMLを解析
     soup = BeautifulSoup(entrance_html, 'html.parser')
     
-    # 女优情報を格納するリスト
+    # 演员情報を格納するリスト
     actresses_data = []
     success_count = 0
     error_count = 0
     
-    # waterfall div内のすべての女优アイテムを取得
+    # waterfall div内のすべての演员アイテムを取得
     waterfall = soup.find('div', id='waterfall')
     if waterfall:
         items = waterfall.find_all('div', class_='item')
@@ -95,7 +95,7 @@ def actresses_handler(url):
                 # 詳細URLを取得
                 detail_url = avatar_box.get('href')
                 
-                # 女优編码を抽出 (URLの最後の部分)
+                # 演员編码を抽出 (URLの最後の部分)
                 actress_code = None
                 if detail_url:
                     match = re.search(r'/star/([^/]+)$', detail_url)
@@ -114,7 +114,7 @@ def actresses_handler(url):
                     # 下载演员头像到本地
                     download_actress_image(full_image_url, actress_code, actress_name)
                     
-                    # 女优データを辞書として保存
+                    # 演员データを辞書として保存
                     actress_info = {
                         'name': actress_name,
                         'code': actress_code,
@@ -126,7 +126,7 @@ def actresses_handler(url):
                     
                      
     
-    print(f"\n=== 女优数据处理完成 ===")
+    print(f"\n=== 演员数据处理完成 ===")
     print(f"总计: {len(actresses_data)} 人")
     print(f"成功保存: {success_count} 人")
     print(f"保存失败: {error_count} 人")
@@ -149,10 +149,10 @@ def craw_all_star():
     else:
         results = []
         all_count = 0
-    for index,star in enumerate(results):
+    for index,star in enumerate(results,20):
         controller.process_actress_page(star['code'])
         logger.info(f"进度：{index}/{all_count} {star['code']}")
-
+   
 
 def craw_top_star():
     cursor = db_manager.get_top_star()

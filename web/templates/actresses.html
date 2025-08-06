@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block title %}演员列表{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4">演员列表</h2>
+    
+    <div class="row">
+        {% for actress in actresses %}
+        <div class="col-6 col-md-3 mb-4">
+            <div class="card h-100"> 
+                    <img src="{{ url_for('static', filename='images/actresses/' + actress.code+'_'+actress.name+'.jpg') }}" 
+                         class="card-img-top img-fluid" 
+                         alt="{{ actress.name }}"
+                         onerror="this.src='{{ actresses.image_url}}'">
+                
+                <div class="card-body">
+                    <h5 class="card-title text-truncate">{{ actress.name }}</h5>
+                    <p class="card-text">
+                        <small class="text-muted">罩杯{{ actress.cup_size }}</small>
+                    </p>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <!-- 分页导航 - 优化移动端和PC端显示 -->
+    <nav aria-label="Page navigation">
+        <ul class="pagination justify-content-center flex-wrap">
+            {% if page > 1 %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('actresses_list', page=page-1) }}">上一页</a>
+            </li>
+            {% endif %}
+            
+            {% set max_pages = 10 %}
+            {% if is_mobile %}
+                {% set max_pages = 5 %}
+            {% endif %}
+            
+            {% set start_page = [1, page - max_pages//2]|max %}
+            {% set end_page = [start_page + max_pages - 1, (total//per_page)+1]|min %}
+            
+            {% if start_page > 1 %}
+            <li class="page-item disabled">
+                <span class="page-link">...</span>
+            </li>
+            {% endif %}
+            
+            {% for p in range(start_page, end_page + 1) %}
+            <li class="page-item {% if p == page %}active{% endif %}">
+                <a class="page-link" href="{{ url_for('actresses_list', page=p) }}">{{ p }}</a>
+            </li>
+            {% endfor %}
+            
+            {% if end_page < (total//per_page)+1 %}
+            <li class="page-item disabled">
+                <span class="page-link">...</span>
+            </li>
+            {% endif %}
+            
+            {% if page*per_page < total %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('actresses_list', page=page+1) }}">下一页</a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+</div>
+
+<script>
+    // 检测是否为移动设备
+    const is_mobile = window.matchMedia("(max-width: 768px)").matches;
+</script>
+<style>
+    /* 移动端优化样式 */
+    @media (max-width: 768px) {
+        .card {
+            margin-bottom: 15px;
+        }
+        .card-title {
+            font-size: 0.9rem;
+        }
+        .page-link {
+            padding: 0.3rem 0.6rem;
+            font-size: 0.9rem;
+        }
+    }
+</style>
+{% endblock %}

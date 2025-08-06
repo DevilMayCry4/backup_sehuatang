@@ -14,3 +14,4 @@ logs/gunicorn_access.log
 logs/gunicorn_error.log
 covers/
 actresses.zip
+image/

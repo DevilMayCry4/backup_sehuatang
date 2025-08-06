@@ -6,7 +6,6 @@ import sys
 import time
 import random
 import logging
-from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
@@ -26,6 +25,7 @@ from database import db_manager
  # 在文件开头添加
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from selenium_base import BaseSeleniumController
+
 
 # 加载环境变量
 load_dotenv('/root/backup_sehuatang/copy.env')
@@ -601,10 +601,11 @@ class JavBusSeleniumController(BaseSeleniumController):
 
 
 
+controller = JavBusSeleniumController()
+
 # Selenium 版本的特殊功能
 def get_html_with_selenium(url, headless=True, delay=3):
     """使用 Selenium 获取 HTML 内容"""
-    controller = SeleniumControler(headless=headless, delay=delay)
     try:
         html_content = controller.get_page_content(url)
         return html_content
@@ -613,7 +614,6 @@ def get_html_with_selenium(url, headless=True, delay=3):
 
 def parse_html_with_selenium(url, parser_func, headless=True, delay=3):
     """使用 Selenium 获取页面并用自定义解析函数处理"""
-    controller = SeleniumControler(headless=headless, delay=delay)
     try:
         html_content = controller.get_page_content(url)
         if html_content:
@@ -833,7 +833,6 @@ def process_actress_page(code, max_pages=None):
         total_movies = []
         actress_info = None
         
-        controller = JavBusSeleniumController(headless=True, delay=3)
         while current_url and (max_pages is None or page_count < max_pages):
             logger.info(f"正在处理第 {page_count + 1} 页: {current_url}")
             
@@ -873,12 +872,14 @@ def process_actress_page(code, max_pages=None):
                                 db_manager.write_jav_movie(movie_detail)
                                 logger.info(f"✓ 已保存影片: {movie_detail.get('識別碼', 'Unknown')}")
                             else:
-                                logger.info(f"✗ 无法解析影片详情: {movie['url']}")
+                                logger.error(f"✗ 无法解析影片详情: {movie['url']}")
+                                db_manager.add_retry_url(movie['url'], 'parse_error', '无法解析影片详情')
                         else:
-                            logger.info(f"✗ 无法获取影片页面: {movie['url']}")
+                            logger.error(f"✗ 无法获取影片页面: {movie['url']}")
+                            db_manager.add_retry_url(movie['url'], 'fetch_error', '无法获取影片页面')
                     except Exception as e:
-                        logger.info(f"✗ 处理影片时出错 {movie['url']}: {e}")
-                        continue
+                        logger.error(f"✗ 处理影片时出错 {movie['url']}: {e}")
+                        db_manager.add_retry_url(movie['url'], 'process_error', str(e))
                 else:
                     logger.info(f"跳过已处理的影片: {movie['url']}")
             total_movies.extend(movies)
@@ -913,7 +914,6 @@ def process_actress_page(code, max_pages=None):
 # 使用示例
 if __name__ == "__main__":
     # 测试 Selenium 控制器
-    controller = JavBusSeleniumController(headless=True, delay=3)
     try:
         # 测试获取页面内容
         html = controller.get_page_content("https://www.javbus.com")
@@ -925,3 +925,31 @@ if __name__ == "__main__":
     finally:
         controller.close_driver()
 # 在文件末尾添加以下方法
+def retry_failed_urls(max_retries=3):
+    """重试失败的URL"""
+    pending_urls = db_manager.get_pending_retry_urls()
+    
+    for url_info in pending_urls:
+        url = url_info['url']
+        retry_count = url_info.get('retry_count', 0)
+        
+        if retry_count >= max_retries:
+            db_manager.update_retry_status(url, False, retry_count)
+            continue
+            
+        try:
+            # 这里调用原来的处理方法
+            html = controller.get_page_content(url)
+            if html:
+                movie_detail = parser_content(html)
+                if movie_detail:
+                    db_manager.write_jav_movie(movie_detail)
+                    db_manager.update_retry_status(url, True, retry_count)
+                    continue
+            
+            # 如果重试失败
+            db_manager.update_retry_status(url, False, retry_count)
+            
+        except Exception as e:
+            logger.error(f"重试失败 {url}: {e}")
+            db_manager.update_retry_status(url, False, retry_count)

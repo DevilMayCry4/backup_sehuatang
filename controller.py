@@ -462,7 +462,7 @@ def read_magnets_from_table(url):
         return None
 
 def write_actress_data(actress_info, local_image_path=None):
-    """写入女优数据到 MongoDB"""
+    """写入演员数据到 MongoDB"""
     try:
         db = get_mongo_connection()
         collection = db.actresses_data
@@ -495,7 +495,7 @@ def write_actress_data(actress_info, local_image_path=None):
         return False
 
 def create_actress_db():
-    """创建女优数据库集合和索引"""
+    """创建演员数据库集合和索引"""
     try:
         db = get_mongo_connection()
         collection = db.actresses_data

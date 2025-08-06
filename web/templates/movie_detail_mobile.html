@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>{{ movie.title or '电影详情' }} - Jellyfin电影查询</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .mobile-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1rem 0;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+        .movie-poster {
+            max-width: 100%;
+            height: auto;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        }
+        .info-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+            margin-bottom: 1rem;
+        }
+        .magnet-container {
+            background: #e3f2fd;
+            border-radius: 8px;
+            padding: 1rem;
+        }
+        .btn-copy {
+            background: #2196f3;
+            border: none;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 25px;
+            font-weight: 500;
+        }
+        .btn-back {
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+            border-radius: 20px;
+        }
+    </style>
+</head>
+<body>
+    <!-- 移动端头部 -->
+    <div class="mobile-header">
+        <div class="container">
+            <div class="d-flex align-items-center">
+                <button class="btn btn-back me-3" onclick="goBack()">
+                    <i class="bi bi-arrow-left"></i> 返回
+                </button>
+                <h5 class="mb-0 flex-grow-1">电影详情</h5>
+            </div>
+        </div>
+    </div>
+
+    <div class="container py-3">
+        <!-- 电影海报 -->
+        <div class="text-center mb-4">
+            {% if movie.image_url %}
+                <img src="{{ movie.image_url }}" alt="{{ movie.title }}" class="movie-poster" 
+                     style="max-height: 400px;"
+                     onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjI4MCIgdmlld0JveD0iMCAwIDIwMCAyODAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMjgwIiBmaWxsPSIjRjhGOUZBIi8+CjxwYXRoIGQ9Ik03MCA5MEwxMzAgOTBMMTAwIDEzMEw3MCA5MFoiIGZpbGw9IiNEMUQ1REIiLz4KPC9zdmc+'">
+            {% else %}
+                <div class="d-flex align-items-center justify-content-center bg-light text-muted movie-poster" 
+                     style="width:200px;height:280px; margin: 0 auto;">
+                    <i class="bi bi-film" style="font-size: 4rem;"></i>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- 电影信息 -->
+        <div class="info-card p-3 mb-3">
+            <h4 class="text-primary mb-3">{{ movie.title or '未知标题' }}</h4>
+            
+            <div class="row g-3">
+                <div class="col-6">
+                    <div class="text-muted small">电影编号</div>
+                    <div class="fw-bold">{{ movie.movie_code or 'N/A' }}</div>
+                </div>
+                <div class="col-6">
+                    <div class="text-muted small">发现时间</div>
+                    <div class="fw-bold">{{ movie.found_at.strftime('%Y-%m-%d %H:%M') if movie.found_at else '未知时间' }}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 磁力链接 -->
+        {% if movie.magnet_link %}
+        <div class="info-card p-3">
+            <h6 class="text-success mb-3">
+                <i class="bi bi-magnet"></i> 磁力链接
+            </h6>
+            <div class="magnet-container">
+                <div class="small text-muted mb-2">点击下方按钮复制磁力链接</div>
+                <div class="d-grid">
+                    <button class="btn btn-copy" onclick="copyMagnetLink()">
+                        <i class="bi bi-copy me-2"></i>复制磁力链接
+                    </button>
+                </div>
+                <div class="mt-3">
+                    <textarea class="form-control" rows="3" readonly id="magnetText">{{ movie.magnet_link }}</textarea>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="info-card p-3">
+            <div class="text-center text-muted">
+                <i class="bi bi-x-circle" style="font-size: 2rem;"></i>
+                <h6 class="mt-2">暂无磁力链接</h6>
+                <p class="small">该电影还没有找到磁力链接</p>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Toast 提示 -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-3">
+        <div id="copyToast" class="toast" role="alert">
+            <div class="toast-header">
+                <i class="bi bi-check-circle text-success me-2"></i>
+                <strong class="me-auto">复制成功</strong>
+                <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+            </div>
+            <div class="toast-body">
+                磁力链接已复制到剪贴板
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function goBack() {
+            if (window.history.length > 1) {
+                window.history.back();
+            } else {
+                window.location.href = '/subscriptions';
+            }
+        }
+
+        function copyMagnetLink() {
+            const magnetText = document.getElementById('magnetText').value;
+            
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(magnetText).then(function() {
+                    showToast();
+                }).catch(function(err) {
+                    console.error('复制失败: ', err);
+                    fallbackCopy(magnetText);
+                });
+            } else {
+                fallbackCopy(magnetText);
+            }
+        }
+
+        function fallbackCopy(text) {
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            textArea.style.position = 'fixed';
+            textArea.style.left = '-999999px';
+            textArea.style.top = '-999999px';
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            
+            try {
+                const successful = document.execCommand('copy');
+                if (successful) {
+                    showToast();
+                }
+            } catch (err) {
+                console.error('复制失败: ', err);
+            }
+            
+            document.body.removeChild(textArea);
+        }
+
+        function showToast() {
+            const toast = new bootstrap.Toast(document.getElementById('copyToast'));
+            toast.show();
+        }
+    </script>
+</body>
+</html>
