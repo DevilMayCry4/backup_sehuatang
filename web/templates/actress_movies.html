@@ -9,7 +9,7 @@
     <div class="row">
         {% for movie in movies %}
         <div class="col-6 col-md-3 mb-4">
-            <div class="card h-100" style="cursor: pointer;" onclick="window.location.href='/actress-movie-detail/{{ actress.code }}/{{ movie.code }}'">
+            <div class="card h-100" style="cursor: pointer;" onclick="window.location.href='/jav-movie-detail/{{ movie.code }}'">
                 <a href="{{ url_for('static', filename='images/covers/' + movie.code+'/'+movie.code+'_cover.jpg') }}" data-toggle="lightbox" data-gallery="movie-gallery" onclick="event.stopPropagation();">
                     <img src="{{ url_for('static', filename='images/covers/' + movie.code+'/'+movie.code+'_cover.jpg') }}"
                          class="card-img-top img-fluid" 

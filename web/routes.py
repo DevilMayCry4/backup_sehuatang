@@ -431,16 +431,10 @@ def register_routes(app, jellyfin_checker, crawler):
                              per_page=per_page,
                              total=total)
     
-    @app.route('/actress-movie-detail/<actress_code>/<movie_code>')
-    def actress_movie_detail(actress_code, movie_code):
+    @app.route('/jav-movie-detail/<movie_code>')
+    def actress_movie_detail( movie_code):
         """演员影片详情页面"""
         try:
-            # 获取演员信息
-            actress = db_manager.actresses_data_collection.find_one({'code': actress_code})
-            if not actress:
-                return render_template('error.html', 
-                                     error_message='演员不存在'), 404
-            
             # 获取影片详情
             movie = db_manager.javbus_data_collection.find_one({'code': movie_code})
             if not movie:
@@ -450,8 +444,7 @@ def register_routes(app, jellyfin_checker, crawler):
             movie['magnet_links'] = magnet_links
             parse_actress_to_array = db_manager.parse_actress_to_array(movie)
             movie['actresses'] = parse_actress_to_array
-            return render_template('actress_movie_detail.html', 
-                                 actress=actress,
+            return render_template('jav_movie_detail.html',  
                                  movie=movie)
             
         except Exception as e:
