@@ -12,12 +12,9 @@ import re
 import os
 import requests
 import downloader
-
-
-
-
-
-
+from web.app import crawler
+from web.app import logger
+ 
 
 def _get_cili_url(soup):
     """get_cili(soup).get the ajax url and Referer url of request"""
@@ -138,7 +135,7 @@ def download_image(image_url, save_path, filename):
         print(f"图片已保存: {file_path}")
         return file_path
     except Exception as e:
-        print(f"下载图片失败 {image_url}: {e}")
+        logger.info(f"下载图片失败 {image_url}: {e}")
         return None
 
 def get_file_extension(url):
@@ -320,15 +317,12 @@ def parser_content(html):
     if bigimage_url and categories.get('識別碼'):
         code_name = categories['識別碼']
         # 创建基于识别码的文件夹
-        save_dir = os.path.join('images', 'covers', code_name)
-        ext = get_file_extension(bigimage_url)
-        cover_filename = f"{code_name}_cover.{ext}"
+        save_dir = os.path.join('/root/backup_sehuatang/web/static/images', 'covers', code_name)
+        cover_filename = f"{code_name}_cover.jpg"
         
         # 下载封面
         download_image(bigimage_url, save_dir, cover_filename)
         
- 
-
     #標題加入字典
     title = soup.find('title').text.strip().replace(" - JavBus","")
     categories['標題'] = title

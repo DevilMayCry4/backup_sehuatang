@@ -9,13 +9,15 @@
     <div class="row">
         {% for movie in movies %}
         <div class="col-6 col-md-3 mb-4">
-            <div class="card h-100">
-                <img src="{{ movie.cover }}" class="card-img-top img-fluid" alt="{{ movie.title }}">
+            <div class="card h-100" style="cursor: pointer;" onclick="window.location.href='/actress-movie-detail/{{ actress.code }}/{{ movie.code }}'">
+                <a href="{{ url_for('static', filename='images/covers/' + movie.code+'/'+movie.code+'_cover.jpg') }}" data-toggle="lightbox" data-gallery="movie-gallery" onclick="event.stopPropagation();">
+                    <img src="{{ url_for('static', filename='images/covers/' + movie.code+'/'+movie.code+'_cover.jpg') }}"
+                         class="card-img-top img-fluid" 
+                         alt="{{ movie.title }}"
+                         loading="lazy">
+                </a>
                 <div class="card-body">
-                    <h5 class="card-title text-truncate">{{ movie.title }}</h5>
-                    <p class="card-text">
-                        <small class="text-muted">{{ movie.code }}</small>
-                    </p>
+                    <small class="text-muted">{{ movie.title }}</small>
                 </div>
             </div>
         </div>
@@ -31,7 +33,10 @@
             </li>
             {% endif %}
             
-            {% for p in range(1, (total//per_page)+2) %}
+            {% set start_page = [1, page-5]|max %}
+            {% set end_page = [start_page+9, (total//per_page)+1]|min %}
+            
+            {% for p in range(start_page, end_page+1) %}
             <li class="page-item {% if p == page %}active{% endif %}">
                 <a class="page-link" href="{{ url_for('actress_movies', code=actress.code, page=p) }}">{{ p }}</a>
             </li>
@@ -45,4 +50,16 @@
         </ul>
     </nav>
 </div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ekko-lightbox/5.3.0/ekko-lightbox.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/ekko-lightbox/5.3.0/ekko-lightbox.css">
+<script>
+    $(document).on('click', '[data-toggle="lightbox"]', function(event) {
+        event.preventDefault();
+        $(this).ekkoLightbox();
+    });
+</script>
 {% endblock %}

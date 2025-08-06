@@ -11,6 +11,7 @@ import sys
 import os
 from dotenv import load_dotenv
 import atexit
+import ast
 
 # 添加父目录到路径
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -354,6 +355,16 @@ class DatabaseManager:
             print(f"获取分页演员数据错误: {e}")
             return None, 0
     
+    def get_all_star(self):
+        """获取全部演员数据"""
+        try:
+            if self.actresses_data_collection is None:
+                return None
+            return self.actresses_data_collection.find().sort("_id", 1)
+        except Exception as e:
+            print(f"Error getting top actresses from MongoDB: {e}")
+            return None
+
     def get_top_star(self):
         """获取前10个演员数据"""
         try:
@@ -402,25 +413,64 @@ class DatabaseManager:
         except Exception as e:
             logger.error(f"更新重试状态失败: {url}, 错误: {e}")
             return False
-    def get_actress_movies(self, actress_code, page=1, per_page=20):
+    def get_actress_movies(self, actress_name, page=1, per_page=20):
         """获取指定演员的所有影片(分页)"""
         try:
             if self.javbus_data_collection is None:
                 return None, 0
                 
             movies = list(self.javbus_data_collection.find(
-                {'code': {'$regex': actress_code, '$options': 'i'}}
+                {'actresses': {'$regex': actress_name, '$options': 'i'}}
             ).skip((page-1)*per_page).limit(per_page))
             
             total = self.javbus_data_collection.count_documents(
-                {'code': {'$regex': actress_code, '$options': 'i'}}
+                {'actresses': {'$regex': actress_name, '$options': 'i'}}
             )
-            print(actress_code)
             return movies, total
         except Exception as e:
             print(f"获取演员影片错误: {e}")
             return None, 0
-            
+    
+    
+    def parse_actress_to_array(self,movie):
+        """解析数据库里的演员信息，将字符串转换为数组"""
+        if movie == None:
+            return None
+        else:
+            actresses = movie['actresses']
+            if actresses == None:
+                return None
+            else:
+                return  actresses.split('\n')
+
+    def parser_magnet_links_to_array(self,movie):
+        """解析数据库里的磁力信息，将字符串转换为数组"""
+        if movie == None:
+            return None
+        else:
+            magnet_links = movie['magnet_links']
+            if magnet_links == None:
+                return None
+            else:
+                return self.parse_string_to_array(magnet_links)
+
+        
+    def parse_string_to_array(self,data_string):
+        data_list = []
+        lines = data_string.strip().split('\n')
+        
+        for line in lines:
+            line = line.strip()
+            if line:  # 跳过空行
+                try:
+                    # 使用 ast.literal_eval 安全地解析字典字符串
+                    data_dict = ast.literal_eval(line)
+                    data_list.append(data_dict)
+                except (ValueError, SyntaxError) as e:
+                    print(f"解析行失败: {line}, 错误: {e}")
+        return data_list
+
+
     def close_connection(self):
         """关闭 MongoDB 连接"""
         if self.mongo_client:

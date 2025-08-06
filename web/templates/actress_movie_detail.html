@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>{{ movie.title or '影片详情' }} - {{ actress.name }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .mobile-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1rem 0;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+        .movie-poster {
+            max-width: 100%;
+            height: auto;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        }
+        .info-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+            margin-bottom: 1rem;
+        }
+        .btn-back {
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+            border-radius: 20px;
+        }
+    </style>
+</head>
+<body>
+    <!-- 头部导航 -->
+    <div class="mobile-header">
+        <div class="container">
+            <div class="d-flex align-items-center">
+                <h5 class="mb-0 text-center">{{ actress.name }}的影片</h5>
+            </div>
+        </div>
+    </div>
+
+    <div class="container mt-3">
+        <!-- 影片海报 -->
+        <div class="text-center mb-4">
+            <img src="{{ url_for('static', filename='images/covers/' + movie.code+'/'+movie.code+'_cover.jpg') }}" class="movie-poster" alt="{{ movie.title }}" 
+                 >
+        </div>
+
+        <!-- 影片信息 -->
+        <div class="info-card p-3">
+            <h4 class="mb-3">{{ movie.title }}</h4>
+            
+            <div class="row mb-2">
+                <div class="col-4 text-muted">番号:</div>
+                <div class="col-8">{{ movie.code }}</div>
+            </div>
+            
+            {% if movie.release_date %}
+            <div class="row mb-2">
+                <div class="col-4 text-muted">发行日期:</div>
+                <div class="col-8">{{ movie.release_date }}</div>
+            </div>
+            {% endif %}
+            
+            {% if movie.duration %}
+            <div class="row mb-2">
+                <div class="col-4 text-muted">时长:</div>
+                <div class="col-8">{{ movie.duration }}</div>
+            </div>
+            {% endif %}
+            
+            {% if movie.director %}
+            <div class="row mb-2">
+                <div class="col-4 text-muted">导演:</div>
+                <div class="col-8">{{ movie.director }}</div>
+            </div>
+            {% endif %}
+            
+            {% if movie.studio %}
+            <div class="row mb-2">
+                <div class="col-4 text-muted">制作商:</div>
+                <div class="col-8">{{ movie.studio }}</div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- 演员信息 -->
+        {% if movie.actresses %}
+        <div class="info-card p-3">
+            <h5 class="mb-3">出演演员</h5>
+            <div class="row">
+                {% for actress_name in movie.actresses %}
+                <div class="col-6 col-md-4 mb-2">
+                    <span class="badge bg-primary">{{ actress_name }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- 磁力链接 -->
+        {% if movie.magnet_links %}
+        <div class="info-card p-3">
+            <h5 class="mb-3">磁力链接</h5>
+            {% for magnet in movie.magnet_links %}
+            <div class="magnet-container mb-3 p-3 border rounded">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div class="d-flex align-items-center">
+                        <h6 class="mb-0 me-2">{{ magnet.title or '未知标题' }}</h6>
+                        <!-- 字幕和高清图标 -->
+                        {% if magnet.title and ('字幕' in magnet.title or 'CH' in magnet.title or '中文' in magnet.title) %}
+                        <span class="badge bg-success me-1" title="包含字幕">
+                            <i class="fas fa-closed-captioning"></i> 字幕
+                        </span>
+                        {% endif %}
+                        {% if magnet.title and ('HD' in magnet.title or '高清' in magnet.title or '1080' in magnet.title or '720' in magnet.title) %}
+                        <span class="badge bg-info me-1" title="高清画质">
+                            <i class="fas fa-video"></i> 高清
+                        </span>
+                        {% endif %}
+                    </div>
+                    <button class="btn btn-sm btn-outline-primary" onclick="copyToClipboard('{{ magnet.magnet }}')">复制</button>
+                </div>
+                
+                <div class="row mb-2">
+                    <div class="col-md-6">
+                        <small class="text-muted">
+                            <i class="fas fa-hdd"></i> 大小: {{ magnet.size or '未知大小' }}
+                        </small>
+                    </div>
+                    <div class="col-md-6">
+                        <small class="text-muted">
+                            <i class="fas fa-calendar"></i> 日期: {{ magnet.date or '未知日期' }}
+                        </small>
+                    </div>
+                </div>
+                
+                <div class="text-break small bg-light p-2 rounded" style="word-break: break-all; font-family: monospace;">
+                    {{ magnet.magnet }}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function copyToClipboard(text) {
+            // 检查是否支持现代剪贴板API
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(text).then(function() {
+                    showCopySuccess();
+                }, function(err) {
+                    console.error('复制失败: ', err);
+                    fallbackCopyTextToClipboard(text);
+                });
+            } else {
+                // 回退到传统方法
+                fallbackCopyTextToClipboard(text);
+            }
+        }
+        
+        function fallbackCopyTextToClipboard(text) {
+            var textArea = document.createElement("textarea");
+            textArea.value = text;
+            
+            // 避免滚动到底部
+            textArea.style.top = "0";
+            textArea.style.left = "0";
+            textArea.style.position = "fixed";
+            textArea.style.opacity = "0";
+            
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            
+            try {
+                var successful = document.execCommand('copy');
+                if (successful) {
+                    showCopySuccess();
+                } else {
+                    showCopyError();
+                }
+            } catch (err) {
+                console.error('复制失败: ', err);
+                showCopyError();
+            }
+            
+            document.body.removeChild(textArea);
+        }
+        
+        function showCopySuccess() {
+            // 创建一个临时的成功提示
+            var toast = document.createElement('div');
+            toast.className = 'alert alert-success position-fixed';
+            toast.style.top = '20px';
+            toast.style.right = '20px';
+            toast.style.zIndex = '9999';
+            toast.innerHTML = '<i class="fas fa-check"></i> 磁力链接已复制到剪贴板';
+            
+            document.body.appendChild(toast);
+            
+            // 3秒后自动移除提示
+            setTimeout(function() {
+                if (toast.parentNode) {
+                    toast.parentNode.removeChild(toast);
+                }
+            }, 3000);
+        }
+        
+        function showCopyError() {
+            var toast = document.createElement('div');
+            toast.className = 'alert alert-danger position-fixed';
+            toast.style.top = '20px';
+            toast.style.right = '20px';
+            toast.style.zIndex = '9999';
+            toast.innerHTML = '<i class="fas fa-exclamation-triangle"></i> 复制失败，请手动复制';
+            
+            document.body.appendChild(toast);
+            
+            setTimeout(function() {
+                if (toast.parentNode) {
+                    toast.parentNode.removeChild(toast);
+                }
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

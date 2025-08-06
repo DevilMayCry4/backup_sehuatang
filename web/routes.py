@@ -10,8 +10,7 @@ from database import db_manager
 from movie_search import process_movie_search_results
 from subscription import trigger_subscription_check_async
 from image_proxy import proxy_image
-import app_logger
-
+ 
 
 def register_routes(app, jellyfin_checker, crawler):
     """注册所有路由"""
@@ -420,17 +419,45 @@ def register_routes(app, jellyfin_checker, crawler):
         
         # 获取演员信息
         actress = db_manager.actresses_data_collection.find_one({'code': code})
-        app_logger.info(f"获取演员信息: {actress}")
         # 获取该演员的所有影片(分页)
-        movies, total = db_manager.get_actress_movies(code, page, per_page)
-        print(movies)
-        app_logger.info(f"获取演员影片: {movies}")
+        movies, total = db_manager.get_actress_movies(actress['name'], page, per_page)
+        if not movies:
+            movies = []
+                                 
         return render_template('actress_movies.html', 
                              actress=actress,
                              movies=movies,
                              page=page,
                              per_page=per_page,
                              total=total)
+    
+    @app.route('/actress-movie-detail/<actress_code>/<movie_code>')
+    def actress_movie_detail(actress_code, movie_code):
+        """演员影片详情页面"""
+        try:
+            # 获取演员信息
+            actress = db_manager.actresses_data_collection.find_one({'code': actress_code})
+            if not actress:
+                return render_template('error.html', 
+                                     error_message='演员不存在'), 404
+            
+            # 获取影片详情
+            movie = db_manager.javbus_data_collection.find_one({'code': movie_code})
+            if not movie:
+                return render_template('error.html', 
+                                     error_message='影片不存在'), 404
+            magnet_links = db_manager.parser_magnet_links_to_array(movie)
+            movie['magnet_links'] = magnet_links
+            parse_actress_to_array = db_manager.parse_actress_to_array(movie)
+            movie['actresses'] = parse_actress_to_array
+            return render_template('actress_movie_detail.html', 
+                                 actress=actress,
+                                 movie=movie)
+            
+        except Exception as e:
+            print(f"获取演员影片详情错误: {e}")
+            return render_template('error.html', 
+                                 error_message="获取演员影片详情错误"), 500
 
  
  
