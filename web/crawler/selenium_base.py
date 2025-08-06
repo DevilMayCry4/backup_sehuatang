@@ -132,7 +132,7 @@ class BaseSeleniumController:
             self.mongo_client.admin.command('ping')
             self.db = self.mongo_client['sehuatang_crawler']
             self.collection = self.db['thread_details']
-            logger.info(f"MongoDB连接成功: {self.mongo_uri}")
+            
         except Exception as e:
             logger.error(f"MongoDB连接失败: {e}")
             self.mongo_client = None

@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block title %}{{ actress.name }}的影片{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4">{{ actress.name }}的影片</h2>
+    
+    <div class="row">
+        {% for movie in movies %}
+        <div class="col-6 col-md-3 mb-4">
+            <div class="card h-100">
+                <img src="{{ movie.cover }}" class="card-img-top img-fluid" alt="{{ movie.title }}">
+                <div class="card-body">
+                    <h5 class="card-title text-truncate">{{ movie.title }}</h5>
+                    <p class="card-text">
+                        <small class="text-muted">{{ movie.code }}</small>
+                    </p>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <!-- 分页导航 -->
+    <nav aria-label="Page navigation">
+        <ul class="pagination justify-content-center flex-wrap">
+            {% if page > 1 %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('actress_movies', code=actress.code, page=page-1) }}">上一页</a>
+            </li>
+            {% endif %}
+            
+            {% for p in range(1, (total//per_page)+2) %}
+            <li class="page-item {% if p == page %}active{% endif %}">
+                <a class="page-link" href="{{ url_for('actress_movies', code=actress.code, page=p) }}">{{ p }}</a>
+            </li>
+            {% endfor %}
+            
+            {% if page*per_page < total %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('actress_movies', code=actress.code, page=page+1) }}">下一页</a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+</div>
+{% endblock %}

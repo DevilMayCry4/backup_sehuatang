@@ -27,11 +27,7 @@ MONGO_DB = os.getenv('MONGO_DB', 'javbus_crawler')
 _mongo_client = None
 _mongo_db = None
 
-# 配置日志
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s'
-)
+ 
 logger = logging.getLogger(__name__)
 
 class SeleniumControler:

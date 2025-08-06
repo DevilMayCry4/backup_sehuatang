@@ -10,6 +10,7 @@ from database import db_manager
 from movie_search import process_movie_search_results
 from subscription import trigger_subscription_check_async
 from image_proxy import proxy_image
+import app_logger
 
 
 def register_routes(app, jellyfin_checker, crawler):
@@ -407,6 +408,26 @@ def register_routes(app, jellyfin_checker, crawler):
         
         return render_template('actresses.html', 
                              actresses=actresses,
+                             page=page,
+                             per_page=per_page,
+                             total=total)
+    
+    @app.route('/actress/<code>')
+    def actress_movies(code):
+        """演员影片列表"""
+        page = request.args.get('page', 1, type=int)
+        per_page = 20
+        
+        # 获取演员信息
+        actress = db_manager.actresses_data_collection.find_one({'code': code})
+        app_logger.info(f"获取演员信息: {actress}")
+        # 获取该演员的所有影片(分页)
+        movies, total = db_manager.get_actress_movies(code, page, per_page)
+        print(movies)
+        app_logger.info(f"获取演员影片: {movies}")
+        return render_template('actress_movies.html', 
+                             actress=actress,
+                             movies=movies,
                              page=page,
                              per_page=per_page,
                              total=total)

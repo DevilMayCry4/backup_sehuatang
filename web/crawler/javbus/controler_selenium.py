@@ -36,11 +36,7 @@ llm_api_url = os.getenv('LLM_API_URL', 'https://open.bigmodel.cn/api/paas/v4/cha
 llm_api_key = os.getenv('LLM_API_KEY', '')
 llm_model = os.getenv('LLM_MODEL', 'glm-4.5-flash')
 jav_base_url = 'https://www.javbus.com'
-# 配置日志
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s'
-)
+ 
 logger = logging.getLogger(__name__)
 
 class JavBusSeleniumController(BaseSeleniumController):

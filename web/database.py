@@ -402,7 +402,25 @@ class DatabaseManager:
         except Exception as e:
             logger.error(f"更新重试状态失败: {url}, 错误: {e}")
             return False
-
+    def get_actress_movies(self, actress_code, page=1, per_page=20):
+        """获取指定演员的所有影片(分页)"""
+        try:
+            if self.javbus_data_collection is None:
+                return None, 0
+                
+            movies = list(self.javbus_data_collection.find(
+                {'code': {'$regex': actress_code, '$options': 'i'}}
+            ).skip((page-1)*per_page).limit(per_page))
+            
+            total = self.javbus_data_collection.count_documents(
+                {'code': {'$regex': actress_code, '$options': 'i'}}
+            )
+            print(actress_code)
+            return movies, total
+        except Exception as e:
+            print(f"获取演员影片错误: {e}")
+            return None, 0
+            
     def close_connection(self):
         """关闭 MongoDB 连接"""
         if self.mongo_client:
@@ -473,5 +491,7 @@ def get_all_star():
 def get_top_star():
     """获取热门演员 - 兼容性函数"""
     return db_manager.get_top_star()
+
+
 
 

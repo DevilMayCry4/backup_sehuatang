@@ -9,12 +9,11 @@
     <div class="row">
         {% for actress in actresses %}
         <div class="col-6 col-md-3 mb-4">
-            <div class="card h-100"> 
-                    <img src="{{ url_for('static', filename='images/actresses/' + actress.code+'_'+actress.name+'.jpg') }}" 
-                         class="card-img-top img-fluid" 
-                         alt="{{ actress.name }}"
-                         onerror="this.src='{{ actresses.image_url}}'">
-                
+            <div class="card h-100" onclick="window.location.href='{{ url_for('actress_movies', code=actress.code) }}'">
+                <img src="{{ url_for('static', filename='images/actresses/' + actress.code+'_'+actress.name+'.jpg') }}" 
+                     class="card-img-top img-fluid" 
+                     alt="{{ actress.name }}"
+                     onerror="this.src='{{ actress.image_url }}'">
                 <div class="card-body">
                     <h5 class="card-title text-truncate">{{ actress.name }}</h5>
                     <p class="card-text">

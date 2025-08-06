@@ -32,6 +32,10 @@ from subscription import start_scheduler
 from jellyfin_movie_checker import JellyfinMovieChecker
 from crawler.javbus_crawler import JavBusCrawler
 from config import config as app_config
+ 
+
+
+
 
 # 创建Flask应用
 app = Flask(__name__)
@@ -102,8 +106,7 @@ def init_mongodb():
         found_movies_collection.create_index("series_name")
         found_movies_collection.create_index("subscription_id")
         found_movies_collection.create_index("found_at")
-        
-        print("MongoDB连接成功")
+         
         return True
     except Exception as e:
         print(f"MongoDB连接失败: {e}")
