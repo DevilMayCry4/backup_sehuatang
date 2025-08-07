@@ -8,13 +8,14 @@ import sys
 from bs4 import BeautifulSoup
 import requests
 
+from web import app_logger
+
 # 添加当前目录到路径以确保能找到 controler_selenium
 current_dir = os.path.dirname(os.path.abspath(__file__))
 if current_dir not in sys.path:
     sys.path.insert(0, current_dir)
 
 import controler_selenium as controller
-from selenium_crawler import logger
 
 # 添加上级目录到路径以导入 database 模块
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
@@ -151,7 +152,7 @@ def craw_all_star():
         all_count = 0
     for index,star in enumerate(results[20:]):
         controller.process_actress_page(star['code'])
-        logger.info(f"进度：{index}/{all_count} {star['code']}")
+        app_logger.info(f"进度：{index}/{all_count} {star['code']}")
    
 
 def craw_top_star():
@@ -165,7 +166,7 @@ def craw_top_star():
         all_count = 0
     for index,star in enumerate(results):
         controller.process_actress_page(star['code'])
-        logger.info(f"进度：{index}/{all_count} {star['code']}")
+        app_logger.info(f"进度：{index}/{all_count} {star['code']}")
 
 if __name__ == '__main__':
      
