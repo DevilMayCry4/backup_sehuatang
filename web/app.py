@@ -31,7 +31,6 @@ from routes import register_routes
 from subscription import start_scheduler
 from jellyfin_movie_checker import JellyfinMovieChecker
 from crawler.javbus_crawler import JavBusCrawler
-from config import config as app_config
   
 # 创建Flask应用
 app = Flask(__name__)
@@ -69,102 +68,6 @@ def init_components():
     
     return jellyfin_checker, crawler
 
- 
-
-# 初始化MongoDB连接
-mongo_client = None
-mongo_db = None
-mongo_collection = None
-add_movie_collection = None
-found_movies_collection = None  # 新增found_movies集合变量
-
-def init_mongodb():
-    """初始化MongoDB连接"""
-    global mongo_client, mongo_db, mongo_collection, add_movie_collection, found_movies_collection
-    try:
-        mongo_config = app_config.get_mongo_config()
-        mongo_client = MongoClient(mongo_config['uri'], serverSelectionTimeoutMS=5000)
-        # 测试连接
-        mongo_client.admin.command('ping')
-        # 连接到sehuatang_backup数据库
-        mongo_db = mongo_client['sehuatang_crawler']
-        mongo_collection = mongo_db['thread_details']
-        add_movie_collection = mongo_db['add_movie']  # 新增订阅表
-        found_movies_collection = mongo_db['found_movies']  # 新增找到的电影表
-        
-        # 创建索引
-        add_movie_collection.create_index("series_name")
-        add_movie_collection.create_index("movie_code")
-        add_movie_collection.create_index("created_at")
-        
-        # 为found_movies表创建索引
-        found_movies_collection.create_index("movie_code")
-        found_movies_collection.create_index("series_name")
-        found_movies_collection.create_index("subscription_id")
-        found_movies_collection.create_index("found_at")
-         
-        return True
-    except Exception as e:
-        print(f"MongoDB连接失败: {e}")
-        return False
-
-def extract_movie_code_from_title(title):
-    """从标题中提取电影编号"""
-    if not title:
-        return None
-    
-    # 常见的电影编号格式
-    patterns = [
-        r'([A-Z]{2,6}-\d{3,4})',  # 如 SSIS-123, PRED-456
-        r'([A-Z]{2,6}\d{3,4})',   # 如 SSIS123, PRED456
-        r'(\d{6}[-_]\d{3})',      # 如 123456-789
-        r'([A-Z]+[-_]\d+)',       # 如 ABC-123
-    ]
-    
-    for pattern in patterns:
-        match = re.search(pattern, title.upper())
-        if match:
-            return match.group(1)
-    
-    return None
-
-def query_magnet_link(movie_code, title):
-    """查询MongoDB中的magnet_link"""
-    if mongo_collection is None:
-        return None, False
-    
-    try:
-        # 首先尝试用movie_code在title字段中搜索
-        query_conditions = []
-        
-        if movie_code:
-            # 在title字段中搜索包含movie_code的记录
-            query_conditions.extend([
-                {'title': {'$regex': movie_code, '$options': 'i'}},
-                {'title': {'$regex': movie_code.replace('-', ''), '$options': 'i'}},
-                {'title': {'$regex': movie_code.replace('-', '_'), '$options': 'i'}}
-            ])
-        
-        if title:
-            # 从title中提取可能的电影编号
-            extracted_code = extract_movie_code_from_title(title)
-            if extracted_code and extracted_code != movie_code:
-                query_conditions.extend([
-                    {'title': {'$regex': extracted_code, '$options': 'i'}},
-                    {'title': {'$regex': extracted_code.replace('-', ''), '$options': 'i'}}
-                ])
-        
-        # 执行查询
-        for condition in query_conditions:
-            result = mongo_collection.find_one(condition)
-            if result and result.get('magnet_link'):
-                return result.get('magnet_link'), True
-        
-        return None, False
-        
-    except Exception as e:
-        print(f"查询MongoDB出错: {e}")
-        return None, False
 
 # 保留这个调用，它会处理所有初始化
 jellyfin_checker, crawler = init_components()

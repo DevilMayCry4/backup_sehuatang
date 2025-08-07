@@ -40,7 +40,7 @@
     <div class="row">
         {% for actress in actresses %}
         <div class="col-6 col-md-3 mb-4">
-            <div class="card h-100" onclick="window.location.href='{{ url_for('actress_movies', code=actress.code) }}';"> 
+            <div class="card h-100" onclick="window.location.href='{{url_for('actress_movies', code=actress.code) }}';"> 
                 <img id="actress-img-{{ loop.index }}" 
                      src="{{ url_for('static', filename='images/actresses/' + actress.code+'_'+actress.name+'.jpg') }}" 
                      class="card-img-top img-fluid" 

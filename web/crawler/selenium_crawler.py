@@ -5,58 +5,22 @@
 功能：从首页获取详情页链接，然后提取每个详情页的标题和磁力链接
 """
 
+import sys
+import os
 import re
-import time
-import csv
-from selenium import webdriver
+import time 
+import random
+
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.chrome.options import Options
 from selenium.common.exceptions import TimeoutException, WebDriverException
 from urllib.parse import urljoin
-import logging
-from pymongo import MongoClient
-from datetime import datetime
-import random
-import logging
-from logging.handlers import RotatingFileHandler
-import os
-import sys
 
-# 添加上级目录到路径以导入 database 模块
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
-from config import config  
- # 导入配置
-
-# 配置日志
-# 创建日志目录
-log_config = config.get_log_config()
-log_dir = log_config['log_dir']
-if not os.path.exists(log_dir):
-    os.makedirs(log_dir)
-
-# 配置日志格式
-log_format = '%(asctime)s - %(levelname)s - %(message)s'
-
-# 配置日志记录器
-logging.basicConfig(
-    level=logging.INFO,
-    format=log_format,
-    handlers=[
-        # 控制台输出
-        logging.StreamHandler(),
-        # 文件输出（带轮转）
-        RotatingFileHandler(
-            os.path.join(log_dir, log_config['log_file']),
-            maxBytes=log_config['max_bytes'],
-            backupCount=log_config['backup_count'],
-            encoding='utf-8'
-        )
-    ]
-)
-
-logger = logging.getLogger(__name__)
+# 添加父目录到Python路径
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from database import db_manager
+import  app_logger
 
 # 修改类名和继承
 from selenium_base import BaseSeleniumController
@@ -64,39 +28,10 @@ from selenium_base import BaseSeleniumController
 class ForumSeleniumCrawler(BaseSeleniumController):
     """专门用于论坛爬虫的 Selenium 控制器"""
      
-    
-    def save_to_mongodb(self, data):
-        """保存数据到MongoDB"""
-        if not self.mongo_client:
-            logger.warning("MongoDB未连接，跳过数据保存")
-            return False
-        
-        try:
-            # 添加时间戳
+    def __init__(self, headless=True, delay=3):
+        super().__init__(headless, delay)
+        self.base_url = "https://sehuatang.org/forum.php?mod=forumdisplay&fid=103&filter=typeid&typeid=480"
 
-            data['crawl_time'] = datetime.now() 
-            data['tid'] = self.extract_tid_id(data['url'])
-            # 检查是否已存在
-            existing = self.collection.find_one({'tid': data['tid']})
-            if existing:
-                # 更新现有记录
-                self.collection.update_one(
-                    {'tid': data['tid']},
-
-                    {'$set': data}
-                )
-                logger.info(f"更新MongoDB记录: {data['title']}")
-            else:
-                # 插入新记录
-                self.collection.insert_one(data)
-                logger.info(f"保存到MongoDB: {data['title']}")
-            return True
-        except Exception as e:
-            logger.error(f"保存到MongoDB失败: {e}")
-            return False
-    
-
-    # url=https://sehuatang.org/forum.php?mod=viewthread&tid=2921619&extra=page%3D1%26filter%3Dtypeid%26typeid%3D480%253Fpage%253D1
     
     def extract_tid_id(self, url):
         """从URL中提取thread ID"""
@@ -113,7 +48,7 @@ class ForumSeleniumCrawler(BaseSeleniumController):
     def get_page_content(self, url, max_retries=3):
         """使用Selenium获取页面内容，支持重试机制"""
         if not self.driver:
-            logger.error("WebDriver未初始化")
+            app_logger.error("WebDriver未初始化")
             return None
             
         for attempt in range(max_retries):
@@ -121,10 +56,10 @@ class ForumSeleniumCrawler(BaseSeleniumController):
                 # 随机延时，避免被检测
                 if attempt > 0:
                     wait_time = (attempt + 1) * 5 + random.uniform(2, 5)  # 增加等待时间
-                    logger.info(f"第{attempt + 1}次重试，等待{wait_time:.1f}秒...")
+                    app_logger.info(f"第{attempt + 1}次重试，等待{wait_time:.1f}秒...")
                     time.sleep(wait_time)
                 
-                logger.info(f"正在访问: {url}")
+                app_logger.info(f"正在访问: {url}")
                 
                 # 设置页面加载超时
                 self.driver.set_page_load_timeout(60)  # 增加超时时间
@@ -139,7 +74,7 @@ class ForumSeleniumCrawler(BaseSeleniumController):
                 # 检查是否遇到验证页面
                 page_source = self.driver.page_source
                 if '验证您是否是真人' in page_source or 'security check' in page_source.lower():
-                    logger.warning(f"遇到安全验证页面: {url}")
+                    app_logger.warning(f"遇到安全验证页面: {url}")
                     if attempt < max_retries - 1:
                         # 尝试等待更长时间
                         time.sleep(random.uniform(10, 20))
@@ -150,23 +85,23 @@ class ForumSeleniumCrawler(BaseSeleniumController):
                 if handled_age_check:
                     # 重新获取页面源码
                     page_source = self.driver.page_source 
-                    logger.info("已获取年龄确认后的新页面数据")
+                    app_logger.info("已获取年龄确认后的新页面数据")
                 
                 return page_source
                 
             except TimeoutException:
-                logger.error(f"页面加载超时: {url} (尝试{attempt + 1}/{max_retries})")
+                app_logger.error(f"页面加载超时: {url} (尝试{attempt + 1}/{max_retries})")
             except WebDriverException as e:
                 if "ERR_CONNECTION_REFUSED" in str(e):
-                    logger.error(f"连接被拒绝: {url} (尝试{attempt + 1}/{max_retries})")
+                    app_logger.error(f"连接被拒绝: {url} (尝试{attempt + 1}/{max_retries})")
                     if attempt < max_retries - 1:
-                        logger.info("可能是网络问题或反爬虫机制，等待更长时间后重试...")
+                        app_logger.info("可能是网络问题或反爬虫机制，等待更长时间后重试...")
                         time.sleep(random.uniform(30, 60))  # 等待30-60秒
                         continue
                 else:
-                    logger.error(f"WebDriver异常: {url} (尝试{attempt + 1}/{max_retries}): {e}")
+                    app_logger.error(f"WebDriver异常: {url} (尝试{attempt + 1}/{max_retries}): {e}")
             except Exception as e:
-                logger.error(f"获取页面失败: {url} (尝试{attempt + 1}/{max_retries}): {e}")
+                app_logger.error(f"获取页面失败: {url} (尝试{attempt + 1}/{max_retries}): {e}")
                 
             if attempt == max_retries - 1:
                 return None
@@ -179,20 +114,20 @@ class ForumSeleniumCrawler(BaseSeleniumController):
             # 检查是否遇到年龄确认页面
             page_source = self.driver.page_source
             if '满18岁，请点此进入' in page_source or 'If you are over 18，please click here' in page_source:
-                logger.info("检测到年龄确认页面，正在点击确认按钮...")
+                app_logger.info("检测到年龄确认页面，正在点击确认按钮...")
                 try:
                     # 尝试点击年龄确认按钮
                     enter_btn = WebDriverWait(self.driver, 5).until(
                         EC.element_to_be_clickable((By.CLASS_NAME, "enter-btn"))
                     )
                     enter_btn.click()
-                    logger.info("已点击年龄确认按钮")
+                    app_logger.info("已点击年龄确认按钮")
                     
                     # 等待页面跳转
                     time.sleep(random.uniform(2, 4))
                     return True
                 except Exception as e:
-                    logger.warning(f"点击年龄确认按钮失败: {e}")
+                    app_logger.warning(f"点击年龄确认按钮失败: {e}")
             
             # 随机滚动页面
             scroll_height = self.driver.execute_script("return document.body.scrollHeight")
@@ -203,10 +138,11 @@ class ForumSeleniumCrawler(BaseSeleniumController):
             time.sleep(random.uniform(1, 3))
             
         except Exception as e:
-            logger.debug(f"模拟人类行为失败: {e}")
+            app_logger.debug(f"模拟人类行为失败: {e}")
         return False
     
     def extract_thread_links_from_html(self, html_content):
+
         """从HTML内容中提取详情页链接"""
         thread_links = []
         # 使用正则表达式匹配 thread-数字-1-1.html 格式的链接
@@ -217,13 +153,10 @@ class ForumSeleniumCrawler(BaseSeleniumController):
         for match in matches:
             link = match[0].replace('&amp;', '&')
             tid = self.extract_tid_id(link)
-            
-            # 检查数据库中是否已存在该thread_id的记录
-            if self.mongo_client is not None and self.collection is not None:
-                existing_record = self.collection.find_one({'tid': tid})
-                if existing_record:
-                    logger.info(f"跳过已存在的记录: tid={tid}")
-                    continue  # 跳过已存在的记录 
+            if db_manager.is_sehuatang_detail_craled(tid):
+               app_logger.info(f"跳过已存在的记录: tid={tid}")
+               continue  # 跳过已存在的记录 
+                    
  
             processed_links.append(link)
         print(f"处理后的链接: {processed_links}")
@@ -234,7 +167,7 @@ class ForumSeleniumCrawler(BaseSeleniumController):
         
         # 去重
         thread_links = list(set(thread_links))
-        logger.info(f"找到 {len(thread_links)} 个详情页链接")
+        app_logger.info(f"找到 {len(thread_links)} 个详情页链接")
         return thread_links
     
     def extract_thread_links_from_file(self, file_path):
@@ -244,7 +177,7 @@ class ForumSeleniumCrawler(BaseSeleniumController):
                 html_content = f.read()
             return self.extract_thread_links_from_html(html_content)
         except Exception as e:
-            logger.error(f"读取文件失败 {file_path}: {e}")
+            app_logger.error(f"读取文件失败 {file_path}: {e}")
             return []
     
     def extract_title_and_magnet(self, html_content):
@@ -273,7 +206,7 @@ class ForumSeleniumCrawler(BaseSeleniumController):
     
     def crawl_thread_details(self, thread_url):
         """爬取单个详情页的信息"""
-        logger.info(f"正在爬取: {thread_url}")
+        app_logger.info(f"正在爬取: {thread_url}")
         
         html_content = self.get_page_content(thread_url)
         if not html_content:
@@ -285,11 +218,12 @@ class ForumSeleniumCrawler(BaseSeleniumController):
             data = {
                 'url': thread_url,
                 'title': title,
-                'magnet_link': magnet_link
+                'magnet_link': magnet_link,
+                'id':self.extract_tid_id(thread_url),
  
             }
             # 保存到MongoDB
-            self.save_to_mongodb(data)
+            db_manager.save_sehuatang_detail_db(data)
             return data
         
         return None
@@ -297,36 +231,36 @@ class ForumSeleniumCrawler(BaseSeleniumController):
     def crawl_from_file(self, home_file_path):
  
         """从本地文件开始爬取"""
-        logger.info(f"开始从文件爬取: {home_file_path}")
+        app_logger.info(f"开始从文件爬取: {home_file_path}")
         
         # 从首页文件提取详情页链接
         thread_links = self.extract_thread_links_from_file(home_file_path)
         
         if not thread_links:
-            logger.warning("未找到任何详情页链接"+home_file_path)
+            app_logger.warning("未找到任何详情页链接"+home_file_path)
             return
         
         results = []
         
         # 爬取每个详情页
         for i, thread_url in enumerate(thread_links, 1):
-            logger.info(f"进度: {i}/{len(thread_links)}")
+            app_logger.info(f"进度: {i}/{len(thread_links)}")
             
             result = self.crawl_thread_details(thread_url)
             if result:
-                logger.error(f"提取失败: {thread_url}")
+                app_logger.error(f"提取失败: {thread_url}")
                 results.append(result)
-                logger.info(f"成功提取: {result['title']}")
+                app_logger.info(f"成功提取: {result['title']}")
             else:
-                logger.error(f"提取失败: {thread_url}")
+                app_logger.error(f"提取失败: {thread_url}")
 
             # 随机延时避免过于频繁的请求
             if i < len(thread_links):
                 delay_time = self.delay + random.uniform(-2, 2)
                 time.sleep(max(1, delay_time))
          
-        logger.info(f"爬取完成，共获取 {len(results)} 条有效数据")
-        logger.info(f"数据已保存到MongoDB") 
+        app_logger.info(f"爬取完成，共获取 {len(results)} 条有效数据")
+        app_logger.info(f"数据已保存到MongoDB") 
         
         return results
     
@@ -334,7 +268,7 @@ class ForumSeleniumCrawler(BaseSeleniumController):
     
     def crawl_from_url(self, home_url):
         """从网络URL开始爬取"""
-        logger.info(f"开始从URL爬取: {home_url}")
+        app_logger.info(f"开始从URL爬取: {home_url}")
         
         # 先测试网络连接
        
@@ -342,55 +276,49 @@ class ForumSeleniumCrawler(BaseSeleniumController):
         # 获取首页内容
         html_content = self.get_page_content(home_url)
         if not html_content:
-            logger.error("无法获取首页内容")
+            app_logger.error("无法获取首页内容")
             return
         
         # 提取详情页链接
         thread_links = self.extract_thread_links_from_html(html_content)
         
         if not thread_links:
-            logger.warning("未找到任何详情页链接："+home_url)
+            app_logger.warning("未找到任何详情页链接："+home_url)
             return
         
         results = []
         
         # 爬取每个详情页
         for i, thread_url in enumerate(thread_links, 1):
-            logger.info(f"进度: {i}/{len(thread_links)}")
+            app_logger.info(f"进度: {i}/{len(thread_links)}")
             
             result = self.crawl_thread_details(thread_url)
             if result:
                 results.append(result)
-                logger.info(f"成功提取: {result['title']}")
+                app_logger.info(f"成功提取: {result['title']}")
             
             # 随机延时避免过于频繁的请求
             if i < len(thread_links):
                 delay_time = self.delay + random.uniform(-2, 2)
                 time.sleep(max(1, delay_time))
         
-        logger.info(f"爬取完成，共获取 {len(results)} 条有效数据")
-        logger.info(f"数据已保存到MongoDB")
+        app_logger.info(f"爬取完成，共获取 {len(results)} 条有效数据")
+        app_logger.info(f"数据已保存到MongoDB")
         
         return results
     
   
-    
-    def close_connection(self):
-        """关闭连接"""
-        if self.driver:
-            self.driver.quit()
-            logger.info("Selenium WebDriver已关闭") 
-            
+     
 
     def update_subscription(self):
          crawler = ForumSeleniumCrawler()  
          pageNumbers = 50
-         for pageNumber in range(0, pageNumbers + 1):
+         for pageNumber in range(1, pageNumbers + 1):
             url = f"{crawler.base_url}&page={pageNumber}"
             results = crawler.crawl_from_url(url)
             if results:
                 print(f"\n第 {pageNumber} 页爬取完成，共获取 {len(results)} 条数据")
-         self.logger.info(f"完成全部爬取")
+         app_logger.info(f"完成全部爬取")
 
 def main():
     """主函数"""
@@ -405,11 +333,12 @@ def main():
             results = crawler.crawl_from_url(url)
             if results:
                 print(f"\n第 {pageNumber} 页爬取完成，共获取 {len(results)} 条数据")
-        self.logger.info(f"完成全部爬取")
+        app_logger.info(f"完成全部爬取")
     
     finally:
         # 确保关闭所有连接
-        crawler.close_connection()
+        crawler.close_driver()
+
 
 if __name__ == "__main__":
     main()

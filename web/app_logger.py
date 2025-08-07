@@ -9,6 +9,7 @@ if not os.path.exists(log_dir):
 info_log_path = os.path.join(log_dir, 'app_info.log')
 error_log_path  = os.path.join(log_dir, 'app_error.log')
 warning_log_path  = os.path.join(log_dir, 'app_warning.log')
+debug_log_path  = os.path.join(log_dir, 'app_debug.log')
 
 # 设置时区为北京时间
 os.environ['TZ'] = 'Asia/Shanghai'
@@ -38,12 +39,22 @@ logging.basicConfig(
     encoding='utf-8'
 )
 
+logging.basicConfig(
+    filename=debug_log_path,
+    level=logging.DEBUG,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S',
+    encoding='utf-8'
+)
+
 logger = logging.getLogger(__name__)
 
 
 def info(msg):
     logger.info(msg)
 
+def debug(msg):
+    logger.debug(msg)
 
 def error(msg):
     logger.error(msg)

@@ -554,6 +554,37 @@ class DatabaseManager:
             self.mongo_client.close()
             self.mongo_client = None
             app_logger.info(f"MongoDB connection closed")
+    
+    def is_sehuatang_detail_craled(self,tid):
+        return self.mongo_collection.find_one({'tid': tid})
+
+    def save_sehuatang_detail_db(self, data):
+        """保存数据到MongoDB"""
+        if not self.mongo_client:
+            app_logger.warning("MongoDB未连接，跳过数据保存")
+            return False
+        
+        try:
+            # 添加时间戳
+            data['crawl_time'] = datetime.now()  
+            # 检查是否已存在
+            existing = self.mongo_collection.find_one({'tid': data['tid']})
+            if existing:
+                # 更新现有记录
+                self.mongo_collection.update_one(
+                    {'tid': data['tid']},
+
+                    {'$set': data}
+                )
+                app_logger.info(f"更新MongoDB记录: {data['title']}")
+            else:
+                # 插入新记录
+                self.mongo_collection.insert_one(data)
+                app_logger.info(f"保存到MongoDB: {data['title']}")
+            return True
+        except Exception as e:
+            app_logger.error(f"保存到MongoDB失败: {e}")
+            return False
 
 # 创建全局数据库管理器实例
 db_manager = DatabaseManager()

@@ -124,17 +124,7 @@ class BaseSeleniumController:
         logging.error(f"获取页面内容失败，已尝试 {max_retries} 次: {url}")
         return None
     
-    def init_mongodb(self):
-        """初始化MongoDB连接"""
-        try:
-            self.mongo_client = MongoClient(self.mongo_uri, serverSelectionTimeoutMS=5000)
-            # 测试连接
-            self.mongo_client.admin.command('ping')
-            self.db = self.mongo_client['sehuatang_crawler']
-            self.collection = self.db['thread_details']
-            
-        except Exception as e:
-            self.mongo_client = None
+    
 
     def simulate_human_behavior(self):
         """模拟人类浏览行为 - 基础版本"""
