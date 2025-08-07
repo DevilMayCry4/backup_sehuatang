@@ -109,7 +109,7 @@ def parser_homeurl(html):
         yield url['href']
 
 # 添加图片下载函数
-def download_image(image_url, save_path, filename):
+def download_image(image_url, save_path, filename,code_name):
     """下载图片到本地"""
     try:
         # 创建保存目录
@@ -135,7 +135,7 @@ def download_image(image_url, save_path, filename):
         print(f"图片已保存: {file_path}")
         return file_path
     except Exception as e:
-        db_manager.record_failed_image_download(image_url, str(e))
+        db_manager.record_failed_image_download(image_url, str(e),code_name)
          
         return None
 
@@ -322,7 +322,7 @@ def parser_content(html):
         cover_filename = f"{code_name}_cover.jpg"
         
         # 下载封面
-        download_image(bigimage_url, save_dir, cover_filename)
+        download_image(bigimage_url, save_dir, cover_filename,code_name)
         
     #標題加入字典
     title = soup.find('title').text.strip().replace(" - JavBus","")

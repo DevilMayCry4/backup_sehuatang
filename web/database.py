@@ -385,7 +385,7 @@ class DatabaseManager:
             app_logger.info(f"Error getting top actresses from MongoDB: {e}")
             return None
     
-    def add_retry_url(self, url, error_type, error_message):
+    def add_retry_url(self, url, error_type, error_message,code):
         """添加失败URL到重试表"""
         try:
             # 检查URL是否已存在
@@ -401,7 +401,8 @@ class DatabaseManager:
                 'retry_count': 0,
                 'last_retry_time': None,
                 'created_at': datetime.now(),
-                'status': 'pending'
+                'status': 'pending',
+                'code':code
             })
             return True
         except Exception as e:

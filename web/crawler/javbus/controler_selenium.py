@@ -866,13 +866,13 @@ def process_actress_page(code, max_pages=None):
                                 app_logger.info(f"✓ 已保存影片: {movie_detail.get('識別碼', 'Unknown')}")
                             else:
                                 app_logger.error(f"✗ 无法解析影片详情: {movie['url']}")
-                                db_manager.add_retry_url(movie['url'], 'parse_error', '无法解析影片详情')
+                                db_manager.add_retry_url(movie['url'], 'parse_error', '无法解析影片详情',code)
                         else:
                             app_logger.error(f"✗ 无法获取影片页面: {movie['url']}")
-                            db_manager.add_retry_url(movie['url'], 'fetch_error', '无法获取影片页面')
+                            db_manager.add_retry_url(movie['url'], 'fetch_error', '无法获取影片页面',code)
                     except Exception as e:
                         app_logger.error(f"✗ 处理影片时出错 {movie['url']}: {e}")
-                        db_manager.add_retry_url(movie['url'], 'process_error', str(e))
+                        db_manager.add_retry_url(movie['url'], 'process_error', str(e),code)
                 else:
                     app_logger.info(f"跳过已处理的影片: {movie['url']}")
             total_movies.extend(movies)
