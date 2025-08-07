@@ -24,11 +24,12 @@ def check_subscribed_series(jellyfin_checker, crawler):
     check_interval_days = int(os.getenv('SUBSCRIPTION_CHECK_INTERVAL_DAYS', '7'))
     current_time = datetime.now()
     
-    # 收集本次检查发现的所有新电影
-    newly_found_movies = []
+    
     
     try:
         # 获取所有订阅
+        # 收集本次检查发现的所有新电影
+        newly_found_movies = []
         subscriptions = db_manager.get_subscriptions()
         
         for subscription in subscriptions:

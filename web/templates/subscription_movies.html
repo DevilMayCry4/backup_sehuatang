@@ -3,26 +3,7 @@
 {% block title %}{{ series_name }} - 电影列表{% endblock %}
 
 {% block content %}
-<div class="container-fluid mt-4">
-    <!-- 页面标题和导航 -->
-    <div class="row mb-4">
-        <div class="col">
-            <nav aria-label="breadcrumb">
-                <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="/">首页</a></li>
-                    <li class="breadcrumb-item"><a href="/subscriptions">订阅管理</a></li>
-                    <li class="breadcrumb-item active" aria-current="page">{{ series_name }}</li>
-                </ol>
-            </nav>
-            
-            <div class="d-flex justify-content-between align-items-center">
-                <h2><i class="bi bi-film"></i> {{ series_name }} - 电影列表</h2>
-                <a href="/subscriptions" class="btn btn-outline-secondary">
-                    <i class="bi bi-arrow-left"></i> 返回订阅列表
-                </a>
-            </div>
-        </div>
-    </div>
+ 
     
     <!-- 订阅信息卡片 -->
     <div class="row mb-4">
@@ -77,8 +58,8 @@
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">电影列表</h5>
                     <div>
-                        <button class="btn btn-sm btn-outline-primary" onclick="refreshMovies()">
-                            <i class="bi bi-arrow-clockwise"></i> 刷新
+                        <button class="btn btn-sm btn-outline-primary" onclick="copySelectedMovieLinks()">
+                            <i class="bi bi-clipboard"></i> 复制选中链接
                         </button>
                     </div>
                 </div>
@@ -250,6 +231,103 @@ function copyToClipboard(text) {
         // 可以添加提示信息
         console.log('已复制到剪贴板');
     });
+}
+
+// 复制选中电影的磁力链接
+function copySelectedMovieLinks() {
+    const checkedBoxes = document.querySelectorAll('.movie-checkbox:checked');
+    
+    if (checkedBoxes.length === 0) {
+        alert('请先选择要复制链接的电影');
+        return;
+    }
+    
+    const selectedLinks = [];
+    checkedBoxes.forEach(checkbox => {
+        const index = checkbox.value;
+        const movie = currentMovies[index];
+        if (movie && movie.magnet_link) {
+            selectedLinks.push(`${movie.title || movie.movie_code || '未知电影'}: ${movie.magnet_link}`);
+        }
+    });
+    
+    if (selectedLinks.length === 0) {
+        alert('选中的电影中没有可用的磁力链接');
+        return;
+    }
+    
+    const linkText = selectedLinks.join('\n\n');
+    
+    // 兼容性复制方案
+    function fallbackCopyTextToClipboard(text) {
+        const textArea = document.createElement("textarea");
+        textArea.value = text;
+        
+        // 避免滚动到底部
+        textArea.style.top = "0";
+        textArea.style.left = "0";
+        textArea.style.position = "fixed";
+        textArea.style.opacity = "0";
+        
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        
+        try {
+            const successful = document.execCommand('copy');
+            document.body.removeChild(textArea);
+            return successful;
+        } catch (err) {
+            document.body.removeChild(textArea);
+            return false;
+        }
+    }
+    
+    function copyTextToClipboard(text) {
+        if (!navigator.clipboard) {
+            return fallbackCopyTextToClipboard(text);
+        }
+        
+        return navigator.clipboard.writeText(text).then(() => {
+            return true;
+        }).catch(err => {
+            console.error('现代剪贴板API失败，尝试备用方案:', err);
+            return fallbackCopyTextToClipboard(text);
+        });
+    }
+    
+    // 执行复制
+    const copyResult = copyTextToClipboard(linkText);
+    
+    if (copyResult && copyResult.then) {
+        // 异步结果
+        copyResult.then(success => {
+            showCopyFeedback(success);
+        });
+    } else {
+        // 同步结果
+        showCopyFeedback(copyResult);
+    }
+}
+
+// 显示复制反馈
+function showCopyFeedback(success) {
+    const button = event.target.closest('button');
+    const originalText = button.innerHTML;
+    
+    if (success) {
+        button.innerHTML = '<i class="bi bi-check"></i> 已复制';
+        button.classList.remove('btn-outline-primary');
+        button.classList.add('btn-success');
+        
+        setTimeout(() => {
+            button.innerHTML = originalText;
+            button.classList.remove('btn-success');
+            button.classList.add('btn-outline-primary');
+        }, 2000);
+    } else {
+        alert('复制失败，请手动复制以下内容：\n\n' + linkText);
+    }
 }
 
 // 全选/取消全选
