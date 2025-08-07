@@ -6,7 +6,7 @@ import os
 import re
 import sys
 from bs4 import BeautifulSoup
-from requests.exceptions import HTTPError
+import requests
 
 # 添加当前目录到路径以确保能找到 controler_selenium
 current_dir = os.path.dirname(os.path.abspath(__file__))

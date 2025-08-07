@@ -12,8 +12,7 @@ import os
 from dotenv import load_dotenv
 import atexit
 import ast
-
-from web import app_logger
+import app_logger
 
 # 添加父目录到路径
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -42,6 +41,7 @@ class DatabaseManager:
             self.mongo_collection = self.mongo_db['thread_details']
             self.add_movie_collection = self.mongo_db['add_movie']
             self.found_movies_collection = self.mongo_db['found_movies']
+            self.retry_collection = self.mongo_db['retry_urls']
             
             # JavBus 爬虫相关集合
             self.javbus_data_collection = self.mongo_db['javbus_data']
@@ -66,11 +66,14 @@ class DatabaseManager:
             # 演员数据索引
             self.actresses_data_collection.create_index("code", unique=True)
             self.actresses_data_collection.create_index("name")
+
+            #重试索引
+            self.retry_collection.create_index("url", unique=True)
             
-            print("MongoDB连接成功")
+            app_logger.info(f"MongoDB连接成功")
             return True
         except Exception as e:
-            print(f"MongoDB连接失败: {e}")
+            app_logger.info(f"MongoDB连接失败: {e}")
             return False
     
     def get_subscriptions(self):
@@ -171,7 +174,7 @@ class DatabaseManager:
             )
             return result.matched_count > 0
         except Exception as e:
-            print(f"更新订阅状态错误: {e}")
+            app_logger.info(f"更新订阅状态错误: {e}")
             return False
     
     def check_movie_exists_in_found(self, movie_code):
@@ -215,14 +218,14 @@ class DatabaseManager:
             )
             
             if result.upserted_id:
-                print(f"Inserted new document with URL: {document['url']}")
+                app_logger.info(f"Inserted new document with URL: {document['url']}")
             elif result.modified_count > 0:
-                print(f"Updated existing document with URL: {document['url']}")
+                app_logger.info(f"Updated existing document with URL: {document['url']}")
                 
             return True
             
         except Exception as e:
-            print(f"Error writing data to MongoDB: {e}")
+            app_logger.info(f"Error writing data to MongoDB: {e}")
             return False
     
     def refresh_data(self, dict_jav, url):
@@ -238,14 +241,14 @@ class DatabaseManager:
             )
             
             if result.modified_count > 0:
-                print(f"Updated magnet links for URL: {url}")
+                app_logger.info(f"Updated magnet links for URL: {url}")
                 return True
             else:
-                print(f"No document found with URL: {url}")
+                app_logger.info(f"No document found with URL: {url}")
                 return False
                 
         except Exception as e:
-            print(f"Error refreshing data in MongoDB: {e}")
+            app_logger.info(f"Error refreshing data in MongoDB: {e}")
             return False
     
     def check_url_not_in_table(self, url):
@@ -263,7 +266,7 @@ class DatabaseManager:
             return result is None
             
         except Exception as e:
-            print(f"Error checking URL in MongoDB: {e}")
+            app_logger.info(f"Error checking URL in MongoDB: {e}")
             return True  # 出错时假设不存在
     
     def is_movie_crawed(self, code):
@@ -279,7 +282,7 @@ class DatabaseManager:
             return result is not None
                 
         except Exception as e:
-            print(f"Error checking movie crawled status: {e}")
+            app_logger.info(f"Error checking movie crawled status: {e}")
             return False
     
     def read_magnets_from_table(self, url):
@@ -300,7 +303,7 @@ class DatabaseManager:
                 return None
                 
         except Exception as e:
-            print(f"Error reading magnets from MongoDB: {e}")
+            app_logger.info(f"Error reading magnets from MongoDB: {e}")
             return None
     
     def write_actress_data(self, actress_info, local_image_path=None):
@@ -332,14 +335,14 @@ class DatabaseManager:
             )
             
             if result.upserted_id:
-                print(f"Inserted new actress: {document['name']} ({document['code']})")
+                app_logger.info(f"Inserted new actress: {document['name']} ({document['code']})")
             elif result.modified_count > 0:
-                print(f"Updated existing actress: {document['name']} ({document['code']})")
+                app_logger.info(f"Updated existing actress: {document['name']} ({document['code']})")
                 
             return True
             
         except Exception as e:
-            print(f"Error writing actress data to MongoDB: {e}")
+            app_logger.info(f"Error writing actress data to MongoDB: {e}")
             return False
     
     def get_paginated_actresses(self, page=1, per_page=20):
@@ -354,7 +357,7 @@ class DatabaseManager:
             total = self.actresses_data_collection.count_documents({})
             return actresses, total
         except Exception as e:
-            print(f"获取分页演员数据错误: {e}")
+            app_logger.info(f"获取分页演员数据错误: {e}")
             return None, 0
     
     def get_all_star(self):
@@ -364,7 +367,7 @@ class DatabaseManager:
                 return None
             return self.actresses_data_collection.find().sort("_id", 1)
         except Exception as e:
-            print(f"Error getting top actresses from MongoDB: {e}")
+            app_logger.info(f"Error getting top actresses from MongoDB: {e}")
             return None
 
     def get_top_star(self):
@@ -374,12 +377,18 @@ class DatabaseManager:
                 return None
             return self.actresses_data_collection.find().sort("_id", 1).limit(100)
         except Exception as e:
-            print(f"Error getting top actresses from MongoDB: {e}")
+            app_logger.info(f"Error getting top actresses from MongoDB: {e}")
             return None
     
     def add_retry_url(self, url, error_type, error_message):
         """添加失败URL到重试表"""
         try:
+            # 检查URL是否已存在
+            existing_url = self.retry_collection.find_one({'url': url})
+            if existing_url:
+                app_logger.info(f"重试URL已存在，跳过添加: {url}")
+                return True
+                
             self.retry_collection.insert_one({
                 'url': url,
                 'error_type': error_type,
@@ -391,7 +400,7 @@ class DatabaseManager:
             })
             return True
         except Exception as e:
-            logger.error(f"添加重试URL失败: {url}, 错误: {e}")
+            app_logger.error("添加重试URL失败: {url}, 错误: {e}")
             return False
 
     def get_pending_retry_urls(self, limit=100):
@@ -413,8 +422,9 @@ class DatabaseManager:
             )
             return True
         except Exception as e:
-            logger.error(f"更新重试状态失败: {url}, 错误: {e}")
+            app_logger.error("更新重试状态失败: {url}, 错误: {e}")
             return False
+            
     def get_actress_movies(self, actress_name, page=1, per_page=20):
         """获取指定演员的所有影片(分页)"""
         try:
@@ -430,7 +440,7 @@ class DatabaseManager:
             )
             return movies, total
         except Exception as e:
-            print(f"获取演员影片错误: {e}")
+            app_logger.info(f"获取演员影片错误: {e}")
             return None, 0
     
     
@@ -473,7 +483,7 @@ class DatabaseManager:
                     data = ast.literal_eval(line)
                     data_list.append(data)
                 except (ValueError, SyntaxError) as e:
-                    print(f"解析行失败: {line}, 错误: {e}")
+                    app_logger.info(f"解析行失败: {line}, 错误: {e}")
         return data_list
 
     def record_failed_image_download(self, image_url, error_message, movie_code=None):
@@ -514,11 +524,11 @@ class DatabaseManager:
                 }
                 self.failed_images_collection.insert_one(failed_image_doc)
             
-            print(f"已记录失败图片: {image_url}")
+            app_logger.info(f"已记录失败图片: {image_url}")
             return True
             
         except Exception as e:
-            print(f"记录失败图片时出错: {e}")
+            app_logger.info(f"记录失败图片时出错: {e}")
             return False
 
     def get_failed_images(self, limit=100):
@@ -530,7 +540,7 @@ class DatabaseManager:
             failed_images = list(self.failed_images_collection.find().sort("last_failed_at", -1).limit(limit))
             return failed_images
         except Exception as e:
-            print(f"获取失败图片记录时出错: {e}")
+            app_logger.info(f"获取失败图片记录时出错: {e}")
             return []
 
     def close_connection(self):
@@ -538,7 +548,7 @@ class DatabaseManager:
         if self.mongo_client:
             self.mongo_client.close()
             self.mongo_client = None
-            app_logger.info("MongoDB connection closed")
+            app_logger.info(f"MongoDB connection closed")
 
 # 创建全局数据库管理器实例
 db_manager = DatabaseManager()

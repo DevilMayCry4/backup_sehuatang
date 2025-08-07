@@ -134,7 +134,6 @@ class BaseSeleniumController:
             self.collection = self.db['thread_details']
             
         except Exception as e:
-            logger.error(f"MongoDB连接失败: {e}")
             self.mongo_client = None
 
     def simulate_human_behavior(self):

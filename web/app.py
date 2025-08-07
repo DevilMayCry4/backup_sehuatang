@@ -32,9 +32,7 @@ from subscription import start_scheduler
 from jellyfin_movie_checker import JellyfinMovieChecker
 from crawler.javbus_crawler import JavBusCrawler
 from config import config as app_config
- 
- 
-
+  
 # 创建Flask应用
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key-here'
@@ -168,16 +166,13 @@ def query_magnet_link(movie_code, title):
         print(f"查询MongoDB出错: {e}")
         return None, False
 
-# 初始化MongoDB
-init_mongodb()
-
-# 初始化所有组件（移到模块级别）
+# 保留这个调用，它会处理所有初始化
 jellyfin_checker, crawler = init_components()
 
-# 注册路由（移到模块级别）
+# 注册路由
 register_routes(app, jellyfin_checker, crawler)
 
-# 启动定时任务（移到模块级别）
+# 启动定时任务调度器
 start_scheduler(jellyfin_checker, crawler)
 
 if __name__ == '__main__':

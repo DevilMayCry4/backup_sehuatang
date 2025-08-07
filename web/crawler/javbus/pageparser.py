@@ -14,6 +14,10 @@ import requests
 from web.app import crawler 
 from database import db_manager
 
+headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+            'Referer': 'https://www.javbus.com/'
+        }
 
 def _get_cili_url(soup):
     """get_cili(soup).get the ajax url and Referer url of request"""
@@ -117,10 +121,7 @@ def download_image(image_url, save_path, filename):
         else:
             print(f'开始下载图片:{image_url} 路径:{file_path}')
         # 设置请求头
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-            'Referer': 'https://www.javbus.com/'
-        }
+        
         
         # 下载图片
         response = requests.get(image_url, headers=headers, timeout=30)
@@ -343,7 +344,7 @@ def get_html(url, Referer_url=None, max_retries=5):
 
     for i in range(max_retries):
         try:
-            response = requests.get(url, headers=headers, proxies=proxies, timeout=10)
+            response = requests.get(url, headers=headers, timeout=10)
             if response.status_code == 200:
                 break
             elif response.status_code == 404:

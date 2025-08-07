@@ -5,7 +5,6 @@ import os
 import sys
 import time
 import random
-import logging
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
@@ -49,13 +48,13 @@ class JavBusSeleniumController(BaseSeleniumController):
         
         if max_retries is None:
             max_retries = self.max_retries
-            
+        page_source = None   
         for attempt in range(max_retries):
             try:
                 # 随机延时，避免被检测
                 if attempt > 0:
                     wait_time = (attempt + 1) * 5 + random.uniform(2, 5)
-                    app_logger.info(f"第{attempt + 1}次重试，等待{wait_time:.1f}秒...")
+                    app_logger.info("第{attempt + 1}次重试，等待{wait_time:.1f}秒...")
                     time.sleep(wait_time)
                 
                 app_logger.info(f"正在访问: {url}")
@@ -164,7 +163,7 @@ class JavBusSeleniumController(BaseSeleniumController):
                     if json_match:
                         answers_json = json_match.group()
                         answers = json.loads(answers_json)
-                        app_logger.info(f"大模型返回答案: {answers}")
+                        app_logger.info("大模型返回答案: {answers}")
                         return answers
                     else:
                         app_logger.warning("大模型返回内容中未找到有效JSON")
@@ -173,11 +172,11 @@ class JavBusSeleniumController(BaseSeleniumController):
                     app_logger.warning(f"解析大模型返回的JSON失败: {e}")
                     return None
             else:
-                app_logger.error(f"大模型API调用失败: {response.status_code} - {response.text}")
+                app_logger.error("大模型API调用失败: {response.status_code} - {response.text}")
                 return None
                 
         except Exception as e:
-            app_logger.error(f"调用大模型处理驾驶证考试题失败: {e}")
+            app_logger.error("调用大模型处理驾驶证考试题失败: {e}")
             return None
     
     def extract_questions_from_page(self):
@@ -386,7 +385,7 @@ class JavBusSeleniumController(BaseSeleniumController):
                                 EC.element_to_be_clickable((By.CSS_SELECTOR, selector))
                             )
                             submit_btn.click()
-                            app_logger.info(f"已提交驾驶证考试题答案: {selector}")
+                            app_logger.info("已提交驾驶证考试题答案: {selector}")
                             submit_clicked = True
                             break
                         except Exception:
@@ -591,7 +590,7 @@ class JavBusSeleniumController(BaseSeleniumController):
                 self.driver.quit()
                 app_logger.info("WebDriver已关闭")
             except Exception as e:
-                app_logger.error(f"关闭WebDriver时出错: {e}")
+                app_logger.error("关闭WebDriver时出错: {e}")
             finally:
                 self.driver = None
 
@@ -678,7 +677,7 @@ def parse_actress_info(html_content, base_url=None):
         return actress_info
         
     except Exception as e:
-        app_logger.info(f"解析演员信息时出错: {e}")
+        app_logger.info("解析演员信息时出错: {e}")
         return None
 
 def parse_actress_movies(html_content):
@@ -758,7 +757,7 @@ def parse_actress_movies(html_content):
         return movies
         
     except Exception as e:
-        app_logger.info(f"解析演员影片列表时出错: {e}")
+        app_logger.info("解析演员影片列表时出错: {e}")
         return []
 
 def get_next_page_url_actress(current_url, html_content):
@@ -789,7 +788,7 @@ def get_next_page_url_actress(current_url, html_content):
         return None
         
     except Exception as e:
-        app_logger.info(f"获取下一页URL时出错: {e}")
+        app_logger.info("获取下一页URL时出错: {e}")
         return None
 
 def update_actress_data(actress_info,code):
@@ -813,13 +812,13 @@ def update_actress_data(actress_info,code):
         return db_manager.write_actress_data(actress_data)
         
     except Exception as e:
-        app_logger.info(f"更新演员数据时出错: {e}")
+        app_logger.info("更新演员数据时出错: {e}")
         return False
 
 def process_actress_page(code, max_pages=None):
     """处理演员页面，获取演员信息和所有影片"""
     try:
-        app_logger.info(f"开始处理演员页面: {code}")
+        app_logger.info("开始处理演员页面: {code}")
         current_url = (f'{jav_base_url}/star/{code}')
          
         page_count = 0
@@ -848,7 +847,7 @@ def process_actress_page(code, max_pages=None):
             
             # 解析影片列表
             movies =  parse_actress_movies(html_content)
-            app_logger.info(f"第 {page_count + 1} 页找到 {len(movies)} 部影片")
+            app_logger.info("第 {page_count + 1} 页找到 {len(movies)} 部影片")
              
             for movie in movies: 
                 code = movie['code'] 
@@ -860,6 +859,7 @@ def process_actress_page(code, max_pages=None):
                             # 使用pageparser解析影片详细信息
                             import pageparser
                             movie_detail = pageparser.parser_content(movie_html)
+                            app_logger.info('解析影片详细页面: {movie_detail}')
                             if movie_detail:
                                 # 写入数据库
                                 db_manager.write_jav_movie(movie_detail)
@@ -912,7 +912,7 @@ if __name__ == "__main__":
         html = controller.get_page_content("https://www.javbus.com")
         if html:
             app_logger.info("成功获取页面内容")
-            app_logger.info(f"页面长度: {len(html)} 字符")
+            app_logger.info("页面长度: {len(html)} 字符")
         else:
             app_logger.info("获取页面内容失败")
     finally:
