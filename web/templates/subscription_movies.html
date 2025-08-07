@@ -1,0 +1,279 @@
+{% extends "base.html" %}
+
+{% block title %}{{ series_name }} - 电影列表{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- 页面标题和导航 -->
+    <div class="row mb-4">
+        <div class="col">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="/">首页</a></li>
+                    <li class="breadcrumb-item"><a href="/subscriptions">订阅管理</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">{{ series_name }}</li>
+                </ol>
+            </nav>
+            
+            <div class="d-flex justify-content-between align-items-center">
+                <h2><i class="bi bi-film"></i> {{ series_name }} - 电影列表</h2>
+                <a href="/subscriptions" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> 返回订阅列表
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 订阅信息卡片 -->
+    <div class="row mb-4">
+        <div class="col">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <strong>订阅状态:</strong>
+                            <span class="badge {{ 'bg-success' if subscription.status == 'active' else 'bg-secondary' }}">
+                                {{ '活跃' if subscription.status == 'active' else '暂停' }}
+                            </span>
+                        </div>
+                        <div class="col-md-3">
+                            <strong>创建时间:</strong>
+                            {% if subscription.created_at %}
+                                {% if subscription.created_at.__class__.__name__ == 'datetime' %}
+                                    {{ subscription.created_at.strftime('%Y-%m-%d %H:%M') }}
+                                {% else %}
+                                    {{ subscription.created_at[:16].replace('T', ' ') if 'T' in subscription.created_at else subscription.created_at }}
+                                {% endif %}
+                            {% else %}
+                                未知
+                            {% endif %}
+                        </div>
+                        <div class="col-md-3">
+                            <strong>最后检查:</strong>
+                            {% if subscription.last_checked %}
+                                {% if subscription.last_checked.__class__.__name__ == 'datetime' %}
+                                    {{ subscription.last_checked.strftime('%Y-%m-%d %H:%M') }}
+                                {% else %}
+                                    {{ subscription.last_checked[:16].replace('T', ' ') if 'T' in subscription.last_checked else subscription.last_checked }}
+                                {% endif %}
+                            {% else %}
+                                从未检查
+                            {% endif %}
+                        </div>
+                        <div class="col-md-3">
+                            <strong>找到电影:</strong>
+                            <span class="badge bg-info" id="totalMoviesCount">加载中...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 电影列表 -->
+    <div class="row">
+        <div class="col">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">电影列表</h5>
+                    <div>
+                        <button class="btn btn-sm btn-outline-primary" onclick="refreshMovies()">
+                            <i class="bi bi-arrow-clockwise"></i> 刷新
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div id="moviesList">
+                        <div class="text-center">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">加载中...</span>
+                            </div>
+                            <p class="mt-2">正在加载电影列表...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentMovies = [];
+const seriesName = '{{ series_name }}';
+
+// 页面加载时获取电影列表
+document.addEventListener('DOMContentLoaded', function() {
+    loadMovies();
+});
+
+// 加载电影列表
+async function loadMovies() {
+    const moviesList = document.getElementById('moviesList');
+    
+    try {
+        const response = await fetch(`/api/subscription-movies/${encodeURIComponent(seriesName)}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            currentMovies = data.movies;
+            displayMovies(data.movies);
+            document.getElementById('totalMoviesCount').textContent = data.movies.length;
+        } else {
+            moviesList.innerHTML = `
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    ${data.error || '加载电影失败'}
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('加载电影错误:', error);
+        moviesList.innerHTML = `
+            <div class="alert alert-danger">
+                <i class="bi bi-exclamation-triangle"></i>
+                网络错误，请稍后重试
+            </div>
+        `;
+    }
+}
+
+// 刷新电影列表
+function refreshMovies() {
+    document.getElementById('moviesList').innerHTML = `
+        <div class="text-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">刷新中...</span>
+            </div>
+            <p class="mt-2">正在刷新电影列表...</p>
+        </div>
+    `;
+    loadMovies();
+}
+
+// 显示电影列表（复用原有的displayMovies函数逻辑）
+function displayMovies(movies) {
+    const container = document.getElementById('moviesList');
+    
+    if (movies.length === 0) {
+        container.innerHTML = `
+            <div class="text-center text-muted">
+                <i class="bi bi-film" style="font-size: 3rem;"></i>
+                <h6 class="mt-3">暂无电影</h6>
+                <p>该订阅下还没有找到电影</p>
+            </div>
+        `;
+        return;
+    }
+    
+    // 添加全选/取消全选功能
+    let html = `
+        <div class="mb-3 p-2 bg-light rounded">
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="selectAll" onchange="toggleSelectAll()">
+                <label class="form-check-label fw-bold" for="selectAll">
+                    全选/取消全选 (${movies.length} 部电影)
+                </label>
+            </div>
+        </div>
+    `;
+    
+    movies.forEach((movie, index) => {
+        const foundAt = movie.found_at ? 
+            new Date(movie.found_at).toLocaleString('zh-CN') : '未知时间';
+        
+        html += `
+            <div class="movie-item border rounded p-3 mb-3" data-index="${index}">
+                <div class="row align-items-center">
+                    <!-- 多选复选框 -->
+                    <div class="col-auto">
+                        <div class="form-check">
+                            <input class="form-check-input movie-checkbox" type="checkbox" 
+                                   id="movie-${index}" value="${index}" 
+                                   onchange="updateSelection()" 
+                                   ${movie.magnet_link ? '' : 'disabled'}>
+                            <label class="form-check-label" for="movie-${index}"></label>
+                        </div>
+                    </div>
+                    
+                    <!-- 电影封面 -->
+                    <div class="col-md-2 text-center mb-3">
+                        ${movie.image_url ? 
+                            `<img src="${movie.image_url}" alt="${movie.title}" class="movie-image img-fluid" 
+                                 style="max-width: 100px; max-height: 140px; object-fit: cover; border-radius: 8px;"
+                                 onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjE0MCIgdmlld0JveD0iMCAwIDEwMCAxNDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMDAiIGhlaWdodD0iMTQwIiBmaWxsPSIjRjhGOUZBIi8+CjxwYXRoIGQ9Ik0zNSA1MEw2NSA1MEw1MCA3NUwzNSA1MFoiIGZpbGw9IiNEMUQ1REIiLz4KPC9zdmc+'">` :
+                            `<div class="movie-image d-flex align-items-center justify-content-center bg-light text-muted" style="width:100px;height:140px; border-radius: 8px;">
+                                <i class="bi bi-film" style="font-size: 2rem;"></i>
+                            </div>`
+                        }
+                    </div>
+                    
+                    <!-- 电影信息 -->
+                    <div class="col-md-9">
+                        <div class="movie-info">
+                            <h6 class="movie-title mb-2">
+                                <strong>${movie.title || '未知标题'}</strong>
+                            </h6>
+                            
+                            <div class="movie-meta mb-2">
+                                <span class="badge bg-info me-2">编号: ${movie.movie_code || 'N/A'}</span>
+                                <span class="badge bg-secondary me-2">发现时间: ${foundAt}</span>
+                                ${movie.magnet_link ? 
+                                    '<span class="badge bg-success"><i class="bi bi-magnet"></i> 有磁力链接</span>' :
+                                    '<span class="badge bg-light text-muted"><i class="bi bi-x-circle"></i> 无磁力链接</span>'
+                                }
+                            </div>
+                            
+                            ${movie.magnet_link ? 
+                                `<div class="magnet-link">
+                                    <small class="text-muted">磁力链接:</small>
+                                    <div class="input-group input-group-sm mt-1">
+                                        <input type="text" class="form-control" value="${movie.magnet_link}" readonly>
+                                        <button class="btn btn-outline-secondary" type="button" onclick="copyToClipboard('${movie.magnet_link}')">
+                                            <i class="bi bi-clipboard"></i>
+                                        </button>
+                                    </div>
+                                </div>` : ''
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html;
+}
+
+// 复制到剪贴板
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(() => {
+        // 可以添加提示信息
+        console.log('已复制到剪贴板');
+    });
+}
+
+// 全选/取消全选
+function toggleSelectAll() {
+    const selectAll = document.getElementById('selectAll');
+    const checkboxes = document.querySelectorAll('.movie-checkbox:not(:disabled)');
+    
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = selectAll.checked;
+    });
+    
+    updateSelection();
+}
+
+// 更新选择状态
+function updateSelection() {
+    const checkboxes = document.querySelectorAll('.movie-checkbox:not(:disabled)');
+    const checkedBoxes = document.querySelectorAll('.movie-checkbox:checked');
+    const selectAll = document.getElementById('selectAll');
+    
+    if (selectAll) {
+        selectAll.checked = checkboxes.length > 0 && checkedBoxes.length === checkboxes.length;
+        selectAll.indeterminate = checkedBoxes.length > 0 && checkedBoxes.length < checkboxes.length;
+    }
+}
+</script>
+{% endblock %}

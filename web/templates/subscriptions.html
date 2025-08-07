@@ -178,7 +178,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <span>最后检查: ${lastChecked}</span>
                             </small>
                             <button class="btn btn-sm btn-outline-primary d-flex align-items-center" 
-                                    onclick="loadMoviesForSubscription('${subscription.series_name}', ${index})">
+                                    onclick="window.location.href='/subscription-movies/${encodeURIComponent(subscription.series_name)}'">
                                 <i class="bi bi-film me-1"></i> 查看电影
                                 <i class="bi bi-arrow-right ms-1"></i>
                             </button>

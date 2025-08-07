@@ -242,40 +242,28 @@ def register_routes(app, jellyfin_checker, crawler):
                 'error': '服务器内部错误'
             })
     
-    @app.route('/api/subscription-movies/<series_name>', methods=['GET'])
-    def get_subscription_movies(series_name):
-        """获取指定订阅的电影列表"""
+    @app.route('/subscription-movies/<series_name>')
+    def subscription_movies_page(series_name):
+        """订阅电影列表页面"""
         try:
-            movies_docs = db_manager.get_subscription_movies(series_name)
-            
-            movies = []
-            for movie_doc in movies_docs:
-                movie_data = {
-                    'movie_code': movie_doc.get('movie_code', ''),
-                    'title': movie_doc.get('title', ''),
-                    'magnet_link': movie_doc.get('magnet_link', ''),
-                    'found_at': movie_doc.get('found_at', ''),
-                    'image_url': movie_doc.get('image_url', '')
-                }
-                
-                # 如果有image_url，转换为代理URL
-                if movie_data['image_url']:
-                    movie_data['image_url'] = f"/proxy-image?url={movie_data['image_url']}"
-                
-                movies.append(movie_data)
-            
-            return jsonify({
-                'success': True,
-                'movies': movies,
-                'total_count': len(movies)
+            # 获取订阅信息
+            subscription = db_manager.add_movie_collection.find_one({
+                'series_name': series_name,
+                'type': 'subscription'
             })
+            
+            if not subscription:
+                return render_template('error.html', 
+                                     error_message=f'订阅 "{series_name}" 不存在'), 404
+            
+            return render_template('subscription_movies.html', 
+                                 series_name=series_name,
+                                 subscription=subscription)
             
         except Exception as e:
-            print(f"获取订阅电影错误: {e}")
-            return jsonify({
-                'success': False,
-                'error': str(e)
-            })
+            print(f"获取订阅电影页面错误: {e}")
+            return render_template('error.html', 
+                                 error_message='加载订阅电影页面失败'), 500
     
     # 在文件末尾添加缺失的路由
     @app.route('/api/subscriptions/<subscription_id>/status', methods=['PUT'])
@@ -453,4 +441,38 @@ def register_routes(app, jellyfin_checker, crawler):
                                  error_message="获取演员影片详情错误"), 500
 
  
- 
+    @app.route('/api/subscription-movies/<series_name>', methods=['GET'])
+    def get_subscription_movies(series_name):
+        """获取指定订阅的电影列表"""
+        try:
+            movies_docs = db_manager.get_subscription_movies(series_name)
+            
+            movies = []
+            for movie_doc in movies_docs:
+                movie_data = {
+                    'movie_code': movie_doc.get('movie_code', ''),
+                    'title': movie_doc.get('title', ''),
+                    'magnet_link': movie_doc.get('magnet_link', ''),
+                    'found_at': movie_doc.get('found_at', ''),
+                    'image_url': movie_doc.get('image_url', '')
+                }
+                
+                # 如果有image_url，转换为代理URL
+                if movie_data['image_url']:
+                    movie_data['image_url'] = f"/proxy-image?url={movie_data['image_url']}"
+                
+                movies.append(movie_data)
+            
+            return jsonify({
+                'success': True,
+                'movies': movies,
+                'total_count': len(movies)
+            })
+            
+        except Exception as e:
+            print(f"获取订阅电影错误: {e}")
+            return jsonify({
+                'success': False,
+                'error': str(e)
+            })
+    
