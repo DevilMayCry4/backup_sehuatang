@@ -1,15 +1,46 @@
 {% extends "base.html" %}
-
 {% block title %}演员列表{% endblock %}
-
 {% block content %}
 <div class="container mt-4">
     <h2 class="mb-4">演员列表</h2>
     
+    <!-- 罩杯筛选器 -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="card-title">按罩杯筛选</h6>
+                    <form method="GET" action="{{ url_for('actresses_list') }}" class="d-flex flex-wrap align-items-center">
+                        <div class="me-3 mb-2">
+                            <select name="cup_size" class="form-select" onchange="this.form.submit()">
+                                <option value="">全部罩杯</option>
+                                {% for cup_size in all_cup_sizes %}
+                                <option value="{{ cup_size }}" {% if cup_size_filter == cup_size %}selected{% endif %}>
+                                    {{ cup_size }}杯
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        {% if cup_size_filter %}
+                        <div class="mb-2">
+                            <a href="{{ url_for('actresses_list') }}" class="btn btn-outline-secondary btn-sm">清除筛选</a>
+                        </div>
+                        {% endif %}
+                    </form>
+                    {% if cup_size_filter %}
+                    <small class="text-muted">当前筛选：{{ cup_size_filter }}杯，共 {{ total }} 位演员</small>
+                    {% else %}
+                    <small class="text-muted">共 {{ total }} 位演员</small>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
     <div class="row">
         {% for actress in actresses %}
         <div class="col-6 col-md-3 mb-4">
-            <div class="card h-100" onclick="window.location.href='{{ url_for('actress_movies', code=actress.code) }}';">
+            <div class="card h-100" onclick="window.location.href='{{ url_for('actress_movies', code=actress.code) }}';"> 
                 <img id="actress-img-{{ loop.index }}" 
                      src="{{ url_for('static', filename='images/actresses/' + actress.code+'_'+actress.name+'.jpg') }}" 
                      class="card-img-top img-fluid" 
@@ -29,12 +60,12 @@
         {% endfor %}
     </div>
     
-    <!-- 分页导航 - 优化移动端和PC端显示 -->
+    <!-- 分页导航 - 保持筛选参数 -->
     <nav aria-label="Page navigation">
         <ul class="pagination justify-content-center flex-wrap">
             {% if page > 1 %}
             <li class="page-item">
-                <a class="page-link" href="{{ url_for('actresses_list', page=page-1) }}">上一页</a>
+                <a class="page-link" href="{{ url_for('actresses_list', page=page-1, cup_size=cup_size_filter) }}">上一页</a>
             </li>
             {% endif %}
             
@@ -54,7 +85,7 @@
             
             {% for p in range(start_page, end_page + 1) %}
             <li class="page-item {% if p == page %}active{% endif %}">
-                <a class="page-link" href="{{ url_for('actresses_list', page=p) }}">{{ p }}</a>
+                <a class="page-link" href="{{ url_for('actresses_list', page=p, cup_size=cup_size_filter) }}">{{ p }}</a>
             </li>
             {% endfor %}
             
@@ -66,7 +97,7 @@
             
             {% if page*per_page < total %}
             <li class="page-item">
-                <a class="page-link" href="{{ url_for('actresses_list', page=page+1) }}">下一页</a>
+                <a class="page-link" href="{{ url_for('actresses_list', page=page+1, cup_size=cup_size_filter) }}">下一页</a>
             </li>
             {% endif %}
         </ul>
@@ -105,7 +136,6 @@ function tryAlternativeFormats(img) {
 }
 </script>
  
-</script>
 <style>
     /* 移动端优化样式 */
     @media (max-width: 768px) {

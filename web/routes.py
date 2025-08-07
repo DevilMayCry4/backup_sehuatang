@@ -389,15 +389,21 @@ def register_routes(app, jellyfin_checker, crawler):
     @app.route('/actresses')
     def actresses_list():
         page = request.args.get('page', 1, type=int)
+        cup_size_filter = request.args.get('cup_size', None)
         per_page = 20
         
-        actresses, total = db_manager.get_paginated_actresses(page, per_page)
+        actresses, total = db_manager.get_paginated_actresses(page, per_page, cup_size_filter)
+        
+        # 定义完整的罩杯尺寸列表 A-M
+        all_cup_sizes = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M']
         
         return render_template('actresses.html', 
                              actresses=actresses,
                              page=page,
                              per_page=per_page,
-                             total=total)
+                             total=total,
+                             cup_size_filter=cup_size_filter,
+                             all_cup_sizes=all_cup_sizes)
     
     @app.route('/actress/<code>')
     def actress_movies(code):

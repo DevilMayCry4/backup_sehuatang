@@ -345,16 +345,21 @@ class DatabaseManager:
             app_logger.info(f"Error writing actress data to MongoDB: {e}")
             return False
     
-    def get_paginated_actresses(self, page=1, per_page=20):
+    def get_paginated_actresses(self, page=1, per_page=20, cup_size_filter=None):
         """获取分页演员数据"""
         try:
             if self.actresses_data_collection is None:
                 return None, 0
                 
-            actresses = list(self.actresses_data_collection.find()
+            # 构建查询条件
+            query = {}
+            if cup_size_filter:
+                query['cup_size'] = cup_size_filter
+                
+            actresses = list(self.actresses_data_collection.find(query)
                             .skip((page-1)*per_page)
                             .limit(per_page))
-            total = self.actresses_data_collection.count_documents({})
+            total = self.actresses_data_collection.count_documents(query)
             return actresses, total
         except Exception as e:
             app_logger.info(f"获取分页演员数据错误: {e}")
