@@ -33,9 +33,7 @@ from jellyfin_movie_checker import JellyfinMovieChecker
 from crawler.javbus_crawler import JavBusCrawler
 from config import config as app_config
  
-
-
-
+ 
 
 # 创建Flask应用
 app = Flask(__name__)
@@ -183,7 +181,6 @@ register_routes(app, jellyfin_checker, crawler)
 start_scheduler(jellyfin_checker, crawler)
 
 if __name__ == '__main__':
-    print("Flask应用启动中...")
     app.run(debug=True, host='0.0.0.0', port=5000)
 
 

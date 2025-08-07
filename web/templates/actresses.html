@@ -9,11 +9,15 @@
     <div class="row">
         {% for actress in actresses %}
         <div class="col-6 col-md-3 mb-4">
-            <div class="""card h-100" onclick="window.location.href='{{ url_for('actress_movies', code=actress.code) }}';"> 
-                <img src="{{ url_for('static', filename='images/actresses/' + actress.code+'_'+actress.name+'.jpg') }}" 
+            <div class="card h-100" onclick="window.location.href='{{ url_for('actress_movies', code=actress.code) }}';">
+                <img id="actress-img-{{ loop.index }}" 
+                     src="{{ url_for('static', filename='images/actresses/' + actress.code+'_'+actress.name+'.jpg') }}" 
                      class="card-img-top img-fluid" 
                      alt="{{ actress.name }}"
-                     onerror="this.src='{{ actress.image_url }}'">
+                     data-actress-code="{{ actress.code }}"
+                     data-actress-name="{{ actress.name }}"
+                     data-fallback-url="{{ actress.image_url }}"
+                     onerror="tryAlternativeFormats(this)">
                 <div class="card-body">
                     <h5 class="card-title text-truncate">{{ actress.name }}</h5>
                     <p class="card-text">
@@ -70,6 +74,36 @@
 </div>
 
 <script>
+function tryAlternativeFormats(img) {
+    const code = img.dataset.actressCode;
+    const name = img.dataset.actressName;
+    const fallbackUrl = img.dataset.fallbackUrl;
+    
+    // 如果还没有尝试过的格式列表
+    if (!img.dataset.triedFormats) {
+        img.dataset.triedFormats = 'jpg';
+    }
+    
+    const triedFormats = img.dataset.triedFormats.split(',');
+    const allFormats = ['jpg', 'gif', 'png', 'jpeg'];
+    
+    // 找到下一个未尝试的格式
+    const nextFormat = allFormats.find(format => !triedFormats.includes(format));
+    
+    if (nextFormat) {
+        // 尝试下一个格式
+        img.dataset.triedFormats = triedFormats.concat([nextFormat]).join(',');
+        const newSrc = `{{ url_for('static', filename='images/actresses/') }}${code}_${name}.${nextFormat}`;
+        img.src = newSrc;
+    } else {
+        // 所有格式都尝试过了，使用原始URL作为最后的回退
+        if (fallbackUrl) {
+            img.src = fallbackUrl;
+            img.onerror = null; // 防止无限循环
+        }
+    }
+}
+</script>
     // 检测是否为移动设备
     const is_mobile = window.matchMedia("(max-width: 768px)").matches;
 </script>
