@@ -23,3 +23,6 @@ def info(msg):
 
 def error(msg):
     logger.error(msg)
+
+def warning(msg):
+    logger.warning(msg)

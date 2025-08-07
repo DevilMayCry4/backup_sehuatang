@@ -379,11 +379,8 @@ class ForumSeleniumCrawler(BaseSeleniumController):
         """关闭连接"""
         if self.driver:
             self.driver.quit()
-            logger.info("Selenium WebDriver已关闭")
-        
-        if self.mongo_client:
-            self.mongo_client.close()
-            logger.info("MongoDB连接已关闭")
+            logger.info("Selenium WebDriver已关闭") 
+            
 
     def update_subscription(self):
          crawler = ForumSeleniumCrawler()  

@@ -22,6 +22,7 @@ import os
 from typing import Dict, List, Optional, Any
 from urllib.parse import quote
 from jellyfin_config import config
+import app_logger
 
 
 class JellyfinMovieChecker:
@@ -246,7 +247,7 @@ class JellyfinMovieChecker:
         Returns:
             Dict[str, Any]: 检查结果
         """
-        print(f"🎬 正在检查电影: '{movie_name}'")
+        app_logger.info("🎬 正在检查电影: '{movie_name}'")
         print("=" * 50)
         
         # 认证

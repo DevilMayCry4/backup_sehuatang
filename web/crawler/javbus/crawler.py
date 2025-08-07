@@ -149,7 +149,7 @@ def craw_all_star():
     else:
         results = []
         all_count = 0
-    for index,star in enumerate(results,20):
+    for index,star in enumerate(results[20:]):
         controller.process_actress_page(star['code'])
         logger.info(f"进度：{index}/{all_count} {star['code']}")
    

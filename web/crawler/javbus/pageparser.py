@@ -11,10 +11,9 @@ from urllib.parse import urlparse
 import re
 import os
 import requests
-import downloader
-from web.app import crawler
-from web.app import logger
- 
+from web.app import crawler 
+from database import db_manager
+
 
 def _get_cili_url(soup):
     """get_cili(soup).get the ajax url and Referer url of request"""
@@ -135,7 +134,8 @@ def download_image(image_url, save_path, filename):
         print(f"图片已保存: {file_path}")
         return file_path
     except Exception as e:
-        logger.info(f"下载图片失败 {image_url}: {e}")
+        db_manager.record_failed_image_download(image_url, str(e))
+         
         return None
 
 def get_file_extension(url):
@@ -301,7 +301,7 @@ def parser_content(html):
         categories['URL'] = url      
 
     #将磁力链接加入字典
-    magnet_html = downloader.get_html(_get_cili_url(soup), Referer_url=url)
+    magnet_html =  get_html(_get_cili_url(soup), Referer_url=url)
     magnet = _parser_magnet(magnet_html)
     categories['磁力链接'] = magnet
 
@@ -329,4 +329,33 @@ def parser_content(html):
     
     return categories
 
+
+def get_html(url, Referer_url=None, max_retries=5):
+    '''get_html(url),download and return html'''
+    if Referer_url==None:
+        Referer_url = url
+
+    if Referer_url:
+        headers['Referer'] = Referer_url
+
+    if max_retries<1:
+        max_retries = 1
+
+    for i in range(max_retries):
+        try:
+            response = requests.get(url, headers=headers, proxies=proxies, timeout=10)
+            if response.status_code == 200:
+                break
+            elif response.status_code == 404:
+                response.raise_for_status() # raise an HTTPError exception at once, if 404 err happens
+
+        except Exception as err:
+            # print(err)
+            if i == (max_retries -1):
+               raise     # other exceptions raised after max_retries attempts
+
+    html = response.content
+    soup = BeautifulSoup(html.decode('utf-8', errors='ignore'), 'html.parser')
+    html = soup.prettify()
+    return html
 

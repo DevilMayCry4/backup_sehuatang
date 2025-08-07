@@ -13,6 +13,8 @@ from dotenv import load_dotenv
 import atexit
 import ast
 
+from web import app_logger
+
 # 添加父目录到路径
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config import config as app_config
@@ -456,27 +458,87 @@ class DatabaseManager:
 
         
     def parse_string_to_array(self,data_string):
+        """将字符串解析为数组"""
+        if not data_string:
+            return []
+        
         data_list = []
         lines = data_string.strip().split('\n')
         
         for line in lines:
             line = line.strip()
-            if line:  # 跳过空行
+            if line:
                 try:
-                    # 使用 ast.literal_eval 安全地解析字典字符串
-                    data_dict = ast.literal_eval(line)
-                    data_list.append(data_dict)
+                    # 使用 ast.literal_eval 安全解析
+                    data = ast.literal_eval(line)
+                    data_list.append(data)
                 except (ValueError, SyntaxError) as e:
                     print(f"解析行失败: {line}, 错误: {e}")
         return data_list
 
+    def record_failed_image_download(self, image_url, error_message, movie_code=None):
+        """记录下载失败的图片地址"""
+        try:
+            # 创建失败图片记录集合（如果不存在）
+            if not hasattr(self, 'failed_images_collection'):
+                self.failed_images_collection = self.mongo_db['failed_images']
+                # 创建索引
+                self.failed_images_collection.create_index("image_url")
+                self.failed_images_collection.create_index("created_at")
+            
+            # 检查是否已经记录过这个失败的图片
+            existing_record = self.failed_images_collection.find_one({"image_url": image_url})
+            
+            if existing_record:
+                # 更新失败次数和最后失败时间
+                self.failed_images_collection.update_one(
+                    {"image_url": image_url},
+                    {
+                        "$inc": {"failure_count": 1},
+                        "$set": {
+                            "last_failed_at": datetime.now(),
+                            "last_error_message": str(error_message)
+                        }
+                    }
+                )
+            else:
+                # 创建新的失败记录
+                failed_image_doc = {
+                    "image_url": image_url,
+                    "movie_code": movie_code,
+                    "error_message": str(error_message),
+                    "failure_count": 1,
+                    "created_at": datetime.now(),
+                    "last_failed_at": datetime.now(),
+                    "last_error_message": str(error_message)
+                }
+                self.failed_images_collection.insert_one(failed_image_doc)
+            
+            print(f"已记录失败图片: {image_url}")
+            return True
+            
+        except Exception as e:
+            print(f"记录失败图片时出错: {e}")
+            return False
+
+    def get_failed_images(self, limit=100):
+        """获取失败的图片记录"""
+        try:
+            if not hasattr(self, 'failed_images_collection'):
+                return []
+            
+            failed_images = list(self.failed_images_collection.find().sort("last_failed_at", -1).limit(limit))
+            return failed_images
+        except Exception as e:
+            print(f"获取失败图片记录时出错: {e}")
+            return []
 
     def close_connection(self):
         """关闭 MongoDB 连接"""
         if self.mongo_client:
             self.mongo_client.close()
             self.mongo_client = None
-            print("MongoDB connection closed")
+            app_logger.info("MongoDB connection closed")
 
 # 创建全局数据库管理器实例
 db_manager = DatabaseManager()

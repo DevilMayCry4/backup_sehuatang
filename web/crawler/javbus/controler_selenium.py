@@ -17,6 +17,7 @@ import requests
 import json
 import re
 from bs4 import BeautifulSoup
+import app_logger
 
 # 添加上级目录到路径以导入 database 模块
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
@@ -36,15 +37,14 @@ llm_api_url = os.getenv('LLM_API_URL', 'https://open.bigmodel.cn/api/paas/v4/cha
 llm_api_key = os.getenv('LLM_API_KEY', '')
 llm_model = os.getenv('LLM_MODEL', 'glm-4.5-flash')
 jav_base_url = 'https://www.javbus.com'
- 
-logger = logging.getLogger(__name__)
+  
 
 class JavBusSeleniumController(BaseSeleniumController):
      
     def get_page_content(self, url, max_retries=None):
         """使用Selenium获取页面内容，支持重试机制"""
         if not self.driver:
-            logger.error("WebDriver未初始化")
+            app_logger.error("WebDriver未初始化")
             return None
         
         if max_retries is None:
@@ -55,10 +55,10 @@ class JavBusSeleniumController(BaseSeleniumController):
                 # 随机延时，避免被检测
                 if attempt > 0:
                     wait_time = (attempt + 1) * 5 + random.uniform(2, 5)
-                    logger.info(f"第{attempt + 1}次重试，等待{wait_time:.1f}秒...")
+                    app_logger.info(f"第{attempt + 1}次重试，等待{wait_time:.1f}秒...")
                     time.sleep(wait_time)
                 
-                logger.info(f"正在访问: {url}")
+                app_logger.info(f"正在访问: {url}")
                 
                 # 设置页面加载超时
                 self.driver.set_page_load_timeout(self.page_load_timeout)
@@ -74,7 +74,7 @@ class JavBusSeleniumController(BaseSeleniumController):
                 page_source = self.driver.page_source
                  
                 if '验证您是否是真人' in page_source or 'security check' in page_source.lower():
-                    logger.warning(f"遇到安全验证页面: {url}")
+                    app_logger.warning(f"遇到安全验证页面: {url}")
                     if attempt < max_retries - 1:
                         time.sleep(random.uniform(10, 20))
                         continue
@@ -86,18 +86,18 @@ class JavBusSeleniumController(BaseSeleniumController):
                 return self.driver.page_source
                 
             except TimeoutException:
-                logger.error(f"页面加载超时: {url} (尝试{attempt + 1}/{max_retries})")
+                app_logger.error(f"页面加载超时: {url} (尝试{attempt + 1}/{max_retries})")
             except WebDriverException as e:
                 if "ERR_CONNECTION_REFUSED" in str(e):
-                    logger.error(f"连接被拒绝: {url} (尝试{attempt + 1}/{max_retries})")
+                    app_logger.error(f"连接被拒绝: {url} (尝试{attempt + 1}/{max_retries})")
                     if attempt < max_retries - 1:
-                        logger.info("可能是网络问题或反爬虫机制，等待更长时间后重试...")
+                        app_logger.info("可能是网络问题或反爬虫机制，等待更长时间后重试...")
                         time.sleep(random.uniform(30, 60))
                         continue
                 else:
-                    logger.error(f"WebDriver异常: {url} (尝试{attempt + 1}/{max_retries}): {e}")
+                    app_logger.error(f"WebDriver异常: {url} (尝试{attempt + 1}/{max_retries}): {e}")
             except Exception as e:
-                logger.error(f"获取页面失败: {url} (尝试{attempt + 1}/{max_retries}): {e}")
+                app_logger.error(f"获取页面失败: {url} (尝试{attempt + 1}/{max_retries}): {e}")
                 
             if attempt == max_retries - 1:
                 return None
@@ -164,20 +164,20 @@ class JavBusSeleniumController(BaseSeleniumController):
                     if json_match:
                         answers_json = json_match.group()
                         answers = json.loads(answers_json)
-                        logger.info(f"大模型返回答案: {answers}")
+                        app_logger.info(f"大模型返回答案: {answers}")
                         return answers
                     else:
-                        logger.warning("大模型返回内容中未找到有效JSON")
+                        app_logger.warning("大模型返回内容中未找到有效JSON")
                         return None
                 except json.JSONDecodeError as e:
-                    logger.warning(f"解析大模型返回的JSON失败: {e}")
+                    app_logger.warning(f"解析大模型返回的JSON失败: {e}")
                     return None
             else:
-                logger.error(f"大模型API调用失败: {response.status_code} - {response.text}")
+                app_logger.error(f"大模型API调用失败: {response.status_code} - {response.text}")
                 return None
                 
         except Exception as e:
-            logger.error(f"调用大模型处理驾驶证考试题失败: {e}")
+            app_logger.error(f"调用大模型处理驾驶证考试题失败: {e}")
             return None
     
     def extract_questions_from_page(self):
@@ -190,7 +190,7 @@ class JavBusSeleniumController(BaseSeleniumController):
             # 查找包含题目的表单
             form = soup.find('form')
             if not form:
-                logger.warning("未找到包含题目的表单")
+                app_logger.warning("未找到包含题目的表单")
                 return None
             
             # 提取所有题目
@@ -254,7 +254,7 @@ class JavBusSeleniumController(BaseSeleniumController):
                     })
             
             if not questions:
-                logger.warning("未找到有效的考试题目")
+                app_logger.warning("未找到有效的考试题目")
                 return None
             
             # 格式化为适合大模型处理的字符串
@@ -262,7 +262,7 @@ class JavBusSeleniumController(BaseSeleniumController):
             return formatted_questions
                 
         except Exception as e:
-            logger.error(f"提取页面题目失败: {e}")
+            app_logger.error(f"提取页面题目失败: {e}")
             return None
     
     def format_questions_for_llm(self, questions):
@@ -320,13 +320,13 @@ class JavBusSeleniumController(BaseSeleniumController):
             
             # 处理驾驶证考试题验证（使用大模型）
             if has_driving_test:
-                logger.info("检测到驾驶证考试题验证页面，正在使用大模型处理...")
+                app_logger.info("检测到驾驶证考试题验证页面，正在使用大模型处理...")
                 
                 try:
                     # 提取页面题目
                     questions_html = self.extract_questions_from_page()
                     if not questions_html:
-                        logger.warning("无法提取页面题目，使用备用答案")
+                        app_logger.warning("无法提取页面题目，使用备用答案")
                         # 使用预设的备用答案
                         correct_answers = {
                             'userAnswers[19]': 'C',
@@ -343,7 +343,7 @@ class JavBusSeleniumController(BaseSeleniumController):
                         
                         # 如果大模型调用失败，使用备用答案
                         if not correct_answers:
-                            logger.warning("大模型调用失败，使用备用答案")
+                            app_logger.warning("大模型调用失败，使用备用答案")
                             correct_answers = {
                                 'userAnswers[19]': 'C',
                                 'userAnswers[7]': 'A',
@@ -364,11 +364,11 @@ class JavBusSeleniumController(BaseSeleniumController):
                             # 点击正确答案
                             if not radio_button.is_selected():
                                 radio_button.click()
-                                logger.info(f"已选择题目 {question_name} 的答案: {correct_value}")
+                                app_logger.info(f"已选择题目 {question_name} 的答案: {correct_value}")
                                 time.sleep(random.uniform(0.5, 1.5))
                                 
                         except Exception as e:
-                            logger.warning(f"选择题目 {question_name} 失败: {e}")
+                            app_logger.warning(f"选择题目 {question_name} 失败: {e}")
                             continue
                     
                     # 提交答案
@@ -386,7 +386,7 @@ class JavBusSeleniumController(BaseSeleniumController):
                                 EC.element_to_be_clickable((By.CSS_SELECTOR, selector))
                             )
                             submit_btn.click()
-                            logger.info(f"已提交驾驶证考试题答案: {selector}")
+                            app_logger.info(f"已提交驾驶证考试题答案: {selector}")
                             submit_clicked = True
                             break
                         except Exception:
@@ -395,13 +395,13 @@ class JavBusSeleniumController(BaseSeleniumController):
                     if submit_clicked:
                         # 等待页面跳转
                         time.sleep(random.uniform(3, 6))
-                        logger.info("驾驶证考试题验证处理完成")
+                        app_logger.info("驾驶证考试题验证处理完成")
                         return True
                     else:
-                        logger.warning("未能找到提交按钮")
+                        app_logger.warning("未能找到提交按钮")
                         
                 except Exception as e:
-                    logger.warning(f"处理驾驶证考试题验证失败: {e}")
+                    app_logger.warning(f"处理驾驶证考试题验证失败: {e}")
                     
                     # 备用方案：使用JavaScript和预设答案
                     try:
@@ -440,16 +440,16 @@ class JavBusSeleniumController(BaseSeleniumController):
                         """
                         
                         self.driver.execute_script(js_script)
-                        logger.info("使用JavaScript备用方案处理驾驶证考试题")
+                        app_logger.info("使用JavaScript备用方案处理驾驶证考试题")
                         time.sleep(random.uniform(4, 7))
                         return True
                         
                     except Exception as js_e:
-                        logger.warning(f"JavaScript备用方案也失败: {js_e}")
+                        app_logger.warning(f"JavaScript备用方案也失败: {js_e}")
             
             # 处理普通年龄验证页面（原有逻辑）
             elif has_age_verification:
-                logger.info("检测到年龄确认页面，正在处理...")
+                app_logger.info("检测到年龄确认页面，正在处理...")
                 
                 try:
                     # 方法1: 处理模态框形式的年龄验证（如 hint.html 中的形式）
@@ -468,7 +468,7 @@ class JavBusSeleniumController(BaseSeleniumController):
                             )
                             if not checkbox.is_selected():
                                 checkbox.click()
-                                logger.info(f"已勾选年龄确认复选框: {selector}")
+                                app_logger.info(f"已勾选年龄确认复选框: {selector}")
                                 checkbox_found = True
                                 time.sleep(random.uniform(0.5, 1.5))
                                 break
@@ -495,7 +495,7 @@ class JavBusSeleniumController(BaseSeleniumController):
                                 EC.element_to_be_clickable((By.CSS_SELECTOR, selector))
                             )
                             submit_btn.click()
-                            logger.info(f"已点击年龄确认提交按钮: {selector}")
+                            app_logger.info(f"已点击年龄确认提交按钮: {selector}")
                             submit_clicked = True
                             break
                         except Exception:
@@ -516,7 +516,7 @@ class JavBusSeleniumController(BaseSeleniumController):
                                     EC.element_to_be_clickable((By.CSS_SELECTOR, selector))
                                 )
                                 enter_link.click()
-                                logger.info(f"已点击年龄确认链接: {selector}")
+                                app_logger.info(f"已点击年龄确认链接: {selector}")
                                 submit_clicked = True
                                 break
                             except Exception:
@@ -525,13 +525,13 @@ class JavBusSeleniumController(BaseSeleniumController):
                     if checkbox_found or submit_clicked:
                         # 等待页面跳转
                         time.sleep(random.uniform(2, 5))
-                        logger.info("年龄验证处理完成")
+                        app_logger.info("年龄验证处理完成")
                         return True
                     else:
-                        logger.warning("未能找到有效的年龄验证元素")
+                        app_logger.warning("未能找到有效的年龄验证元素")
                         
                 except Exception as e:
-                    logger.warning(f"处理年龄确认页面失败: {e}")
+                    app_logger.warning(f"处理年龄确认页面失败: {e}")
                     
                     # 备用方案：尝试使用 JavaScript 直接提交表单
                     try:
@@ -562,12 +562,12 @@ class JavBusSeleniumController(BaseSeleniumController):
                             }
                         """)
                         
-                        logger.info("使用 JavaScript 备用方案处理年龄验证")
+                        app_logger.info("使用 JavaScript 备用方案处理年龄验证")
                         time.sleep(random.uniform(2, 4))
                         return True
                         
                     except Exception as js_e:
-                        logger.warning(f"JavaScript 备用方案也失败: {js_e}")
+                        app_logger.warning(f"JavaScript 备用方案也失败: {js_e}")
             
             # 随机滚动页面（原有逻辑）
             try:
@@ -578,10 +578,10 @@ class JavBusSeleniumController(BaseSeleniumController):
                 # 随机停留时间
                 time.sleep(random.uniform(1, 3))
             except Exception as e:
-                logger.debug(f"页面滚动失败: {e}")
+                app_logger.debug(f"页面滚动失败: {e}")
                 
         except Exception as e:
-            logger.debug(f"模拟人类行为失败: {e}")
+            app_logger.debug(f"模拟人类行为失败: {e}")
         return False
     
     def close_driver(self):
@@ -589,9 +589,9 @@ class JavBusSeleniumController(BaseSeleniumController):
         if self.driver:
             try:
                 self.driver.quit()
-                logger.info("WebDriver已关闭")
+                app_logger.info("WebDriver已关闭")
             except Exception as e:
-                logger.error(f"关闭WebDriver时出错: {e}")
+                app_logger.error(f"关闭WebDriver时出错: {e}")
             finally:
                 self.driver = None
 
@@ -631,7 +631,7 @@ def parse_actress_info(html_content, base_url=None):
         # 查找演员信息区域
         avatar_box = soup.find('div', class_='avatar-box')
         if not avatar_box:
-            logger.info("未找到演员信息区域")
+            app_logger.info("未找到演员信息区域")
             return None
             
         actress_info = {}
@@ -678,7 +678,7 @@ def parse_actress_info(html_content, base_url=None):
         return actress_info
         
     except Exception as e:
-        logger.info(f"解析演员信息时出错: {e}")
+        app_logger.info(f"解析演员信息时出错: {e}")
         return None
 
 def parse_actress_movies(html_content):
@@ -758,7 +758,7 @@ def parse_actress_movies(html_content):
         return movies
         
     except Exception as e:
-        logger.info(f"解析演员影片列表时出错: {e}")
+        app_logger.info(f"解析演员影片列表时出错: {e}")
         return []
 
 def get_next_page_url_actress(current_url, html_content):
@@ -789,12 +789,10 @@ def get_next_page_url_actress(current_url, html_content):
         return None
         
     except Exception as e:
-        logger.info(f"获取下一页URL时出错: {e}")
+        app_logger.info(f"获取下一页URL时出错: {e}")
         return None
 
 def update_actress_data(actress_info,code):
-
-    print('========---------')
     """更新演员数据到数据库"""
     try:
         # 准备演员数据
@@ -810,19 +808,18 @@ def update_actress_data(actress_info,code):
             'hip': actress_info.get('hip', ''),
             'hobby': actress_info.get('hobby', '')
         }
-        print("============")
-        print(actress_data)
+        app_logger.info(actress_data)
         # 写入数据库
         return db_manager.write_actress_data(actress_data)
         
     except Exception as e:
-        logger.info(f"更新演员数据时出错: {e}")
+        app_logger.info(f"更新演员数据时出错: {e}")
         return False
 
 def process_actress_page(code, max_pages=None):
     """处理演员页面，获取演员信息和所有影片"""
     try:
-        logger.info(f"开始处理演员页面: {code}")
+        app_logger.info(f"开始处理演员页面: {code}")
         current_url = (f'{jav_base_url}/star/{code}')
          
         page_count = 0
@@ -830,12 +827,12 @@ def process_actress_page(code, max_pages=None):
         actress_info = None
         
         while current_url and (max_pages is None or page_count < max_pages):
-            logger.info(f"正在处理第 {page_count + 1} 页: {current_url}")
+            app_logger.info(f"正在处理第 {page_count + 1} 页: {current_url}")
             
             # 获取页面内容
             html_content = controller.get_page_content(current_url)
             if not html_content:
-                logger.info(f"无法获取页面内容: {current_url}")
+                app_logger.info(f"无法获取页面内容: {current_url}")
                 break
             
             # 第一页时解析演员信息
@@ -843,15 +840,15 @@ def process_actress_page(code, max_pages=None):
                 actress_info = parse_actress_info(html_content, jav_base_url)
                 if actress_info:
                     actress_info['detail_url'] = current_url
-                    logger.info(f"解析到演员信息: {actress_info.get('name', 'Unknown')}")
+                    app_logger.info(f"解析到演员信息: {actress_info.get('name', 'Unknown')}")
                     # 更新演员数据到数据库
                     update_actress_data(actress_info,code)
                 else:
-                    logger.info("未能解析到演员信息")
+                    app_logger.info("未能解析到演员信息")
             
             # 解析影片列表
             movies =  parse_actress_movies(html_content)
-            logger.info(f"第 {page_count + 1} 页找到 {len(movies)} 部影片")
+            app_logger.info(f"第 {page_count + 1} 页找到 {len(movies)} 部影片")
              
             for movie in movies: 
                 code = movie['code'] 
@@ -866,24 +863,24 @@ def process_actress_page(code, max_pages=None):
                             if movie_detail:
                                 # 写入数据库
                                 db_manager.write_jav_movie(movie_detail)
-                                logger.info(f"✓ 已保存影片: {movie_detail.get('識別碼', 'Unknown')}")
+                                app_logger.info(f"✓ 已保存影片: {movie_detail.get('識別碼', 'Unknown')}")
                             else:
-                                logger.error(f"✗ 无法解析影片详情: {movie['url']}")
+                                app_logger.error(f"✗ 无法解析影片详情: {movie['url']}")
                                 db_manager.add_retry_url(movie['url'], 'parse_error', '无法解析影片详情')
                         else:
-                            logger.error(f"✗ 无法获取影片页面: {movie['url']}")
+                            app_logger.error(f"✗ 无法获取影片页面: {movie['url']}")
                             db_manager.add_retry_url(movie['url'], 'fetch_error', '无法获取影片页面')
                     except Exception as e:
-                        logger.error(f"✗ 处理影片时出错 {movie['url']}: {e}")
+                        app_logger.error(f"✗ 处理影片时出错 {movie['url']}: {e}")
                         db_manager.add_retry_url(movie['url'], 'process_error', str(e))
                 else:
-                    logger.info(f"跳过已处理的影片: {movie['url']}")
+                    app_logger.info(f"跳过已处理的影片: {movie['url']}")
             total_movies.extend(movies)
             
             # 获取下一页URL
             next_url =  get_next_page_url_actress(current_url, html_content)
             if next_url:
-                logger.info(f"找到下一页: {next_url}")
+                app_logger.info(f"找到下一页: {next_url}")
                 current_url = next_url
                 page_count += 1
                 
@@ -891,10 +888,10 @@ def process_actress_page(code, max_pages=None):
                 import time
                 time.sleep(2)
             else:
-                logger.info("没有更多页面")
+                app_logger.info("没有更多页面")
                 break
         
-        logger.info(f"演员页面处理完成，共处理 {page_count + 1} 页，{len(total_movies)} 部影片")
+        app_logger.info(f"演员页面处理完成，共处理 {page_count + 1} 页，{len(total_movies)} 部影片")
         
         return {
             'actress_info': actress_info,
@@ -904,7 +901,7 @@ def process_actress_page(code, max_pages=None):
         }
         
     except Exception as e:
-        logger.info(f"处理演员页面时出错: {e}")
+        app_logger.info(f"处理演员页面时出错: {e}")
         return None
 
 # 使用示例
@@ -914,10 +911,10 @@ if __name__ == "__main__":
         # 测试获取页面内容
         html = controller.get_page_content("https://www.javbus.com")
         if html:
-            logger.info("成功获取页面内容")
-            logger.info(f"页面长度: {len(html)} 字符")
+            app_logger.info("成功获取页面内容")
+            app_logger.info(f"页面长度: {len(html)} 字符")
         else:
-            logger.info("获取页面内容失败")
+            app_logger.info("获取页面内容失败")
     finally:
         controller.close_driver()
 # 在文件末尾添加以下方法
@@ -947,5 +944,5 @@ def retry_failed_urls(max_retries=3):
             db_manager.update_retry_status(url, False, retry_count)
             
         except Exception as e:
-            logger.error(f"重试失败 {url}: {e}")
+            app_logger.error(f"重试失败 {url}: {e}")
             db_manager.update_retry_status(url, False, retry_count)

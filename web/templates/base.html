@@ -48,6 +48,28 @@
             transform: scale(1.05);
             box-shadow: 0 4px 16px rgba(0,0,0,0.2);
         }
+        
+        /* 移动端导航优化 */
+        @media (max-width: 768px) {
+            .navbar-nav .nav-link {
+                font-size: 1.1rem;
+                padding: 0.75rem 1rem;
+                border-bottom: 1px solid rgba(255,255,255,0.1);
+            }
+            
+            .navbar-nav .nav-link i {
+                font-size: 1.2rem;
+                margin-right: 0.5rem;
+            }
+            
+            .navbar-nav .nav-item:last-child .nav-link {
+                border-bottom: none;
+            }
+            
+            .navbar-collapse {
+                margin-top: 0.5rem;
+            }
+        }
     </style>
 </head>
 <body>

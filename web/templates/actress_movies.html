@@ -3,22 +3,128 @@
 {% block title %}{{ actress.name }}的影片{% endblock %}
 
 {% block content %}
+<style>
+.movie-cover-container {
+    height: 200px;
+    overflow: hidden;
+    position: relative;
+    border-radius: 8px;
+}
+
+.movie-cover-image {
+    width: 200%;
+    height: 100%;
+    object-fit: cover;
+    object-position: right center;
+    transform: translateX(-55%);
+    transition: transform 0.3s ease;
+}
+
+.movie-cover-container:hover .movie-cover-image {
+    transform: translateX(-55%) scale(1.05);
+}
+
+/* 瀑布流布局 */
+.movies-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 1.5rem;
+    padding: 0;
+}
+
+@media (max-width: 768px) {
+    .movies-grid {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 1.25rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .movies-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+    }
+}
+
+/* 卡片样式优化 */
+.movie-card {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    cursor: pointer;
+    overflow: hidden;
+    /* 没有设置固定高度，允许内容自适应 */
+}
+
+.movie-title {
+    font-size: 1.5rem;
+    color: #6c757d;
+    line-height: 1.3;
+    margin: 0;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    hyphens: auto;
+    /* 允许标题自然换行和高度调整 */
+}
+
+.movie-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+}
+
+.movie-card-body {
+    padding: 0.75rem;
+}
+
+.movie-title {
+    font-size: 1.5rem;  /* 保持当前字体大小不变 */
+    color: #6c757d;
+    line-height: 1.3;
+    margin: 0;
+    word-wrap: break-word;      /* 支持换行 */
+    overflow-wrap: break-word;  /* 支持换行 */
+    hyphens: auto;              /* 自动断词 */
+}
+
+.movie-card {
+    background: #f8f9fa;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    cursor: pointer;
+    overflow: hidden;
+    /* 没有设置固定高度，卡片会根据内容自动调节高度 */
+}
+
+@media (max-width: 768px) {
+    .movie-title {
+        font-size: 1.2rem;
+        line-height: 1.2;
+    }
+    
+    .movie-card-body {
+        padding: 0.5rem;
+    }
+}
+</style>
+
 <div class="container mt-4">
     <h2 class="mb-4">{{ actress.name }}的影片</h2>
     
-    <div class="row">
+    <div class="movies-grid">
         {% for movie in movies %}
-        <div class="col-6 col-md-3 mb-4">
-            <div class="card h-100" style="cursor: pointer;" onclick="window.location.href='/jav-movie-detail/{{ movie.code }}'">
-                <a href="{{ url_for('static', filename='images/covers/' + movie.code+'/'+movie.code+'_cover.jpg') }}" data-toggle="lightbox" data-gallery="movie-gallery" onclick="event.stopPropagation();">
+        <div class="movie-card" onclick="window.location.href='/jav-movie-detail/{{ movie.code }}'">
+            <a href="#" onclick="openImageModal('{{ url_for('static', filename='images/covers/' + movie.code+'/'+movie.code+'_cover.jpg') }}', '{{ movie.title }}'); event.stopPropagation(); return false;">
+                <div class="movie-cover-container">
                     <img src="{{ url_for('static', filename='images/covers/' + movie.code+'/'+movie.code+'_cover.jpg') }}"
-                         class="card-img-top img-fluid" 
+                         class="movie-cover-image" 
                          alt="{{ movie.title }}"
                          loading="lazy">
-                </a>
-                <div class="card-body">
-                    <small class="text-muted">{{ movie.title }}</small>
                 </div>
+            </a>
+            <div class="movie-card-body">
+                <p class="movie-title">{{ movie.title }}</p>
             </div>
         </div>
         {% endfor %}
@@ -50,6 +156,150 @@
         </ul>
     </nav>
 </div>
+
+<!-- 图片放大模态框 -->
+<div id="imageModal" class="image-modal" onclick="closeImageModal()">
+    <div class="image-modal-content">
+        <span class="image-modal-close" onclick="closeImageModal()">&times;</span>
+        <img id="modalImage" class="modal-image" src="" alt="">
+        <div id="modalTitle" class="modal-title"></div>
+    </div>
+</div>
+
+
+<style>
+.image-modal {
+    display: none;
+    position: fixed;
+    z-index: 9999;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.9);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.image-modal.show {
+    opacity: 1;
+}
+
+.image-modal-content {
+    position: relative;
+    margin: auto;
+    padding: 20px;
+    width: 90%;
+    max-width: 800px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-image {
+    max-width: 100%;
+    max-height: 80vh;
+    object-fit: contain;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    transform: scale(0.8);
+    transition: transform 0.3s ease;
+}
+
+.image-modal.show .modal-image {
+    transform: scale(1);
+}
+
+.modal-title {
+    color: white;
+    text-align: center;
+    margin-top: 20px;
+    font-size: 1.2rem;
+    opacity: 0;
+    transition: opacity 0.3s ease 0.2s;
+}
+
+.image-modal.show .modal-title {
+    opacity: 1;
+}
+
+.image-modal-close {
+    position: absolute;
+    top: 20px;
+    right: 30px;
+    color: white;
+    font-size: 40px;
+    font-weight: bold;
+    cursor: pointer;
+    z-index: 10000;
+    opacity: 0.7;
+    transition: opacity 0.3s ease;
+}
+
+.image-modal-close:hover {
+    opacity: 1;
+    transform: scale(1.1);
+}
+
+/* 移动端优化 */
+@media (max-width: 768px) {
+    .image-modal-content {
+        padding: 10px;
+    }
+    
+    .modal-image {
+        max-height: 70vh;
+    }
+    
+    .image-modal-close {
+        top: 10px;
+        right: 20px;
+        font-size: 30px;
+    }
+}
+</style>
+
+<script>
+function openImageModal(imageSrc, title) {
+    const modal = document.getElementById('imageModal');
+    const modalImage = document.getElementById('modalImage');
+    const modalTitle = document.getElementById('modalTitle');
+    
+    modalImage.src = imageSrc;
+    modalTitle.textContent = title;
+    
+    modal.style.display = 'block';
+    
+    // 强制重绘后添加show类以触发动画
+    setTimeout(() => {
+        modal.classList.add('show');
+    }, 10);
+    
+    // 阻止页面滚动
+    document.body.style.overflow = 'hidden';
+}
+
+function closeImageModal() {
+    const modal = document.getElementById('imageModal');
+    
+    modal.classList.remove('show');
+    
+    // 等待动画完成后隐藏模态框
+    setTimeout(() => {
+        modal.style.display = 'none';
+        document.body.style.overflow = 'auto';
+    }, 300);
+}
+
+// ESC键关闭模态框
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+        closeImageModal();
+    }
+});
+</script>
 {% endblock %}
 
 {% block scripts %}
