@@ -28,6 +28,7 @@ class DatabaseManager:
         # JavBus 爬虫相关集合
         self.javbus_data_collection = None
         self.actresses_data_collection = None
+        self.processed_actresses_collection = None
         
     def init_mongodb(self):
         """初始化MongoDB连接"""
@@ -432,14 +433,14 @@ class DatabaseManager:
             return False
             
     def get_actress_movies(self, actress_name, page=1, per_page=20):
-        """获取指定演员的所有影片(分页)"""
+        """获取指定演员的所有影片(分页)，按发布日期最新排序"""
         try:
             if self.javbus_data_collection is None:
                 return None, 0
                 
             movies = list(self.javbus_data_collection.find(
                 {'actresses': {'$regex': actress_name, '$options': 'i'}}
-            ).skip((page-1)*per_page).limit(per_page))
+            ).sort('release_date', -1).skip((page-1)*per_page).limit(per_page))
             
             total = self.javbus_data_collection.count_documents(
                 {'actresses': {'$regex': actress_name, '$options': 'i'}}
@@ -586,6 +587,55 @@ class DatabaseManager:
         except Exception as e:
             app_logger.error(f"保存到MongoDB失败: {e}")
             return False
+            
+    def is_actress_processed(self, actress_code):
+        """检查演员是否已经处理过"""
+        if self.processed_actresses_collection is None:
+            return False
+        return self.processed_actresses_collection.find_one({'actress_code': actress_code}) is not None
+    
+    def mark_actress_as_processed(self, actress_code, actress_name=None):
+        """标记演员为已处理"""
+        if self.processed_actresses_collection is None:
+            return False
+        
+        try:
+            doc = {
+                'actress_code': actress_code,
+                'actress_name': actress_name,
+                'processed_at': datetime.now()
+            }
+            
+            # 使用 upsert 避免重复插入
+            self.processed_actresses_collection.update_one(
+                {'actress_code': actress_code},
+                {'$set': doc},
+                upsert=True
+            )
+            app_logger.info(f"标记演员 {actress_code} 为已处理")
+            return True
+        except Exception as e:
+            app_logger.error(f"标记演员 {actress_code} 为已处理失败: {e}")
+            return False
+    
+    def get_processed_actresses_count(self):
+        """获取已处理演员数量"""
+        if self.processed_actresses_collection is None:
+            return 0
+        return self.processed_actresses_collection.count_documents({})
+    
+    def clear_processed_actresses(self):
+        """清空已处理演员记录（用于重新开始处理）"""
+        if self.processed_actresses_collection is None:
+            return False
+        
+        try:
+            result = self.processed_actresses_collection.delete_many({})
+            app_logger.info(f"清空了 {result.deleted_count} 条已处理演员记录")
+            return True
+        except Exception as e:
+            app_logger.error(f"清空已处理演员记录失败: {e}")
+            return False
 
 # 创建全局数据库管理器实例
 db_manager = DatabaseManager()
@@ -650,6 +700,8 @@ def get_all_star():
 def get_top_star():
     """获取热门演员 - 兼容性函数"""
     return db_manager.get_top_star()
+
+      
 
 
 

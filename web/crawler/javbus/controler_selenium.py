@@ -817,7 +817,7 @@ def update_actress_data(actress_info,code):
 def process_actress_page(code, max_pages=None):
     """处理演员页面，获取演员信息和所有影片"""
     try:
-        app_logger.info("开始处理演员页面: {code}")
+        app_logger.info(f"开始处理演员页面: {code}")
         current_url = (f'{jav_base_url}/star/{code}')
          
         page_count = 0

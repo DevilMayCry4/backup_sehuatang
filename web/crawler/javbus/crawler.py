@@ -150,10 +150,27 @@ def craw_all_star():
     else:
         results = []
         all_count = 0
-    for index,star in enumerate(results[20:]):
-        controller.process_actress_page(star['code'])
-        app_logger.info(f"进度：{index}/{all_count} {star['code']}")
-   
+    
+    processed_count = 0
+    skipped_count = 0
+    
+    for index, star in enumerate(results[20:]):
+        # 检查是否已经处理过
+        if db_manager.is_actress_processed(star['code']):
+            skipped_count += 1
+            app_logger.info(f"跳过已处理的演员：{star['code']} ({index+1}/{all_count})")
+            continue
+        
+        try:
+            controller.process_actress_page(star['code'])
+            # 处理完成后标记为已处理
+            db_manager.mark_actress_as_processed(star['code'], star.get('name'))
+            processed_count += 1
+            app_logger.info(f"处理完成：{index+1}/{all_count} {star['code']}")
+        except Exception as e:
+            app_logger.error(f"处理演员 {star['code']} 时出错: {e}")
+    
+    app_logger.info(f"全部演员处理完成 - 总数: {all_count}, 新处理: {processed_count}, 跳过: {skipped_count}")
 
 def craw_top_star():
     cursor = db_manager.get_top_star()
@@ -164,9 +181,27 @@ def craw_top_star():
     else:
         results = []
         all_count = 0
-    for index,star in enumerate(results):
-        controller.process_actress_page(star['code'])
-        app_logger.info(f"进度：{index}/{all_count} {star['code']}")
+    
+    processed_count = 0
+    skipped_count = 0
+    
+    for index, star in enumerate(results):
+        # 检查是否已经处理过
+        if db_manager.is_actress_processed(star['code']):
+            skipped_count += 1
+            app_logger.info(f"跳过已处理的演员：{star['code']} ({index+1}/{all_count})")
+            continue
+        
+        try:
+            controller.process_actress_page(star['code'])
+            # 处理完成后标记为已处理
+            db_manager.mark_actress_as_processed(star['code'], star.get('name'))
+            processed_count += 1
+            app_logger.info(f"处理完成：{index+1}/{all_count} {star['code']}")
+        except Exception as e:
+            app_logger.error(f"处理演员 {star['code']} 时出错: {e}")
+    
+    app_logger.info(f"热门演员处理完成 - 总数: {all_count}, 新处理: {processed_count}, 跳过: {skipped_count}")
 
 if __name__ == '__main__':
      
