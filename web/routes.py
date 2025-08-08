@@ -362,6 +362,45 @@ def register_routes(app, jellyfin_checker, crawler):
                 'error': f'启动失败: {str(e)}'
             })
     
+    @app.route('/api/update-sehuatang', methods=['POST'])
+    def update_sehuatang():
+        """更新论坛电影API"""
+        try:
+            # 在后台线程中执行爬虫任务
+            import threading
+            def run_crawler():
+                try:
+                    # 修改导入路径
+                    import sys
+                    import os
+                    crawler_dir = os.path.join(os.path.dirname(__file__), 'crawler')
+                    sys.path.insert(0, crawler_dir)
+                    
+                    from selenium_crawler import ForumSeleniumCrawler
+                    crawler_instance = ForumSeleniumCrawler()
+                    crawler_instance.update_sehuatang()
+                    print("论坛电影更新完成")
+                except Exception as e:
+                    print(f"论坛电影更新错误: {e}")
+                    import traceback
+                    traceback.print_exc()
+            
+            thread = threading.Thread(target=run_crawler)
+            thread.daemon = True
+            thread.start()
+            
+            return jsonify({
+                'success': True,
+                'message': '论坛电影更新任务已开始执行，请查看控制台日志了解进度'
+            })
+            
+        except Exception as e:
+            print(f"启动论坛电影更新错误: {e}")
+            return jsonify({
+                'success': False,
+                'error': f'启动失败: {str(e)}'
+            })
+
     # 在 register_routes 函数中添加新路由
     
     @app.route('/mobile/movie-detail/<series_name>/<int:movie_index>')

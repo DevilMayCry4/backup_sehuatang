@@ -18,12 +18,11 @@ import re
 from bs4 import BeautifulSoup
 import app_logger
 
-# 添加上级目录到路径以导入 database 模块
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
+# 添加父目录到Python路径
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from database import db_manager
 # 导入 MongoDB 操作模块
  # 在文件开头添加
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from selenium_base import BaseSeleniumController
 
 
@@ -847,7 +846,7 @@ def process_actress_page(code, max_pages=None):
             
             # 解析影片列表
             movies =  parse_actress_movies(html_content)
-            app_logger.info("第 {page_count + 1} 页找到 {len(movies)} 部影片")
+            app_logger.info(f"第 {page_count + 1} 页找到 {len(movies)} 部影片")
              
             for movie in movies: 
                 code = movie['code'] 
@@ -859,11 +858,11 @@ def process_actress_page(code, max_pages=None):
                             # 使用pageparser解析影片详细信息
                             import pageparser
                             movie_detail = pageparser.parser_content(movie_html)
-                            app_logger.info('解析影片详细页面: {movie_detail}')
+                            #app_logger.info(f'解析影片详细页面: {movie_detail}')
                             if movie_detail:
                                 # 写入数据库
                                 db_manager.write_jav_movie(movie_detail)
-                                app_logger.info(f"✓ 已保存影片: {movie_detail.get('識別碼', 'Unknown')}")
+                                #app_logger.info(f"✓ 已保存影片: {movie_detail.get('識別碼', 'Unknown')}")
                             else:
                                 app_logger.error(f"✗ 无法解析影片详情: {movie['url']}")
                                 db_manager.add_retry_url(movie['url'], 'parse_error', '无法解析影片详情',code)

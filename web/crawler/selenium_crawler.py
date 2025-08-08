@@ -20,9 +20,11 @@ from urllib.parse import urljoin
 # 添加父目录到Python路径
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from database import db_manager
-import  app_logger
+import app_logger
 
-# 修改类名和继承
+# 修改类名和继承 - 添加当前目录到路径
+current_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, current_dir)
 from selenium_base import BaseSeleniumController
 
 class ForumSeleniumCrawler(BaseSeleniumController):
@@ -319,7 +321,23 @@ class ForumSeleniumCrawler(BaseSeleniumController):
             if results:
                 print(f"\n第 {pageNumber} 页爬取完成，共获取 {len(results)} 条数据")
          app_logger.info(f"完成全部爬取")
-
+    
+    def update_sehuatang(self):
+        headless = True
+        crawler = ForumSeleniumCrawler(delay=3, headless=headless)  # 设置3秒延时
+        
+        try: 
+            pageNumbers = 100
+            for pageNumber in range(0, pageNumbers + 1):
+                url = f"{crawler.base_url}&page={pageNumber}"
+                results = crawler.crawl_from_url(url)
+                if results:
+                    print(f"\n第 {pageNumber} 页爬取完成，共获取 {len(results)} 条数据")
+            app_logger.info(f"完成全部爬取")
+    
+        finally:
+            # 确保关闭所有连接
+            crawler.close_driver()
 def main():
     """主函数"""
  
