@@ -43,6 +43,7 @@ class DatabaseManager:
             self.add_movie_collection = self.mongo_db['add_movie']
             self.found_movies_collection = self.mongo_db['found_movies']
             self.retry_collection = self.mongo_db['retry_urls']
+            self.processed_actresses_collection = self.mongo_db['processed_actresses']
             
             # JavBus 爬虫相关集合
             self.javbus_data_collection = self.mongo_db['javbus_data']
@@ -67,6 +68,8 @@ class DatabaseManager:
             # 演员数据索引
             self.actresses_data_collection.create_index("code", unique=True)
             self.actresses_data_collection.create_index("name")
+             
+            self.processed_actresses_collection.create_index("actress_code", unique=True)
 
             #重试索引
             self.retry_collection.create_index("url", unique=True)
