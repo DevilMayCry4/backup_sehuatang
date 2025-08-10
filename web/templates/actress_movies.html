@@ -24,87 +24,116 @@
     transform: translateX(-55%) scale(1.05);
 }
 
-/* 瀑布流布局 */
+/* 瀑布流布局 - 增加边距 */
 .movies-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-    gap: 1.5rem;
+    gap: 2rem; /* 增加卡片间距 */
     padding: 0;
+    margin-bottom: 3rem; /* 增加与分页的距离 */
 }
 
 @media (max-width: 768px) {
     .movies-grid {
         grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-        gap: 1.25rem;
+        gap: 1.5rem;
+        margin-bottom: 2.5rem;
     }
 }
 
 @media (max-width: 480px) {
     .movies-grid {
         grid-template-columns: repeat(2, 1fr);
-        gap: 1rem;
+        gap: 1.25rem;
+        margin-bottom: 2rem;
     }
 }
 
 /* 卡片样式优化 */
 .movie-card {
     background: white;
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    border-radius: 12px; /* 增加圆角 */
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08); /* 优化阴影 */
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
     cursor: pointer;
     overflow: hidden;
-    /* 没有设置固定高度，允许内容自适应 */
+    border: 1px solid rgba(0,0,0,0.05); /* 添加细边框 */
+}
+
+.movie-card:hover {
+    transform: translateY(-4px); /* 增加悬停效果 */
+    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+}
+
+.movie-card-body {
+    padding: 1rem; /* 增加内边距 */
 }
 
 .movie-title {
-    font-size: 1.5rem;
-    color: #6c757d;
-    line-height: 1.3;
+    font-size: 1.4rem;
+    color: #495057;
+    line-height: 1.4;
     margin: 0;
     word-wrap: break-word;
     overflow-wrap: break-word;
     hyphens: auto;
-    /* 允许标题自然换行和高度调整 */
+    font-weight: 500; /* 增加字体粗细 */
 }
 
-.movie-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+/* 分页样式优化 */
+.pagination-container {
+    margin-top: 3rem;
+    margin-bottom: 2rem;
+    padding: 2rem 0; /* 增加上下内边距 */
+    border-top: 1px solid #e9ecef; /* 添加分隔线 */
 }
 
-.movie-card-body {
-    padding: 0.75rem;
-}
-
-.movie-title {
-    font-size: 1.5rem;  /* 保持当前字体大小不变 */
-    color: #6c757d;
-    line-height: 1.3;
+.pagination {
     margin: 0;
-    word-wrap: break-word;      /* 支持换行 */
-    overflow-wrap: break-word;  /* 支持换行 */
-    hyphens: auto;              /* 自动断词 */
+    gap: 0.5rem; /* 增加分页按钮间距 */
 }
 
-.movie-card {
-    background: #f8f9fa;
+.page-link {
     border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-    cursor: pointer;
-    overflow: hidden;
-    /* 没有设置固定高度，卡片会根据内容自动调节高度 */
+    border: 1px solid #dee2e6;
+    color: #6c757d;
+    padding: 0.75rem 1rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.page-link:hover {
+    background-color: #f8f9fa;
+    border-color: #adb5bd;
+    color: #495057;
+    transform: translateY(-1px);
+}
+
+.page-item.active .page-link {
+    background-color: #007bff;
+    border-color: #007bff;
+    color: white;
+    box-shadow: 0 2px 8px rgba(0,123,255,0.3);
 }
 
 @media (max-width: 768px) {
     .movie-title {
         font-size: 1.2rem;
-        line-height: 1.2;
+        line-height: 1.3;
     }
     
     .movie-card-body {
-        padding: 0.5rem;
+        padding: 0.75rem;
+    }
+    
+    .pagination-container {
+        margin-top: 2rem;
+        padding: 1.5rem 0;
+    }
+    
+    .page-link {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.9rem;
     }
 }
 </style>
@@ -115,9 +144,9 @@
     <div class="movies-grid">
         {% for movie in movies %}
         <div class="movie-card" onclick="window.location.href='/jav-movie-detail/{{ movie.code }}'">
-            <a href="#" onclick="openImageModal('{{ url_for('static', filename='images/covers/' + movie.code+'/'+movie.code+'_cover.jpg') }}', '{{ movie.title }}'); event.stopPropagation(); return false;">
+            <a href="#" onclick="openImageModal('{{ url_for('static', filename='images/covers/' + movie.code + '/' + movie.code + '_cover.jpg') }}', '{{ movie.title }}'); event.stopPropagation(); return false;">
                 <div class="movie-cover-container">
-                    <img src="{{ url_for('static', filename='images/covers/' + movie.code+'/'+movie.code+'_cover.jpg') }}"
+                    <img src="{{ url_for('static', filename='images/covers/' + movie.code + '/' + movie.code + '_cover.jpg') }}"
                          class="movie-cover-image" 
                          alt="{{ movie.title }}"
                          loading="lazy">
@@ -130,31 +159,37 @@
         {% endfor %}
     </div>
     
-    <!-- 分页导航 -->
-    <nav aria-label="Page navigation">
-        <ul class="pagination justify-content-center flex-wrap">
-            {% if page > 1 %}
-            <li class="page-item">
-                <a class="page-link" href="{{ url_for('actress_movies', code=actress.code, page=page-1) }}">上一页</a>
-            </li>
-            {% endif %}
-            
-            {% set start_page = [1, page-5]|max %}
-            {% set end_page = [start_page+9, (total//per_page)+1]|min %}
-            
-            {% for p in range(start_page, end_page+1) %}
-            <li class="page-item {% if p == page %}active{% endif %}">
-                <a class="page-link" href="{{ url_for('actress_movies', code=actress.code, page=p) }}">{{ p }}</a>
-            </li>
-            {% endfor %}
-            
-            {% if page*per_page < total %}
-            <li class="page-item">
-                <a class="page-link" href="{{ url_for('actress_movies', code=actress.code, page=page+1) }}">下一页</a>
-            </li>
-            {% endif %}
-        </ul>
-    </nav>
+    <!-- 分页导航 - 优化布局和限制显示页码 -->
+    <div class="pagination-container">
+        <nav aria-label="Page navigation">
+            <ul class="pagination justify-content-center flex-wrap">
+                {% if page > 1 %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('actress_movies', code=actress.code, page=page-1) }}">上一页</a>
+                </li>
+                {% endif %}
+                
+                {% set total_pages = (total // per_page) + (1 if total % per_page > 0 else 0) %}
+                {% set start_page = [1, page-2]|max %}
+                {% set end_page = [start_page+4, total_pages]|min %}
+                {% if end_page - start_page < 4 %}
+                    {% set start_page = [1, end_page-4]|max %}
+                {% endif %}
+                
+                {% for p in range(start_page, end_page+1) %}
+                <li class="page-item {% if p == page %}active{% endif %}">
+                    <a class="page-link" href="{{ url_for('actress_movies', code=actress.code, page=p) }}">{{ p }}</a>
+                </li>
+                {% endfor %}
+                
+                {% if page < total_pages %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('actress_movies', code=actress.code, page=page+1) }}">下一页</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
 </div>
 
 <!-- 图片放大模态框 -->
@@ -165,7 +200,6 @@
         <div id="modalTitle" class="modal-title"></div>
     </div>
 </div>
-
 
 <style>
 .image-modal {
