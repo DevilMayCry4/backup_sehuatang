@@ -52,12 +52,16 @@ logger = logging.getLogger(__name__)
 
 def info(msg):
     logger.info(msg)
+    print(msg)
 
 def debug(msg):
     logger.debug(msg)
+    print(msg)
 
 def error(msg):
     logger.error(msg)
+    print(msg)
 
 def warning(msg):
     logger.warning(msg)
+    print(msg)

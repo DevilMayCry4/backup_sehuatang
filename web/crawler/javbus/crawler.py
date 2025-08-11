@@ -15,7 +15,10 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 if current_dir not in sys.path:
     sys.path.insert(0, current_dir)
 
-import controler_selenium as controller
+import controler_selenium as controller 
+from controler_selenium import JavBusSeleniumController
+import pageparser
+
 
 # 添加上级目录到路径以导入 database 模块
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
@@ -202,6 +205,25 @@ def craw_top_star():
             app_logger.error(f"处理演员 {star['code']} 时出错: {e}")
     
     app_logger.info(f"热门演员处理完成 - 总数: {all_count}, 新处理: {processed_count}, 跳过: {skipped_count}")
+
+def process_single_url(url):
+    try:
+        # 获取影片详细页面
+        controller = JavBusSeleniumController()
+        movie_html =  controller.get_page_content(url) 
+        if movie_html:
+            # 使用pageparser解析影片详细信息
+            movie_detail = pageparser.parser_content(movie_html)
+            if movie_detail:
+                # 写入数据库
+                db_manager.write_jav_movie(movie_detail)
+            else:
+                app_logger.error(f"✗ 无法解析影片详情: {url}")
+        else:
+            app_logger.error(f"✗ 无法获取影片页面: {url}")
+    except Exception as e:
+            app_logger.error(f"✗ 无法获取影片页面: {e}")
+    
 
 if __name__ == '__main__':
      

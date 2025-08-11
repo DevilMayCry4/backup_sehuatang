@@ -520,4 +520,89 @@ def register_routes(app, jellyfin_checker, crawler):
                 'success': False,
                 'error': str(e)
             })
+
+    @app.route('/api/retry-failed-movies', methods=['POST'])
+    def retry_failed_movies():
+        """重试失败电影API"""
+        try:
+            # 在后台线程中执行重试任务
+            import threading
+            def run_retry():
+                try:
+                    # 获取待重试的 URL
+                    retry_urls = db_manager.get_pending_retry_urls()
+                    
+                    if not retry_urls:
+                        print("没有待重试的 URL")
+                        return
+                    
+                    print(f"开始重试 {len(retry_urls)} 个失败的 URL")
+                    
+                    # 导入爬虫模块
+                    import sys
+                    import os
+                    crawler_dir = os.path.join(os.path.dirname(__file__), 'crawler')
+                    sys.path.insert(0, crawler_dir)
+                    
+                    from selenium_crawler import ForumSeleniumCrawler
+                    crawler_instance = ForumSeleniumCrawler()
+                    
+                    success_count = 0
+                    failed_count = 0
+                    
+                    for retry_url in retry_urls:
+                        url = retry_url['url']
+                        code = retry_url.get('code', '')
+                        retry_count = retry_url.get('retry_count', 0)
+                        
+                        try:
+                            print(f"重试处理 URL: {url}")
+                            
+                            # 根据 URL 类型选择处理方法
+                            if 'javbus.com' in url:
+                                # JavBus URL 重试
+                                import crawler.javbus.crawler as javbus_crawler
+                                result = javbus_crawler.process_single_url(url)
+                                success = result is not None
+                            else:
+                                # 论坛 URL 重试
+                                success = crawler_instance.process_single_url(url)
+                            
+                            # 更新重试状态
+                            db_manager.update_retry_status(url, success, retry_count)
+                            
+                            if success:
+                                success_count += 1
+                                print(f"重试成功: {url}")
+                            else:
+                                failed_count += 1
+                                print(f"重试失败: {url}")
+                                
+                        except Exception as e:
+                            failed_count += 1
+                            print(f"重试 URL {url} 时发生错误: {e}")
+                            db_manager.update_retry_status(url, False, retry_count)
+                    
+                    print(f"重试完成: 成功 {success_count} 个，失败 {failed_count} 个")
+                    
+                except Exception as e:
+                    print(f"重试失败电影错误: {e}")
+                    import traceback
+                    traceback.print_exc()
+            
+            thread = threading.Thread(target=run_retry)
+            thread.daemon = True
+            thread.start()
+            
+            return jsonify({
+                'success': True,
+                'message': '失败电影重试任务已开始执行，请查看控制台日志了解进度'
+            })
+            
+        except Exception as e:
+            print(f"启动失败电影重试错误: {e}")
+            return jsonify({
+                'success': False,
+                'error': f'启动失败: {str(e)}'
+            })
     

@@ -230,43 +230,7 @@ class ForumSeleniumCrawler(BaseSeleniumController):
         
         return None
     
-    def crawl_from_file(self, home_file_path):
- 
-        """从本地文件开始爬取"""
-        app_logger.info(f"开始从文件爬取: {home_file_path}")
-        
-        # 从首页文件提取详情页链接
-        thread_links = self.extract_thread_links_from_file(home_file_path)
-        
-        if not thread_links:
-            app_logger.warning("未找到任何详情页链接"+home_file_path)
-            return
-        
-        results = []
-        
-        # 爬取每个详情页
-        for i, thread_url in enumerate(thread_links, 1):
-            app_logger.info(f"进度: {i}/{len(thread_links)}")
-            
-            result = self.crawl_thread_details(thread_url)
-            if result:
-                app_logger.error(f"提取失败: {thread_url}")
-                results.append(result)
-                app_logger.info(f"成功提取: {result['title']}")
-            else:
-                app_logger.error(f"提取失败: {thread_url}")
-
-            # 随机延时避免过于频繁的请求
-            if i < len(thread_links):
-                delay_time = self.delay + random.uniform(-2, 2)
-                time.sleep(max(1, delay_time))
-         
-        app_logger.info(f"爬取完成，共获取 {len(results)} 条有效数据")
-        app_logger.info(f"数据已保存到MongoDB") 
-        
-        return results
-    
-    
+     
     
     def crawl_from_url(self, home_url):
         """从网络URL开始爬取"""

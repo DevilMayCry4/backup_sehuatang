@@ -416,7 +416,6 @@ class DatabaseManager:
     def get_pending_retry_urls(self, limit=100):
         """获取待重试的URL"""
         return list(self.retry_collection.find({
-            'status': 'pending'
         }).limit(limit))
 
     def update_retry_status(self, url, success, retry_count):
@@ -692,9 +691,6 @@ def create_actress_db():
     # 索引创建已在 init_mongodb 中处理
     return True
 
-def close_connection():
-    """关闭连接 - 兼容性函数"""
-    return db_manager.close_connection()
 
 def get_all_star():
     """获取所有演员 - 兼容性函数"""

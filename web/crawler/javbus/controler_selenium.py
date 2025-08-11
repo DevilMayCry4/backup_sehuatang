@@ -17,6 +17,7 @@ import json
 import re
 from bs4 import BeautifulSoup
 import app_logger
+import pageparser
 
 # 添加父目录到Python路径
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -856,7 +857,6 @@ def process_actress_page(code, max_pages=None):
                         movie_html =  controller.get_page_content(movie['url']) 
                         if movie_html:
                             # 使用pageparser解析影片详细信息
-                            import pageparser
                             movie_detail = pageparser.parser_content(movie_html)
                             #app_logger.info(f'解析影片详细页面: {movie_detail}')
                             if movie_detail:
@@ -933,7 +933,7 @@ def retry_failed_urls(max_retries=3):
             # 这里调用原来的处理方法
             html = controller.get_page_content(url)
             if html:
-                movie_detail = parser_content(html)
+                movie_detail = pageparser.parser_content(movie_html)
                 if movie_detail:
                     db_manager.write_jav_movie(movie_detail)
                     db_manager.update_retry_status(url, True, retry_count)

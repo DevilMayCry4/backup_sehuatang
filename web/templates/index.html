@@ -125,24 +125,32 @@
                         <button type="button" class="btn btn-danger" id="updateSehuatangBtnMobile">
                             <i class="bi bi-arrow-clockwise"></i> 更新论坛电影
                         </button>
+                        <button type="button" class="btn btn-warning" id="retryFailedMoviesBtnMobile">
+                            <i class="bi bi-arrow-repeat"></i> 重试失败电影
+                        </button>
                     </div>
                 </div>
                 
                 <!-- 桌面端爬虫功能按钮区域 -->
                 <div class="row mt-3 d-none d-md-flex">
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <button type="button" class="btn btn-info" id="crawlAllStarBtn">
                             <i class="bi bi-people"></i> 更新全部演员电影
                         </button>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <button type="button" class="btn btn-success" id="crawlTopStarBtn">
                             <i class="bi bi-star"></i> 更新热门演员
                         </button>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <button type="button" class="btn btn-danger" id="updateSehuatangBtn">
                             <i class="bi bi-arrow-clockwise"></i> 更新论坛电影
+                        </button>
+                    </div>
+                    <div class="col-md-3">
+                        <button type="button" class="btn btn-warning" id="retryFailedMoviesBtn">
+                            <i class="bi bi-arrow-repeat"></i> 重试失败电影
                         </button>
                     </div>
                 </div>
@@ -956,5 +964,51 @@ async function updateSehuatang() {
     }
 }
 
+// 重试失败电影按钮事件监听器
+if (retryFailedMoviesBtn) {
+    retryFailedMoviesBtn.addEventListener('click', function() {
+        retryFailedMovies();
+    });
+}
+
+if (retryFailedMoviesBtnMobile) {
+    retryFailedMoviesBtnMobile.addEventListener('click', function() {
+        retryFailedMovies();
+    });
+}
+
+async function retryFailedMovies() {
+    if (!confirm('确定要重试失败的电影吗？这将重新处理所有失败的 URL。')) return;
+    
+    // 显示加载状态
+    crawlerStatus.classList.remove('d-none');
+    crawlerStatusText.textContent = '正在重试失败的电影...';
+    if (retryFailedMoviesBtn) retryFailedMoviesBtn.disabled = true;
+    if (retryFailedMoviesBtnMobile) retryFailedMoviesBtnMobile.disabled = true;
+    
+    try {
+        const response = await fetch('/api/retry-failed-movies', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showToast(data.message, 'success');
+        } else {
+            showToast(data.error || '启动失败', 'error');
+        }
+    } catch (err) {
+        console.error('重试失败电影错误:', err);
+        showToast('网络错误，请稍后重试', 'error');
+    } finally {
+        crawlerStatus.classList.add('d-none');
+        if (retryFailedMoviesBtn) retryFailedMoviesBtn.disabled = false;
+        if (retryFailedMoviesBtnMobile) retryFailedMoviesBtnMobile.disabled = false;
+    }
+}
 </script>
 {% endblock %}

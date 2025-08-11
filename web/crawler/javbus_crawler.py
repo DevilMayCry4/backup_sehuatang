@@ -142,25 +142,7 @@ class JavBusCrawler:
         
         return movie_items
     
-    def crawl_from_file(self, file_path):
-        """
-        从本地HTML文件解析电影信息和分页信息
-        """
-        try:
-            with open(file_path, 'r', encoding='utf-8') as f:
-                html_content = f.read()
-            
-            movie_items = self.parse_movie_items(html_content)
-            pagination_info = self.parse_pagination(html_content)
-            
-            return {
-                'movies': movie_items,
-                'pagination': pagination_info
-            }
-            
-        except Exception as e:
-            print(f"读取文件时出错: {e}")
-            return {'movies': [], 'pagination': {'has_next': False}}
+ 
     
     def crawl_from_url(self, url, max_pages=None, max_retries=3):
         """
@@ -251,52 +233,7 @@ class JavBusCrawler:
             'total_movies': len(all_movies)
         }
     
-    def crawl_all_pages_from_file(self, file_path, base_series_url=None):
-        """
-        从本地文件开始，然后爬取所有相关页面
-        """
-        # 先解析本地文件
-        local_result = self.crawl_from_file(file_path)
-        all_movies = local_result['movies']
-        
-        # 为本地文件的电影添加页面信息
-        for movie in all_movies:
-            movie['page_number'] = 1
-            movie['source_url'] = 'local_file'
-        
-        pagination_info = local_result['pagination']
-        
-        print(f"本地文件找到 {len(all_movies)} 个电影项目")
-        
-        # 如果有下一页且提供了基础URL，继续爬取
-        if pagination_info['has_next'] and base_series_url:
-            print("检测到有下一页，开始爬取网络页面...")
-            
-            # 从第2页开始爬取
-            next_url = pagination_info['next_url']
-            if not next_url.startswith('http'):
-                next_url = urljoin(base_series_url, next_url)
-            
-            web_result = self.crawl_from_url(next_url)
-            
-            # 合并结果
-            all_movies.extend(web_result['movies'])
-            
-            return {
-                'movies': all_movies,
-                'total_pages_crawled': web_result['total_pages_crawled'] + 1,
-                'total_movies': len(all_movies),
-                'local_movies': len(local_result['movies']),
-                'web_movies': len(web_result['movies'])
-            }
-        
-        return {
-            'movies': all_movies,
-            'total_pages_crawled': 1,
-            'total_movies': len(all_movies),
-            'local_movies': len(all_movies),
-            'web_movies': 0
-        }
+    
     
     def save_to_json(self, result, filename='movie_data.json'):
         """
