@@ -641,66 +641,13 @@ class DatabaseManager:
 
 # 创建全局数据库管理器实例
 db_manager = DatabaseManager()
-db_manager.init_mongodb()
 
 # 在程序退出时自动关闭连接
 def cleanup_db_connection():
     db_manager.close_connection()
-
 atexit.register(cleanup_db_connection)
 
-# ==================== 兼容性函数 ====================
-# 为了保持与原 db_manger.py 的兼容性，提供以下函数
-
-def get_mongo_connection():
-    """获取 MongoDB 连接 - 兼容性函数"""
-    if db_manager.mongo_db is None:
-        db_manager.init_mongodb()
-    return db_manager.mongo_db
-
-def init_db():
-    """初始化数据库 - 兼容性函数"""
-    return db_manager.init_mongodb()
-
-def write_jav_movie(dict_jav):
-    """写入JAV电影数据 - 兼容性函数"""
-    return db_manager.write_jav_movie(dict_jav)
-
-def refresh_data(dict_jav, url):
-    """更新磁力链接数据 - 兼容性函数"""
-    return db_manager.refresh_data(dict_jav, url)
-
-def check_url_not_in_table(url):
-    """检查URL是否不在表中 - 兼容性函数"""
-    return db_manager.check_url_not_in_table(url)
-
-def is_movie_crawed(code):
-    """检查电影是否已爬取 - 兼容性函数"""
-    return db_manager.is_movie_crawed(code)
-
-def read_magnets_from_table(url):
-    """读取磁力链接 - 兼容性函数"""
-    return db_manager.read_magnets_from_table(url)
-
-def write_actress_data(actress_info, local_image_path=None):
-    """写入演员数据 - 兼容性函数"""
-    return db_manager.write_actress_data(actress_info, local_image_path)
-
-def create_actress_db():
-    """创建演员数据库 - 兼容性函数"""
-    # 索引创建已在 init_mongodb 中处理
-    return True
-
-
-def get_all_star():
-    """获取所有演员 - 兼容性函数"""
-    return db_manager.get_all_star()
-
-def get_top_star():
-    """获取热门演员 - 兼容性函数"""
-    return db_manager.get_top_star()
-
-      
+ 
 
 
 
