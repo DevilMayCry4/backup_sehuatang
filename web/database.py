@@ -195,7 +195,6 @@ class DatabaseManager:
         try:
             if self.javbus_data_collection is None:
                 raise Exception('MongoDB未初始化')
-            
             # 准备文档数据
             document = {
                 'url': dict_jav.get('URL', ''),
@@ -415,7 +414,7 @@ class DatabaseManager:
 
     def get_pending_retry_urls(self, limit=100):
         """获取待重试的URL"""
-        return list(self.retry_collection.find({
+        return list(self.retry_collection.find({"status": "1"
         }).limit(limit))
 
     def update_retry_status(self, url, success, retry_count):
@@ -434,19 +433,35 @@ class DatabaseManager:
             app_logger.error("更新重试状态失败: {url}, 错误: {e}")
             return False
             
-    def get_actress_movies(self, actress_name, page=1, per_page=20):
-        """获取指定演员的所有影片(分页)，按发布日期最新排序"""
+    def get_actress_movies(self, actress_name, page=1, per_page=20, search_keyword=None):
+        """获取指定演员的所有影片(分页)，按发布日期最新排序，支持关键字搜索"""
         try:
             if self.javbus_data_collection is None:
                 return None, 0
+            
+            # 基础查询条件：包含该演员
+            base_query = {'actresses': {'$regex': actress_name, '$options': 'i'}}
+            
+            # 如果有搜索关键字，添加额外的查询条件
+            if search_keyword and search_keyword.strip():
+                search_regex = {'$regex': search_keyword.strip(), '$options': 'i'}
+                # 在 title 或 genres 字段中搜索关键字
+                search_query = {
+                    '$or': [
+                        {'title': search_regex},
+                        {'genres': search_regex}
+                    ]
+                }
+                # 合并查询条件
+                final_query = {'$and': [base_query, search_query]}
+            else:
+                final_query = base_query
                 
             movies = list(self.javbus_data_collection.find(
-                {'actresses': {'$regex': actress_name, '$options': 'i'}}
+                final_query
             ).sort('release_date', -1).skip((page-1)*per_page).limit(per_page))
             
-            total = self.javbus_data_collection.count_documents(
-                {'actresses': {'$regex': actress_name, '$options': 'i'}}
-            )
+            total = self.javbus_data_collection.count_documents(final_query)
             return movies, total
         except Exception as e:
             app_logger.info(f"获取演员影片错误: {e}")

@@ -448,12 +448,13 @@ def register_routes(app, jellyfin_checker, crawler):
     def actress_movies(code):
         """演员影片列表"""
         page = request.args.get('page', 1, type=int)
+        search_keyword = request.args.get('search', '', type=str)
         per_page = 20
         
         # 获取演员信息
         actress = db_manager.actresses_data_collection.find_one({'code': code})
-        # 获取该演员的所有影片(分页)
-        movies, total = db_manager.get_actress_movies(actress['name'], page, per_page)
+        # 获取该演员的所有影片(分页)，支持搜索
+        movies, total = db_manager.get_actress_movies(actress['name'], page, per_page, search_keyword)
         if not movies:
             movies = []
                                  
@@ -462,7 +463,8 @@ def register_routes(app, jellyfin_checker, crawler):
                              movies=movies,
                              page=page,
                              per_page=per_page,
-                             total=total)
+                             total=total,
+                             search_keyword=search_keyword)
     
     @app.route('/jav-movie-detail/<movie_code>')
     def actress_movie_detail( movie_code):

@@ -151,183 +151,173 @@ def parser_content(html):
     """parser_content(html),parser page's content of every url and yield the dict of content"""
 
     soup = BeautifulSoup(html, "html.parser")
-    '''获取lang'''
-    lang_pattern = re.compile(r"var lang = '.*?'")
-    match = lang_pattern.findall(soup.prettify())
-    lang=match[0].replace("var lang = '","").replace("'","")
+    
+    # 获取语言设置
+    lang_pattern = re.compile(r"var lang = '(.*?)'")
+    lang_match = lang_pattern.search(html)
+    lang = lang_match.group(1) if lang_match else 'zh'
 
     categories = {}
 
-    if lang == 'zh':
-        # 使用正则表达式解析識別碼
-        code_pattern = re.compile(r'<span class="header">識別碼:</span>\s*<span[^>]*>([^<]+)</span>')
-        code_match = code_pattern.search(html)
-        code_name = code_match.group(1).strip() if code_match else ''
-        categories['識別碼'] = code_name
-        if code_name == '':
-            return
+    # 使用正则表达式解析識別碼 - 通用模式，不依赖语言
+    code_patterns = [
+        r'<span class="header">識別碼:</span>\s*<span[^>]*style="color:#CC0000;">([^<]+)</span>',
+        r'<span class="header">品番:</span>\s*<span[^>]*style="color:#CC0000;">([^<]+)</span>',
+        r'<span class="header">識別碼:</span>\s*<span[^>]*>([^<]+)</span>'
+    ]
+    code_name = ''
+    for pattern in code_patterns:
+        code_match = re.search(pattern, html)
+        if code_match:
+            code_name = code_match.group(1).strip()
+            break
+    
+    categories['識別碼'] = code_name
+    if code_name == '':
+        return
 
-        # 使用正则表达式解析發行日期
-        date_pattern = re.compile(r'<span class="header">發行日期:</span>\s*([^<]+)')
-        date_match = date_pattern.search(html)
-        date_issue = date_match.group(1).strip() if date_match else ''
-        categories['發行日期'] = date_issue
+    # 使用正则表达式解析發行日期 - 支持多种语言
+    date_patterns = [
+        r'<span class="header">發行日期:</span>\s*([0-9-]+)',
+        r'<span class="header">発売日:</span>\s*([0-9-]+)',
+        r'<span class="header">Release Date:</span>\s*([0-9-]+)'
+    ]
+    date_issue = ''
+    for pattern in date_patterns:
+        date_match = re.search(pattern, html)
+        if date_match:
+            date_issue = date_match.group(1).strip()
+            break
+    categories['發行日期'] = date_issue
 
-        # 使用正则表达式解析長度
-        duration_pattern = re.compile(r'<span class="header">長度:</span>\s*([^<]+)')
-        duration_match = duration_pattern.search(html)
-        duration = duration_match.group(1).strip() if duration_match else ''
-        categories['長度'] = duration
+    # 使用正则表达式解析長度 - 支持多种语言
+    duration_patterns = [
+        r'<span class="header">長度:</span>\s*([^<]+)',
+        r'<span class="header">収録時間:</span>\s*([^<]+)',
+        r'<span class="header">Runtime:</span>\s*([^<]+)'
+    ]
+    duration = ''
+    for pattern in duration_patterns:
+        duration_match = re.search(pattern, html)
+        if duration_match:
+            duration = duration_match.group(1).strip()
+            break
+    categories['長度'] = duration
 
-        # 使用正则表达式解析導演
-        director_pattern = re.compile(r'<span class="header">導演:</span>\s*<a[^>]*>([^<]+)</a>')
-        director_match = director_pattern.search(html)
-        director = director_match.group(1).strip() if director_match else ''
-        categories['導演'] = director
+    # 使用正则表达式解析導演 - 支持多种语言
+    director_patterns = [
+        r'<span class="header">導演:</span>\s*<a[^>]*>([^<]+)</a>',
+        r'<span class="header">監督:</span>\s*<a[^>]*>([^<]+)</a>',
+        r'<span class="header">Director:</span>\s*<a[^>]*>([^<]+)</a>'
+    ]
+    director = ''
+    for pattern in director_patterns:
+        director_match = re.search(pattern, html)
+        if director_match:
+            director = director_match.group(1).strip()
+            break
+    categories['導演'] = director
 
-        # 使用正则表达式解析製作商
-        manufacturer_pattern = re.compile(r'<span class="header">製作商:</span>\s*<a[^>]*href="([^"]*)">([^<]+)</a>')
-        manufacturer_match = manufacturer_pattern.search(html)
+    # 使用正则表达式解析製作商 - 支持多种语言
+    manufacturer_patterns = [
+        r'<span class="header">製作商:</span>\s*<a[^>]*href="([^"]*)">([^<]+)</a>',
+        r'<span class="header">メーカー:</span>\s*<a[^>]*href="([^"]*)">([^<]+)</a>',
+        r'<span class="header">Studio:</span>\s*<a[^>]*href="([^"]*)">([^<]+)</a>'
+    ]
+    manufacturer = ''
+    is_uncensored = 0
+    for pattern in manufacturer_patterns:
+        manufacturer_match = re.search(pattern, html)
         if manufacturer_match:
             manufacturer_href = manufacturer_match.group(1)
             manufacturer = manufacturer_match.group(2).strip()
             is_uncensored = 1 if 'uncensored' in manufacturer_href else 0
-        else:
-            manufacturer = ''
-            is_uncensored = 0
-        categories['製作商'] = manufacturer
-        categories['無碼'] = is_uncensored
+            break
+    categories['製作商'] = manufacturer
+    categories['無碼'] = is_uncensored
 
-        # 使用正则表达式解析發行商
-        publisher_pattern = re.compile(r'<span class="header">發行商:</span>\s*<a[^>]*>([^<]+)</a>')
-        publisher_match = publisher_pattern.search(html)
-        publisher = publisher_match.group(1).strip() if publisher_match else ''
-        categories['發行商'] = publisher
+    # 使用正则表达式解析發行商 - 支持多种语言
+    publisher_patterns = [
+        r'<span class="header">發行商:</span>\s*<a[^>]*>([^<]+)</a>',
+        r'<span class="header">レーベル:</span>\s*<a[^>]*>([^<]+)</a>',
+        r'<span class="header">Label:</span>\s*<a[^>]*>([^<]+)</a>'
+    ]
+    publisher = ''
+    for pattern in publisher_patterns:
+        publisher_match = re.search(pattern, html)
+        if publisher_match:
+            publisher = publisher_match.group(1).strip()
+            break
+    categories['發行商'] = publisher
 
-        # 使用正则表达式解析系列
-        series_pattern = re.compile(r'<span class="header">系列:</span>\s*<a[^>]*>([^<]+)</a>')
-        series_match = series_pattern.search(html)
-        series = series_match.group(1).strip() if series_match else ''
+    # 使用正则表达式解析系列 - 支持多种语言
+    series_patterns = [
+        r'<span class="header">系列:</span>\s*<a[^>]*>([^<]+)</a>',
+        r'<span class="header">シリーズ:</span>\s*<a[^>]*>([^<]+)</a>',
+        r'<span class="header">Series:</span>\s*<a[^>]*>([^<]+)</a>'
+    ]
+    series = ''
+    for pattern in series_patterns:
+        series_match = re.search(pattern, html)
+        if series_match:
+            series = series_match.group(1).strip()
+            break
+    categories['系列'] = series
 
-        genre_doc = soup.select_one('p[class=header]', text=re.compile('類別:'))
-        genre =(i.text.strip() for i in genre_doc.find_next('p').select('a')) if genre_doc else ''
-        #genre =(i.text.strip() for i in soup.find('p', text="類別:").find_next('p').select('span')) if soup.find('p', text="類別:") else ''
-        genre_text = ''
-        for tex in genre:
-            # genre_text += '%s   ' % tex 
-            genre_text += '%s\n' % tex 
-        categories['類別'] = genre_text
+    # 使用正则表达式解析類別 - 通用模式
+    genre_pattern = r'<span class="genre"><label><input[^>]*><a[^>]*>([^<]+)</a></label></span>'
+    genre_matches = re.findall(genre_pattern, html)
+    genre_text = '\n'.join(genre.strip() for genre in genre_matches)
+    categories['類別'] = genre_text
 
-        actor_doc = soup.select('span[onmouseover^="hoverdiv"]')
-        actor = (i.text.strip() for i in actor_doc) if actor_doc else ''
-        #actor = (i.text.strip() for i in soup.select('span[onmouseover^="hoverdiv"]')) if soup.select('span[onmouseover^="hoverdiv"]') else ''
-        actor_text = ''
-        for tex in actor:
-            # actor_text += '%s   ' % tex 
-            actor_text += '%s\n' % tex 
-        categories['演員'] = actor_text
-        
-        #网址加入字典
-        url = soup.select('link[hreflang="zh"]')[0]['href']
-        categories['URL'] = url
-    elif lang == 'ja':
-        code_name_doc = soup.find('span', text=re.compile("品番:"))
-        code_name = code_name_doc.parent.contents[3].text.strip() if code_name_doc else ''
-        categories['識別碼'] = code_name
-        #code_name = soup.find('span', text="識別碼:").parent.contents[2].text if soup.find('span', text="識別碼:") else ''
-        if code_name == '':
-            return
-        
-        date_issue_doc = soup.find('span', text=re.compile("発売日:"))
-        date_issue = date_issue_doc.parent.contents[2].strip() if date_issue_doc else ''
-        categories['發行日期'] = date_issue
-        #date_issue = soup.find('span', text="發行日期:").parent.contents[1].strip() if soup.find('span', text="發行日期:") else ''
-
-        duration_doc = soup.find('span', text=re.compile("収録時間:"))
-        duration = duration_doc.parent.contents[2].strip() if duration_doc else ''
-        categories['長度'] = duration
-        #duration = soup.find('span', text="長度:").parent.contents[1].strip() if soup.find('span', text="長度:") else ''
-
-        director_doc = soup.find('span', text=re.compile("監督:"))
-        if hasattr(director_doc,'parent'):
-            if len(director_doc.parent.contents) > 3:
-                director = director_doc.parent.contents[3].text.strip() if director_doc else ''
-            else:
-                director = ''
-        else:
-            director = ''
-        categories['導演'] = director
-        #director = soup.find('span', text="導演:").parent.contents[2].text if soup.find('span', text="導演:") else ''
-
-        manufacturer_doc = soup.find('span', text=re.compile("メーカー:"))
-        manufacturer = manufacturer_doc.parent.contents[3].text.strip() if manufacturer_doc else ''
-        categories['製作商'] = manufacturer
-        #manufacturer = soup.find('span', text="製作商:").parent.contents[2].text if soup.find('span', text="製作商:") else ''
-        if hasattr(manufacturer_doc,'parent'):
-            is_uncensored = 1 if 'uncensored' in manufacturer_doc.parent.contents[3]['href'] else 0
-        else:
-            is_uncensored = 0
-        categories['無碼'] = is_uncensored
-
-        publisher_doc = soup.find('span', text=re.compile("レーベル:"))
-        publisher = publisher_doc.parent.contents[3].text.strip()  if publisher_doc else ''
-        categories['發行商'] = publisher
-        #publisher = soup.find('span', text="發行商:").parent.contents[2].text if soup.find('span', text="發行商:") else ''
-
-        series_doc = soup.find('span', text=re.compile("シリーズ:"))
-        series = series_doc.parent.contents[3].text.strip()  if series_doc else ''
-        categories['系列'] = series
-        #series = soup.find('span', text="系列:").parent.contents[2].text if soup.find('span', text="系列:") else ''
-
-        genre_doc = soup.select_one('p[class=header]', text=re.compile('ジャンル:'))
-        genre =(i.text.strip() for i in genre_doc.find_next('p').select('a')) if genre_doc else ''
-        #genre =(i.text.strip() for i in soup.find('p', text="類別:").find_next('p').select('span')) if soup.find('p', text="類別:") else ''
-        genre_text = ''
-        for tex in genre:
-            # genre_text += '%s   ' % tex 
-            genre_text += '%s\n' % tex 
-        categories['類別'] = genre_text
-
-        actor_doc = soup.select('span[onmouseover^="hoverdiv"]')
-        actor = (i.text.strip() for i in actor_doc) if actor_doc else ''
-        #actor = (i.text.strip() for i in soup.select('span[onmouseover^="hoverdiv"]')) if soup.select('span[onmouseover^="hoverdiv"]') else ''
-        actor_text = ''
-        for tex in actor:
-            # actor_text += '%s   ' % tex 
-            actor_text += '%s\n' % tex 
-        categories['演員'] = actor_text
-        
-        #网址加入字典
-        url = soup.select('link[hreflang="ja"]')[0]['href']
-        categories['URL'] = url      
-
-    #将磁力链接加入字典
-    magnet_html =  get_html(_get_cili_url(soup), Referer_url=url)
-    magnet = _parser_magnet(magnet_html)
-    categories['磁力链接'] = magnet
-
-    #封面链接加入字典
-    if soup.select_one('a[class="bigImage"]').find('img')['src'][0] == '/':
-        parsed = urlparse(url)
-        bigimage_url = parsed.scheme+'://'+parsed.netloc+soup.select_one('a[class="bigImage"]').find('img')['src']
-    else:
-        bigimage_url = soup.select_one('a[class="bigImage"]').find('img')['src']
-    categories['封面'] = bigimage_url
+    # 使用正则表达式解析演員 - 通用模式
+    # 匹配带有onmouseover属性的span标签中的链接文本
+    actor_pattern = r'<span[^>]*onmouseover[^>]*>\s*<a[^>]*>([^<]+)</a>\s*</span>'
+    actor_matches = re.findall(actor_pattern, html)
+    actor_text = '\n'.join(actor.strip() for actor in actor_matches)
+    categories['演員'] = actor_text
     
-    # 下载封面图片
-    if bigimage_url and categories.get('識別碼'):
-        code_name = categories['識別碼']
-        # 创建基于识别码的文件夹
-        save_dir = os.path.join('/root/backup_sehuatang/web/static/images', 'covers', code_name)
-        cover_filename = f"{code_name}_cover.jpg"
+    # 使用正则表达式解析网址 - 通用模式
+    url_pattern = r'<link rel="canonical" href="([^"]+)"'
+    url_match = re.search(url_pattern, html)
+    url = url_match.group(1) if url_match else ''
+    categories['URL'] = url
+
+    # 将磁力链接加入字典
+    try:
+        magnet_html = get_html(_get_cili_url(soup), Referer_url=url)
+        magnet = _parser_magnet(magnet_html)
+        categories['磁力链接'] = magnet
+    except:
+        categories['磁力链接'] = ''
+
+    # 使用正则表达式解析封面链接 - 通用模式
+    cover_pattern = r'<a[^>]*class="bigImage"[^>]*><img[^>]*src="([^"]+)"'
+    cover_match = re.search(cover_pattern, html)
+    if cover_match:
+        bigimage_url = cover_match.group(1)
+        if bigimage_url.startswith('/'):
+            parsed = urlparse(url)
+            bigimage_url = parsed.scheme + '://' + parsed.netloc + bigimage_url
+        categories['封面'] = bigimage_url
         
-        # 下载封面
-        download_image(bigimage_url, save_dir, cover_filename,code_name)
-        
-    #標題加入字典
-    title = soup.find('title').text.strip().replace(" - JavBus","")
-    categories['標題'] = title
+        # 下载封面图片
+        if bigimage_url and categories.get('識別碼'):
+            code_name = categories['識別碼']
+            save_dir = os.path.join('/root/backup_sehuatang/web/static/images', 'covers', code_name)
+            cover_filename = f"{code_name}_cover.jpg"
+            try:
+                download_image(bigimage_url, save_dir, cover_filename, code_name)
+            except:
+                pass
     
+    # 使用正则表达式解析標題 - 通用模式
+    title_pattern = r'<title>([^<]+)</title>'
+    title_match = re.search(title_pattern, html)
+    if title_match:
+        title = title_match.group(1).strip().replace(" - JavBus", "")
+        categories['標題'] = title
+    print(categories)
     return categories
 
 

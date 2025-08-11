@@ -141,6 +141,37 @@
 <div class="container mt-4">
     <h2 class="mb-4">{{ actress.name }}的影片</h2>
     
+    <!-- 搜索框 -->
+    <div class="row mb-4">
+        <div class="col-md-8 col-lg-6">
+            <form method="GET" action="{{ url_for('actress_movies', code=actress.code) }}" class="d-flex">
+                <input type="text" 
+                       class="form-control me-2" 
+                       name="search" 
+                       value="{{ search_keyword or '' }}" 
+                       placeholder="搜索电影标题或类型..." 
+                       aria-label="搜索">
+                <button class="btn btn-primary" type="submit">
+                    <i class="bi bi-search"></i> 搜索
+                </button>
+                {% if search_keyword %}
+                <a href="{{ url_for('actress_movies', code=actress.code) }}" 
+                   class="btn btn-outline-secondary ms-2">
+                    <i class="bi bi-x-circle"></i> 清除
+                </a>
+                {% endif %}
+            </form>
+        </div>
+    </div>
+    
+    <!-- 搜索结果提示 -->
+    {% if search_keyword %}
+    <div class="alert alert-info mb-3">
+        <i class="bi bi-info-circle"></i> 
+        搜索 "{{ search_keyword }}" 的结果，共找到 {{ total }} 部电影
+    </div>
+    {% endif %}
+    
     <div class="movies-grid">
         {% for movie in movies %}
         <div class="movie-card" onclick="window.location.href='/jav-movie-detail/{{ movie.code }}'">
@@ -154,18 +185,21 @@
             </a>
             <div class="movie-card-body">
                 <p class="movie-title">{{ movie.title }}</p>
+                {% if movie.genres %}
+                <small class="text-muted">{{ movie.genres }}</small>
+                {% endif %}
             </div>
         </div>
         {% endfor %}
     </div>
     
-    <!-- 分页导航 - 优化布局和限制显示页码 -->
+    <!-- 分页导航 - 保持搜索参数 -->
     <div class="pagination-container">
         <nav aria-label="Page navigation">
             <ul class="pagination justify-content-center flex-wrap">
                 {% if page > 1 %}
                 <li class="page-item">
-                    <a class="page-link" href="{{ url_for('actress_movies', code=actress.code, page=page-1) }}">上一页</a>
+                    <a class="page-link" href="{{ url_for('actress_movies', code=actress.code, page=page-1, search=search_keyword) }}">上一页</a>
                 </li>
                 {% endif %}
                 
@@ -178,13 +212,13 @@
                 
                 {% for p in range(start_page, end_page+1) %}
                 <li class="page-item {% if p == page %}active{% endif %}">
-                    <a class="page-link" href="{{ url_for('actress_movies', code=actress.code, page=p) }}">{{ p }}</a>
+                    <a class="page-link" href="{{ url_for('actress_movies', code=actress.code, page=p, search=search_keyword) }}">{{ p }}</a>
                 </li>
                 {% endfor %}
                 
                 {% if page < total_pages %}
                 <li class="page-item">
-                    <a class="page-link" href="{{ url_for('actress_movies', code=actress.code, page=page+1) }}">下一页</a>
+                    <a class="page-link" href="{{ url_for('actress_movies', code=actress.code, page=page+1, search=search_keyword) }}">下一页</a>
                 </li>
                 {% endif %}
             </ul>
