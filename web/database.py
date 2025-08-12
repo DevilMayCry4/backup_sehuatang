@@ -704,6 +704,58 @@ class DatabaseManager:
             app_logger.error(f"用户认证失败: {e}")
             return None
     
+    def change_password(self, username, old_password, new_password):
+        """修改用户密码"""
+        try:
+            import hashlib
+            
+            # 验证旧密码
+            old_password_hash = hashlib.sha256(old_password.encode()).hexdigest()
+            user = self.users_collection.find_one({
+                'username': username,
+                'password_hash': old_password_hash,
+                'is_active': True
+            })
+            
+            if not user:
+                return {
+                    'success': False,
+                    'error': '原密码错误'
+                }
+            
+            # 生成新密码哈希
+            new_password_hash = hashlib.sha256(new_password.encode()).hexdigest()
+            
+            # 更新密码
+            result = self.users_collection.update_one(
+                {'_id': user['_id']},
+                {
+                    '$set': {
+                        'password_hash': new_password_hash,
+                        'password_updated_at': datetime.now()
+                    }
+                }
+            )
+            
+            if result.modified_count > 0:
+                app_logger.info(f"用户 {username} 密码修改成功")
+                return {
+                    'success': True,
+                    'message': '密码修改成功'
+                }
+            else:
+                return {
+                    'success': False,
+                    'error': '密码修改失败'
+                }
+                
+        except Exception as e:
+            app_logger.error(f"修改密码失败: {e}")
+            return {
+                'success': False,
+                'error': f'修改密码失败: {str(e)}'
+            }
+
     def create_user_session(self, user_info):
         """创建用户会话"""
         try:

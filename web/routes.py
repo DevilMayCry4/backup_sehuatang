@@ -124,6 +124,71 @@ def register_routes(app, jellyfin_checker, crawler):
                 'error': str(e)
             })
     
+    @app.route('/api/change-password', methods=['POST'])
+    @api_login_required
+    def change_password():
+        """修改密码API"""
+        try:
+            data = request.get_json()
+            old_password = data.get('old_password', '').strip()
+            new_password = data.get('new_password', '').strip()
+            confirm_password = data.get('confirm_password', '').strip()
+            
+            # 验证输入
+            if not old_password or not new_password or not confirm_password:
+                return jsonify({
+                    'success': False,
+                    'error': '请填写所有密码字段'
+                })
+            
+            if new_password != confirm_password:
+                return jsonify({
+                    'success': False,
+                    'error': '新密码和确认密码不一致'
+                })
+            
+            if len(new_password) < 6:
+                return jsonify({
+                    'success': False,
+                    'error': '新密码长度至少6位'
+                })
+            
+            if old_password == new_password:
+                return jsonify({
+                    'success': False,
+                    'error': '新密码不能与原密码相同'
+                })
+            
+            # 获取当前用户信息
+            user_info = db_manager.get_user_session(session['session_id'])
+            if not user_info:
+                return jsonify({
+                    'success': False,
+                    'error': '用户会话无效'
+                })
+            
+            # 修改密码
+            result = db_manager.change_password(user_info['username'], old_password, new_password)
+            
+            if result['success']:
+                # 密码修改成功后，清除所有会话，要求重新登录
+                db_manager.delete_user_session(session['session_id'])
+                session.clear()
+                
+                return jsonify({
+                    'success': True,
+                    'message': '密码修改成功，请重新登录',
+                    'redirect': '/login'
+                })
+            else:
+                return jsonify(result)
+                
+        except Exception as e:
+            return jsonify({
+                'success': False,
+                'error': f'修改密码失败: {str(e)}'
+            })
+    
     @app.route('/')
     @login_required
     def index():
