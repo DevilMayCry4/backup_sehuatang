@@ -4,23 +4,134 @@
 路由模块
 """
 
-from flask import render_template, request, jsonify
+from flask import render_template, request, jsonify, session, redirect, url_for
 from urllib.parse import quote
 from database import db_manager
 from movie_search import process_movie_search_results
 from subscription import trigger_subscription_check_async
 from image_proxy import proxy_image
+from web import app_logger
  
 
 def register_routes(app, jellyfin_checker, crawler):
     """注册所有路由"""
     
+    # 导入装饰器
+    from app import login_required, api_login_required
+    
+    @app.route('/login')
+    def login_page():
+        """登录页面"""
+        return render_template('login.html')
+    
+    @app.route('/api/login', methods=['POST'])
+    def login():
+        """用户登录API"""
+        try:
+            data = request.get_json()
+            username = data.get('username', '').strip()
+            password = data.get('password', '').strip()
+            
+            if not username or not password:
+                return jsonify({
+                    'success': False,
+                    'error': '请输入用户名和密码'
+                })
+            
+            # 验证用户
+            user_info = db_manager.authenticate_user(username, password)
+            if not user_info:
+                return jsonify({
+                    'success': False,
+                    'error': '用户名或密码错误'
+                })
+            
+            # 创建会话
+            session_id = db_manager.create_user_session(user_info)
+            if not session_id:
+                return jsonify({
+                    'success': False,
+                    'error': '创建会话失败'
+                })
+            
+            # 设置session
+            session['session_id'] = session_id
+            session['username'] = user_info['username']
+            session.permanent = True
+            
+            return jsonify({
+                'success': True,
+                'message': '登录成功',
+                'user': {
+                    'username': user_info['username'],
+                    'role': user_info['role']
+                }
+            })
+            
+        except Exception as e:
+            return jsonify({
+                'success': False,
+                'error': f'登录失败: {str(e)}'
+            })
+    
+    @app.route('/api/logout', methods=['POST'])
+    def logout():
+        """用户退出登录API"""
+        try:
+            if 'session_id' in session:
+                db_manager.delete_user_session(session['session_id'])
+            
+            session.clear()
+            
+            return jsonify({
+                'success': True,
+                'message': '退出登录成功'
+            })
+            
+        except Exception as e:
+            return jsonify({
+                'success': False,
+                'error': f'退出登录失败: {str(e)}'
+            })
+    
+    @app.route('/api/check-auth')
+    def check_auth():
+        """检查用户认证状态API"""
+        try:
+            if 'session_id' not in session:
+                return jsonify({
+                    'authenticated': False
+                })
+            
+            user_info = db_manager.get_user_session(session['session_id'])
+            if not user_info:
+                session.clear()
+                return jsonify({
+                    'authenticated': False
+                })
+            
+            return jsonify({
+                'authenticated': True,
+                'user': {
+                    'username': user_info['username'],
+                    'role': user_info['role']
+                }
+            })
+            
+        except Exception as e:
+            return jsonify({
+                'authenticated': False,
+                'error': str(e)
+            })
+    
     @app.route('/')
+    @login_required
     def index():
         """主页"""
         return render_template('index.html')
     
     @app.route('/subscriptions')
+    @login_required
     def subscriptions_page():
         """订阅管理页面"""
         return render_template('subscriptions.html')
@@ -32,6 +143,7 @@ def register_routes(app, jellyfin_checker, crawler):
         return proxy_image(image_url)
     
     @app.route('/search', methods=['POST'])
+    @api_login_required
     def search_movie():
         """搜索电影API"""
         try:
@@ -112,6 +224,7 @@ def register_routes(app, jellyfin_checker, crawler):
             })
     
     @app.route('/api/subscribe-series', methods=['POST'])
+    @api_login_required
     def subscribe_series():
         """订阅电影系列API"""
         try:
@@ -140,6 +253,7 @@ def register_routes(app, jellyfin_checker, crawler):
             })
     
     @app.route('/api/subscriptions', methods=['GET'])
+    @api_login_required
     def get_subscriptions():
         """获取订阅列表API"""
         try:
@@ -558,34 +672,28 @@ def register_routes(app, jellyfin_checker, crawler):
                         retry_count = retry_url.get('retry_count', 0)
                         
                         try:
-                            print(f"重试处理 URL: {url}")
+                            app_logger.debug(f"重试处理 URL: {url}")
                             
                             # 根据 URL 类型选择处理方法
-                            if 'javbus.com' in url:
-                                # JavBus URL 重试
-                                import crawler.javbus.crawler as javbus_crawler
-                                result = javbus_crawler.process_single_url(url)
-                                success = result is not None
-                            else:
-                                # 论坛 URL 重试
-                                success = crawler_instance.process_single_url(url)
-                            
-                            # 更新重试状态
-                            db_manager.update_retry_status(url, success, retry_count)
+                            import crawler.javbus.crawler as javbus_crawler
+                            result = javbus_crawler.process_single_url(url)
+                            success = result is not None
+                             
                             
                             if success:
                                 success_count += 1
-                                print(f"重试成功: {url}")
+                                db_manager.remove_retry(url)
+                                app_logger.debug(f"重试成功: {url}")
                             else:
                                 failed_count += 1
-                                print(f"重试失败: {url}")
+                                app_logger.debug(f"重试失败: {url}")
                                 
                         except Exception as e:
                             failed_count += 1
-                            print(f"重试 URL {url} 时发生错误: {e}")
+                            app_logger.debug(f"重试 URL {url} 时发生错误: {e}")
                             db_manager.update_retry_status(url, False, retry_count)
                     
-                    print(f"重试完成: 成功 {success_count} 个，失败 {failed_count} 个")
+                    app_logger.debug(f"重试完成: 成功 {success_count} 个，失败 {failed_count} 个")
                     
                 except Exception as e:
                     print(f"重试失败电影错误: {e}")

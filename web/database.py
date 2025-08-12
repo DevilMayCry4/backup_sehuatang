@@ -5,11 +5,10 @@
 """
 
 from pymongo import MongoClient
-from datetime import datetime
+from datetime import datetime, timedelta
 from bson import ObjectId
 import sys
 import os
-from dotenv import load_dotenv
 import atexit
 import ast
 import app_logger
@@ -29,6 +28,9 @@ class DatabaseManager:
         self.javbus_data_collection = None
         self.actresses_data_collection = None
         self.processed_actresses_collection = None
+        # 用户认证相关集合
+        self.users_collection = None
+        self.sessions_collection = None
         
     def init_mongodb(self):
         """初始化MongoDB连接"""
@@ -49,37 +51,19 @@ class DatabaseManager:
             self.javbus_data_collection = self.mongo_db['javbus_data']
             self.actresses_data_collection = self.mongo_db['actresses_data']
             
-            # 创建索引
-            self.add_movie_collection.create_index("series_name")
-            self.add_movie_collection.create_index("movie_code")
-            self.add_movie_collection.create_index("created_at")
+            # 用户认证相关集合
+            self.users_collection = self.mongo_db['users']
+            self.sessions_collection = self.mongo_db['sessions']
             
-            # 为found_movies表创建索引
-            self.found_movies_collection.create_index("movie_code")
-            self.found_movies_collection.create_index("series_name")
-            self.found_movies_collection.create_index("subscription_id")
-            self.found_movies_collection.create_index("found_at")
+            # 创建默认管理员用户（如果不存在）
+            self._create_default_admin()
             
-            # JavBus 数据索引
-            self.javbus_data_collection.create_index("url", unique=True)
-            self.javbus_data_collection.create_index("code")
-            self.javbus_data_collection.create_index("title")
-            
-            # 演员数据索引
-            self.actresses_data_collection.create_index("code", unique=True)
-            self.actresses_data_collection.create_index("name")
-             
-            self.processed_actresses_collection.create_index("actress_code", unique=True)
-
-            #重试索引
-            self.retry_collection.create_index("url", unique=True)
-            
-            app_logger.info(f"MongoDB连接成功")
+            app_logger.info("MongoDB连接成功")
             return True
         except Exception as e:
-            app_logger.info(f"MongoDB连接失败: {e}")
+            app_logger.error(f"MongoDB连接失败: {e}")
             return False
-    
+
     def get_subscriptions(self):
         """获取所有订阅"""
         if self.add_movie_collection is None:
@@ -414,8 +398,21 @@ class DatabaseManager:
 
     def get_pending_retry_urls(self, limit=100):
         """获取待重试的URL"""
-        return list(self.retry_collection.find({"status": "1"
-        }).limit(limit))
+        return list(self.retry_collection.find().limit(limit))
+    
+    def remove_retry(self, url):
+        """删除重试URL记录"""
+        try:
+            result = self.retry_collection.delete_one({'url': url})
+            if result.deleted_count > 0:
+                app_logger.info(f"成功删除重试URL记录: {url}")
+                return True
+            else:
+                app_logger.warning(f"未找到要删除的重试URL记录: {url}")
+                return False
+        except Exception as e:
+            app_logger.error(f"删除重试URL记录失败: {url}, 错误: {e}")
+            return False
 
     def update_retry_status(self, url, success, retry_count):
         """更新重试状态"""
@@ -653,7 +650,131 @@ class DatabaseManager:
         except Exception as e:
             app_logger.error(f"清空已处理演员记录失败: {e}")
             return False
-
+    def _create_default_admin(self):
+        """创建默认管理员用户"""
+        try:
+            # 检查是否已存在管理员用户
+            if self.users_collection.find_one({'username': 'admin'}):
+                return
+            
+            import hashlib
+            # 默认密码：admin123
+            password_hash = hashlib.sha256('admin123'.encode()).hexdigest()
+            
+            admin_user = {
+                'username': 'admin',
+                'password_hash': password_hash,
+                'role': 'admin',
+                'created_at': datetime.now(),
+                'is_active': True
+            }
+            
+            self.users_collection.insert_one(admin_user)
+            app_logger.info("默认管理员用户创建成功 (用户名: admin, 密码: admin123)")
+            
+        except Exception as e:
+            app_logger.error(f"创建默认管理员用户失败: {e}")
+    
+    def authenticate_user(self, username, password):
+        """用户认证"""
+        try:
+            import hashlib
+            password_hash = hashlib.sha256(password.encode()).hexdigest()
+            
+            user = self.users_collection.find_one({
+                'username': username,
+                'password_hash': password_hash,
+                'is_active': True
+            })
+            
+            if user:
+                # 更新最后登录时间
+                self.users_collection.update_one(
+                    {'_id': user['_id']},
+                    {'$set': {'last_login': datetime.now()}}
+                )
+                return {
+                    'user_id': str(user['_id']),
+                    'username': user['username'],
+                    'role': user['role']
+                }
+            return None
+            
+        except Exception as e:
+            app_logger.error(f"用户认证失败: {e}")
+            return None
+    
+    def create_user_session(self, user_info):
+        """创建用户会话"""
+        try:
+            import uuid
+            session_id = str(uuid.uuid4())
+            
+            session_data = {
+                'session_id': session_id,
+                'user_id': user_info['user_id'],
+                'username': user_info['username'],
+                'role': user_info['role'],
+                'created_at': datetime.now(),
+                'last_accessed': datetime.now(),
+                'expires_at': datetime.now() + timedelta(hours=24)  # 24小时过期
+            }
+            
+            self.sessions_collection.insert_one(session_data)
+            return session_id
+            
+        except Exception as e:
+            app_logger.error(f"创建用户会话失败: {e}")
+            return None
+    
+    def get_user_session(self, session_id):
+        """获取用户会话信息"""
+        try:
+            session = self.sessions_collection.find_one({
+                'session_id': session_id,
+                'expires_at': {'$gt': datetime.now()}
+            })
+            
+            if session:
+                # 更新最后访问时间
+                self.sessions_collection.update_one(
+                    {'session_id': session_id},
+                    {'$set': {'last_accessed': datetime.now()}}
+                )
+                return {
+                    'user_id': session['user_id'],
+                    'username': session['username'],
+                    'role': session['role']
+                }
+            return None
+            
+        except Exception as e:
+            app_logger.error(f"获取用户会话失败: {e}")
+            return None
+    
+    def delete_user_session(self, session_id):
+        """删除用户会话（退出登录）"""
+        try:
+            result = self.sessions_collection.delete_one({'session_id': session_id})
+            return result.deleted_count > 0
+            
+        except Exception as e:
+            app_logger.error(f"删除用户会话失败: {e}")
+            return False
+    
+    def cleanup_expired_sessions(self):
+        """清理过期会话"""
+        try:
+            result = self.sessions_collection.delete_many({
+                'expires_at': {'$lt': datetime.now()}
+            })
+            if result.deleted_count > 0:
+                app_logger.info(f"清理了 {result.deleted_count} 个过期会话")
+            return result.deleted_count
+            
+        except Exception as e:
+            app_logger.error(f"清理过期会话失败: {e}")
+            return 0
 # 创建全局数据库管理器实例
 db_manager = DatabaseManager()
 
@@ -661,6 +782,8 @@ db_manager = DatabaseManager()
 def cleanup_db_connection():
     db_manager.close_connection()
 atexit.register(cleanup_db_connection)
+
+    
 
  
 

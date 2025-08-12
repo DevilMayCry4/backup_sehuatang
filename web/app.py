@@ -4,7 +4,7 @@
 Flask Web应用 - Jellyfin电影查询 (重构版)
 """
 
-from flask import Flask, render_template, request, jsonify, Response
+from flask import Flask, render_template, request, jsonify, Response, session, redirect, url_for
 from flask_cors import CORS
 import sys
 import os
@@ -21,6 +21,7 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.header import Header
+from functools import wraps
 
 # 添加父目录到路径，以便导入项目模块
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -34,7 +35,8 @@ from crawler.javbus_crawler import JavBusCrawler
   
 # 创建Flask应用
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'your-secret-key-here'
+app.config['SECRET_KEY'] = 'your-secret-key-here-change-in-production'
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=24)
 
 # 配置CORS - 允许所有来源访问
 CORS(app, resources={
@@ -44,6 +46,44 @@ CORS(app, resources={
         "allow_headers": ["Content-Type", "Authorization"]
     }
 })
+
+def login_required(f):
+    """登录验证装饰器"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'session_id' not in session:
+            return redirect(url_for('login_page'))
+        
+        user_info = db_manager.get_user_session(session['session_id'])
+        if not user_info:
+            session.clear()
+            return redirect(url_for('login_page'))
+        
+        return f(*args, **kwargs)
+    return decorated_function
+
+def api_login_required(f):
+    """API登录验证装饰器"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'session_id' not in session:
+            return jsonify({
+                'success': False,
+                'error': '请先登录',
+                'redirect': '/login'
+            }), 401
+        
+        user_info = db_manager.get_user_session(session['session_id'])
+        if not user_info:
+            session.clear()
+            return jsonify({
+                'success': False,
+                'error': '会话已过期，请重新登录',
+                'redirect': '/login'
+            }), 401
+        
+        return f(*args, **kwargs)
+    return decorated_function
 
 def init_components():
     """初始化所有组件"""

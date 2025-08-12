@@ -217,12 +217,15 @@ def process_single_url(url):
             if movie_detail:
                 # 写入数据库
                 db_manager.write_jav_movie(movie_detail)
+                return movie_detail
             else:
                 app_logger.error(f"✗ 无法解析影片详情: {url}")
         else:
             app_logger.error(f"✗ 无法获取影片页面: {url}")
+        return None
     except Exception as e:
             app_logger.error(f"✗ 无法获取影片页面: {e}")
+            return None
     
 
 if __name__ == '__main__':
