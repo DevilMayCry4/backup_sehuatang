@@ -40,7 +40,7 @@
     <div class="row">
         {% for actress in actresses %}
         <div class="col-6 col-md-3 mb-4">
-            <div class="card h-100" onclick="window.location.href='{{url_for('actress_movies', code=actress.code) }}';"> 
+            <div class="card h-100" onclick="window.location.href='{{url_for('actress_movies', code=actress.code) }}';">
                 <img id="actress-img-{{ loop.index }}" 
                      src="{{ url_for('static', filename='images/actresses/' + actress.code+'_'+actress.name+'.jpg') }}" 
                      class="card-img-top img-fluid" 
@@ -61,47 +61,36 @@
     </div>
     
     <!-- 分页导航 - 保持筛选参数 -->
-    <nav aria-label="Page navigation">
-        <ul class="pagination justify-content-center flex-wrap">
-            {% if page > 1 %}
-            <li class="page-item">
-                <a class="page-link" href="{{ url_for('actresses_list', page=page-1, cup_size=cup_size_filter) }}">上一页</a>
-            </li>
-            {% endif %}
-            
-            {% set max_pages = 10 %}
-            {% if is_mobile %}
-                {% set max_pages = 5 %}
-            {% endif %}
-            
-            {% set start_page = [1, page - max_pages//2]|max %}
-            {% set end_page = [start_page + max_pages - 1, (total//per_page)+1]|min %}
-            
-            {% if start_page > 1 %}
-            <li class="page-item disabled">
-                <span class="page-link">...</span>
-            </li>
-            {% endif %}
-            
-            {% for p in range(start_page, end_page + 1) %}
-            <li class="page-item {% if p == page %}active{% endif %}">
-                <a class="page-link" href="{{ url_for('actresses_list', page=p, cup_size=cup_size_filter) }}">{{ p }}</a>
-            </li>
-            {% endfor %}
-            
-            {% if end_page < (total//per_page)+1 %}
-            <li class="page-item disabled">
-                <span class="page-link">...</span>
-            </li>
-            {% endif %}
-            
-            {% if page*per_page < total %}
-            <li class="page-item">
-                <a class="page-link" href="{{ url_for('actresses_list', page=page+1, cup_size=cup_size_filter) }}">下一页</a>
-            </li>
-            {% endif %}
-        </ul>
-    </nav>
+    <div class="pagination-container">
+        <nav aria-label="Page navigation">
+            <ul class="pagination justify-content-center flex-wrap">
+                {% if page > 1 %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('actresses_list', page=page-1, cup_size=cup_size_filter) }}">上一页</a>
+                </li>
+                {% endif %}
+                
+                {% set total_pages = (total // per_page) + (1 if total % per_page > 0 else 0) %}
+                {% set start_page = [1, page-2]|max %}
+                {% set end_page = [start_page+4, total_pages]|min %}
+                {% if end_page - start_page < 4 %}
+                    {% set start_page = [1, end_page-4]|max %}
+                {% endif %}
+                
+                {% for p in range(start_page, end_page+1) %}
+                <li class="page-item {% if p == page %}active{% endif %}">
+                    <a class="page-link" href="{{ url_for('actresses_list', page=p, cup_size=cup_size_filter) }}">{{ p }}</a>
+                </li>
+                {% endfor %}
+                
+                {% if page < total_pages %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('actresses_list', page=page+1, cup_size=cup_size_filter) }}">下一页</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
 </div>
 
 <script>
@@ -137,18 +126,58 @@ function tryAlternativeFormats(img) {
 </script>
  
 <style>
-    /* 移动端优化样式 */
-    @media (max-width: 768px) {
-        .card {
-            margin-bottom: 15px;
-        }
-        .card-title {
-            font-size: 0.9rem;
-        }
-        .page-link {
-            padding: 0.3rem 0.6rem;
-            font-size: 0.9rem;
-        }
+/* 分页样式优化 */
+.pagination-container {
+    margin-top: 3rem;
+    margin-bottom: 2rem;
+    padding: 2rem 0; /* 增加上下内边距 */
+    border-top: 1px solid #e9ecef; /* 添加分隔线 */
+}
+
+.pagination {
+    margin: 0;
+    gap: 0.5rem; /* 增加分页按钮间距 */
+}
+
+.page-link {
+    border-radius: 8px;
+    border: 1px solid #dee2e6;
+    color: #6c757d;
+    padding: 0.75rem 1rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.page-link:hover {
+    background-color: #f8f9fa;
+    border-color: #adb5bd;
+    color: #495057;
+    transform: translateY(-1px);
+}
+
+.page-item.active .page-link {
+    background-color: #007bff;
+    border-color: #007bff;
+    color: white;
+    box-shadow: 0 2px 8px rgba(0,123,255,0.3);
+}
+
+/* 移动端优化样式 */
+@media (max-width: 768px) {
+    .card {
+        margin-bottom: 15px;
     }
+    .card-title {
+        font-size: 0.9rem;
+    }
+    .page-link {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.9rem;
+    }
+    .pagination-container {
+        margin-top: 2rem;
+        padding: 1.5rem 0;
+    }
+}
 </style>
 {% endblock %}
