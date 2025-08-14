@@ -13,7 +13,7 @@ from subscription import trigger_subscription_check_async
 from image_proxy import proxy_image
 from web import app_logger
 import os
- 
+from datetime import datetime
 
 def register_routes(app, jellyfin_checker, crawler):
     """注册所有路由"""
@@ -461,7 +461,7 @@ def register_routes(app, jellyfin_checker, crawler):
                     'success': False,
                     'error': '状态值无效，只能是 active 或 inactive'
                 })
-            
+
             # 更新订阅状态
             result = db_manager.update_subscription_status(subscription_id, new_status)
             
@@ -663,18 +663,18 @@ def register_routes(app, jellyfin_checker, crawler):
         """演员影片列表"""
         page = request.args.get('page', 1, type=int)
         search_keyword = request.args.get('search', '', type=str)
-        is_single_param = request.args.get('is_single', False)
-        is_subtitle_param = request.args.get('is_subtitle', False)
+        is_single_param = request.args.get('is_single', None)
+        is_subtitle_param = request.args.get('is_subtitle', None)
         per_page = 20
         
         # 处理筛选参数
-        is_single = False
+        is_single = None
         if is_single_param == 'true':
             is_single = True
         elif is_single_param == 'false':
             is_single = False
         
-        is_subtitle = False
+        is_subtitle = None
         if is_subtitle_param == 'true':
             is_subtitle = True
         elif is_subtitle_param == 'false':
@@ -833,5 +833,132 @@ def register_routes(app, jellyfin_checker, crawler):
             return jsonify({
                 'success': False,
                 'error': f'启动失败: {str(e)}'
+            })
+
+    @app.route('/api/backup-images', methods=['POST'])
+    @api_login_required
+    def backup_images():
+        """备份图片API"""
+        try:
+            import threading
+            import zipfile
+            import time
+            
+            def run_backup():
+                try:
+                    # 图片目录路径
+                    covers_dir = os.path.join(app.static_folder, 'images', 'covers')
+                    
+                    if not os.path.exists(covers_dir):
+                        app_logger.error(f"图片目录不存在: {covers_dir}")
+                        return
+                    
+                    # 获取已备份的文件夹
+                    backed_up_folders = db_manager.get_backed_up_folders()
+                    
+                    # 获取所有文件夹
+                    all_folders = []
+                    new_folders = []
+                    
+                    for item in os.listdir(covers_dir):
+                        item_path = os.path.join(covers_dir, item)
+                        if os.path.isdir(item_path):
+                            all_folders.append(item)
+                            if item not in backed_up_folders:
+                                new_folders.append(item)
+                    
+                    if not new_folders:
+                        app_logger.info("没有新的文件夹需要备份")
+                        return
+                    
+                    # 创建备份文件名
+                    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                    backup_filename = f"covers_backup_{timestamp}.zip"
+                    backup_path = os.path.join(app.static_folder, 'backups', backup_filename)
+                    
+                    # 确保备份目录存在
+                    os.makedirs(os.path.dirname(backup_path), exist_ok=True)
+                    
+                    app_logger.info(f"开始备份 {len(new_folders)} 个新文件夹到 {backup_filename}")
+                    
+                    # 创建压缩包
+                    total_size = 0
+                    with zipfile.ZipFile(backup_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+                        for folder_name in new_folders:
+                            folder_path = os.path.join(covers_dir, folder_name)
+                            
+                            # 添加文件夹中的所有文件
+                            for root, dirs, files in os.walk(folder_path):
+                                for file in files:
+                                    file_path = os.path.join(root, file)
+                                    # 计算相对路径
+                                    arcname = os.path.relpath(file_path, covers_dir)
+                                    zipf.write(file_path, arcname)
+                                    total_size += os.path.getsize(file_path)
+                    
+                    # 保存备份记录
+                    backup_info = {
+                        'backup_file': backup_filename,
+                        'folders_backed_up': new_folders,
+                        'total_folders': len(new_folders),
+                        'backup_size': total_size
+                    }
+                    
+                    db_manager.save_backup_record(backup_info)
+                    
+                    app_logger.info(f"备份完成: {backup_filename}, 大小: {total_size / 1024 / 1024:.2f} MB")
+                    
+                except Exception as e:
+                    app_logger.error(f"备份过程中发生错误: {e}")
+                    import traceback
+                    traceback.print_exc()
+            
+            # 在后台线程中执行备份
+            thread = threading.Thread(target=run_backup)
+            thread.daemon = True
+            thread.start()
+            
+            return jsonify({
+                'success': True,
+                'message': '图片备份任务已开始执行，请查看控制台日志了解进度'
+            })
+            
+        except Exception as e:
+            app_logger.error(f"启动图片备份错误: {e}")
+            return jsonify({
+                'success': False,
+                'error': f'启动备份失败: {str(e)}'
+            })
+    
+    @app.route('/api/backup-records', methods=['GET'])
+    @api_login_required
+    def get_backup_records():
+        """获取备份记录API"""
+        try:
+            records = db_manager.get_backup_records()
+            
+            # 格式化记录
+            formatted_records = []
+            for record in records:
+                formatted_record = {
+                    'id': str(record['_id']),
+                    'backup_file': record.get('backup_file', ''),
+                    'total_folders': record.get('total_folders', 0),
+                    'backup_size': record.get('backup_size', 0),
+                    'created_at': record.get('created_at', '').isoformat() if record.get('created_at') else '',
+                    'status': record.get('status', 'unknown')
+                }
+                formatted_records.append(formatted_record)
+            
+            return jsonify({
+                'success': True,
+                'records': formatted_records
+            })
+            
+        except Exception as e:
+            app_logger.error(f"获取备份记录错误: {e}")
+            return jsonify({
+                'success': False,
+                'error': f'获取备份记录失败: {str(e)}'
             })
     

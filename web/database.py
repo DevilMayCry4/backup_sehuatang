@@ -843,6 +843,45 @@ class DatabaseManager:
         except Exception as e:
             app_logger.error(f"清理过期会话失败: {e}")
             return 0
+
+    def get_backup_records(self):
+        """获取备份记录"""
+        if self.mongo_db is None:
+            return []
+        backup_collection = self.mongo_db['backup_records']
+        return list(backup_collection.find().sort('created_at', -1))
+    
+    def save_backup_record(self, backup_info):
+        """保存备份记录"""
+        if self.mongo_db is None:
+            raise Exception('MongoDB未初始化')
+        
+        backup_collection = self.mongo_db['backup_records']
+        backup_doc = {
+            'backup_file': backup_info['backup_file'],
+            'folders_backed_up': backup_info['folders_backed_up'],
+            'total_folders': backup_info['total_folders'],
+            'backup_size': backup_info['backup_size'],
+            'created_at': datetime.now(),
+            'status': 'completed'
+        }
+        
+        result = backup_collection.insert_one(backup_doc)
+        return str(result.inserted_id)
+    
+    def get_backed_up_folders(self):
+        """获取已备份的文件夹列表"""
+        if self.mongo_db is None:
+            return set()
+        
+        backup_collection = self.mongo_db['backup_records']
+        backed_up_folders = set()
+        
+        for record in backup_collection.find():
+            if 'folders_backed_up' in record:
+                backed_up_folders.update(record['folders_backed_up'])
+        
+        return backed_up_folders
 # 创建全局数据库管理器实例
 db_manager = DatabaseManager()
 
@@ -850,6 +889,8 @@ db_manager = DatabaseManager()
 def cleanup_db_connection():
     db_manager.close_connection()
 atexit.register(cleanup_db_connection)
+
+    
 
     
 
