@@ -12,16 +12,16 @@
 }
 
 .movie-cover-image {
-    width: 200%;
+    width: 200%; /* 恢复为200%，让图片比容器宽 */
     height: 100%;
     object-fit: cover;
-    object-position: right center;
-    transform: translateX(-55%);
-    transition: transform 0.3s ease;
+    object-position: right center; /* 恢复为right center，显示图片右侧部分 */
+    transform: translateX(-53%) scale(1.1); /* 调整为-50%，显示图片右半部分 */
+ 
 }
 
 .movie-cover-container:hover .movie-cover-image {
-    transform: translateX(-55%) scale(1.05);
+    transform: translateX(-40%) scale(1.1);  /* 悬停时保持右半部分显示并缩放 */
 }
 
 /* 瀑布流布局 - 增加边距 */
@@ -58,6 +58,7 @@
     cursor: pointer;
     overflow: hidden;
     border: 1px solid rgba(0,0,0,0.05); /* 添加细边框 */
+    position: relative; /* 添加相对定位用于书签定位 */
 }
 
 .movie-card:hover {
@@ -78,6 +79,40 @@
     overflow-wrap: break-word;
     hyphens: auto;
     font-weight: 500; /* 增加字体粗细 */
+}
+
+/* 书签标签基础样式 */
+.bookmark {
+    position: absolute;
+    top: 10px;
+    width: 60px;
+    height: 20px;
+   
+    color: white;
+    font-size: 10px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    transform-origin: center;
+}
+
+/* 左上角单体书签 */
+.bookmark-single {
+    left: -5px; /* 从-15px调整为-5px，让书签更贴近卡片左边 */
+    transform: rotate(-45deg);
+    border-radius: 0 4px 4px 0;
+    background: linear-gradient(135deg, #ff8c00, #ff7700);
+}
+
+/* 右上角字幕书签 */
+.bookmark-subtitle {
+    right: -5px; /* 同样调整右侧书签，保持对称 */
+    transform: rotate(45deg);
+    border-radius: 4px 0 0 4px;
+    background: linear-gradient(135deg, #8a2be2, #6a1b9a); /* 从橙色渐变改为紫色渐变 */
 }
 
 /* 分页样式优化 */
@@ -116,6 +151,7 @@
     box-shadow: 0 2px 8px rgba(0,123,255,0.3);
 }
 
+/* 移动端优化 */
 @media (max-width: 768px) {
     .movie-title {
         font-size: 1.2rem;
@@ -135,28 +171,94 @@
         padding: 0.5rem 0.75rem;
         font-size: 0.9rem;
     }
+    
+    .bookmark {
+        width: 50px;
+        height: 18px;
+        font-size: 9px;
+        top: 8px;
+    }
+    
+    .bookmark-single {
+        left: -12px;
+    }
+    
+    .bookmark-subtitle {
+        right: -12px;
+    }
+}
+
+@media (max-width: 480px) {
+    .bookmark {
+        width: 45px;
+        height: 16px;
+        font-size: 8px;
+        top: 6px;
+    }
+    
+    .bookmark-single {
+        left: -10px;
+    }
+    
+    .bookmark-subtitle {
+        right: -10px;
+    }
 }
 </style>
 
 <div class="container mt-4">
     <h2 class="mb-4">{{ actress.name }}的影片</h2>
     
-    <!-- 搜索框 -->
+    <!-- 搜索框和筛选按钮 -->
     <div class="row mb-4">
-        <div class="col-md-8 col-lg-6">
-            <form method="GET" action="{{ url_for('actress_movies', code=actress.code) }}" class="d-flex">
-                <input type="text" 
-                       class="form-control me-2" 
-                       name="search" 
-                       value="{{ search_keyword or '' }}" 
-                       placeholder="搜索电影标题或类型..." 
-                       aria-label="搜索">
+        <div class="col-12">
+            <form method="GET" action="{{ url_for('actress_movies', code=actress.code) }}" class="d-flex flex-wrap align-items-center gap-2">
+                <!-- 搜索框 -->
+                <div class="flex-grow-1" style="min-width: 200px;">
+                    <input type="text" 
+                           class="form-control" 
+                           name="search" 
+                           value="{{ search_keyword or '' }}" 
+                           placeholder="搜索电影标题或类型..." 
+                           aria-label="搜索">
+                </div>
+                
+                <!-- 筛选按钮组 -->
+                <div class="btn-group" role="group" aria-label="单体筛选">
+                    <input type="radio" class="btn-check" name="is_single" value="" id="single_all" 
+                           {% if not is_single_filter %}checked{% endif %}>
+                    <label class="btn btn-outline-secondary" for="single_all">全部</label>
+                    
+                    <input type="radio" class="btn-check" name="is_single" value="true" id="single_yes" 
+                           {% if is_single_filter == 'true' %}checked{% endif %}>
+                    <label class="btn btn-outline-primary" for="single_yes">单体</label>
+                    
+                    <input type="radio" class="btn-check" name="is_single" value="false" id="single_no" 
+                           {% if is_single_filter == 'false' %}checked{% endif %}>
+                    <label class="btn btn-outline-warning" for="single_no">非单体</label>
+                </div>
+                
+                <div class="btn-group" role="group" aria-label="字幕筛选">
+                    <input type="radio" class="btn-check" name="is_subtitle" value="" id="subtitle_all" 
+                           {% if not is_subtitle_filter %}checked{% endif %}>
+                    <label class="btn btn-outline-secondary" for="subtitle_all">全部</label>
+                    
+                    <input type="radio" class="btn-check" name="is_subtitle" value="true" id="subtitle_yes" 
+                           {% if is_subtitle_filter == 'true' %}checked{% endif %}>
+                    <label class="btn btn-outline-success" for="subtitle_yes">有字幕</label>
+                    
+                    <input type="radio" class="btn-check" name="is_subtitle" value="false" id="subtitle_no" 
+                           {% if is_subtitle_filter == 'false' %}checked{% endif %}>
+                    <label class="btn btn-outline-danger" for="subtitle_no">无字幕</label>
+                </div>
+                
+                <!-- 搜索和清除按钮 -->
                 <button class="btn btn-primary" type="submit">
                     <i class="bi bi-search"></i> 搜索
                 </button>
-                {% if search_keyword %}
+                {% if search_keyword or is_single_filter or is_subtitle_filter %}
                 <a href="{{ url_for('actress_movies', code=actress.code) }}" 
-                   class="btn btn-outline-secondary ms-2">
+                   class="btn btn-outline-secondary">
                     <i class="bi bi-x-circle"></i> 清除
                 </a>
                 {% endif %}
@@ -164,17 +266,41 @@
         </div>
     </div>
     
-    <!-- 搜索结果提示 -->
-    {% if search_keyword %}
+    <!-- 筛选结果提示 -->
+    {% if search_keyword or is_single_filter or is_subtitle_filter %}
     <div class="alert alert-info mb-3">
         <i class="bi bi-info-circle"></i> 
-        搜索 "{{ search_keyword }}" 的结果，共找到 {{ total }} 部电影
+        筛选条件：
+        {% if search_keyword %}
+            搜索"{{ search_keyword }}"
+        {% endif %}
+        {% if is_single_filter == 'true' %}
+            {% if search_keyword %}，{% endif %}单体作品
+        {% elif is_single_filter == 'false' %}
+            {% if search_keyword %}，{% endif %}非单体作品
+        {% endif %}
+        {% if is_subtitle_filter == 'true' %}
+            {% if search_keyword or is_single_filter %}，{% endif %}有字幕
+        {% elif is_subtitle_filter == 'false' %}
+            {% if search_keyword or is_single_filter %}，{% endif %}无字幕
+        {% endif %}
+        ，共找到 {{ total }} 部电影
     </div>
     {% endif %}
     
     <div class="movies-grid">
         {% for movie in movies %}
         <div class="movie-card" onclick="window.location.href='/jav-movie-detail/{{ movie.code }}'">
+            <!-- 单体书签 -->
+            {% if movie.is_single %}
+            <div class="bookmark bookmark-single">单体</div>
+            {% endif %}
+            
+            <!-- 字幕书签 -->
+            {% if movie.is_subtitle %}
+            <div class="bookmark bookmark-subtitle">字幕</div>
+            {% endif %}
+            
             <a href="#" onclick="openImageModal('{{ url_for('static', filename='images/covers/' + movie.code + '/' + movie.code + '_cover.jpg') }}', '{{ movie.title }}'); event.stopPropagation(); return false;">
                 <div class="movie-cover-container">
                     <img src="{{ url_for('static', filename='images/covers/' + movie.code + '/' + movie.code + '_cover.jpg') }}"
@@ -193,13 +319,13 @@
         {% endfor %}
     </div>
     
-    <!-- 分页导航 - 保持搜索参数 -->
+    <!-- 分页导航 - 保持搜索和筛选参数 -->
     <div class="pagination-container">
         <nav aria-label="Page navigation">
             <ul class="pagination justify-content-center flex-wrap">
                 {% if page > 1 %}
                 <li class="page-item">
-                    <a class="page-link" href="{{ url_for('actress_movies', code=actress.code, page=page-1, search=search_keyword) }}">上一页</a>
+                    <a class="page-link" href="{{ url_for('actress_movies', code=actress.code, page=page-1, search=search_keyword, is_single=is_single_filter, is_subtitle=is_subtitle_filter) }}">上一页</a>
                 </li>
                 {% endif %}
                 
@@ -212,13 +338,13 @@
                 
                 {% for p in range(start_page, end_page+1) %}
                 <li class="page-item {% if p == page %}active{% endif %}">
-                    <a class="page-link" href="{{ url_for('actress_movies', code=actress.code, page=p, search=search_keyword) }}">{{ p }}</a>
+                    <a class="page-link" href="{{ url_for('actress_movies', code=actress.code, page=p, search=search_keyword, is_single=is_single_filter, is_subtitle=is_subtitle_filter) }}">{{ p }}</a>
                 </li>
                 {% endfor %}
                 
                 {% if page < total_pages %}
                 <li class="page-item">
-                    <a class="page-link" href="{{ url_for('actress_movies', code=actress.code, page=page+1, search=search_keyword) }}">下一页</a>
+                    <a class="page-link" href="{{ url_for('actress_movies', code=actress.code, page=page+1, search=search_keyword, is_single=is_single_filter, is_subtitle=is_subtitle_filter) }}">下一页</a>
                 </li>
                 {% endif %}
             </ul>

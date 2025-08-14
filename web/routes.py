@@ -4,6 +4,7 @@
 路由模块
 """
 
+from pickle import FALSE
 from flask import render_template, request, jsonify, session, redirect, url_for
 from urllib.parse import quote
 from database import db_manager
@@ -662,22 +663,41 @@ def register_routes(app, jellyfin_checker, crawler):
         """演员影片列表"""
         page = request.args.get('page', 1, type=int)
         search_keyword = request.args.get('search', '', type=str)
+        is_single_param = request.args.get('is_single', False)
+        is_subtitle_param = request.args.get('is_subtitle', False)
         per_page = 20
+        
+        # 处理筛选参数
+        is_single = False
+        if is_single_param == 'true':
+            is_single = True
+        elif is_single_param == 'false':
+            is_single = False
+        
+        is_subtitle = False
+        if is_subtitle_param == 'true':
+            is_subtitle = True
+        elif is_subtitle_param == 'false':
+            is_subtitle = False
         
         # 获取演员信息
         actress = db_manager.actresses_data_collection.find_one({'code': code})
-        # 获取该演员的所有影片(分页)，支持搜索
-        movies, total = db_manager.get_actress_movies(actress['name'], page, per_page, search_keyword)
+        # 获取该演员的所有影片(分页)，支持搜索和筛选
+        movies, total = db_manager.get_actress_movies(
+            actress['name'], page, per_page, search_keyword, is_single, is_subtitle
+        )
         if not movies:
             movies = []
-                                 
+                             
         return render_template('actress_movies.html', 
                              actress=actress,
                              movies=movies,
                              page=page,
                              per_page=per_page,
                              total=total,
-                             search_keyword=search_keyword)
+                             search_keyword=search_keyword,
+                             is_single_filter=is_single_param,
+                             is_subtitle_filter=is_subtitle_param)
     
     @app.route('/jav-movie-detail/<movie_code>')
     def actress_movie_detail( movie_code):

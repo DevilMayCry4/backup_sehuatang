@@ -157,7 +157,7 @@ def craw_all_star():
     processed_count = 0
     skipped_count = 0
     
-    for index, star in enumerate(results[27:]):
+    for index, star in enumerate(results[32:]):
         # 检查是否已经处理过
         if db_manager.is_actress_processed(star['code']):
             skipped_count += 1

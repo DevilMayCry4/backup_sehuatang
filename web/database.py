@@ -432,14 +432,17 @@ class DatabaseManager:
             app_logger.error("更新重试状态失败: {url}, 错误: {e}")
             return False
             
-    def get_actress_movies(self, actress_name, page=1, per_page=20, search_keyword=None):
-        """获取指定演员的所有影片(分页)，按发布日期最新排序，支持关键字搜索"""
+    def get_actress_movies(self, actress_name, page=1, per_page=20, search_keyword=None, is_single=None, is_subtitle=None):
+        """获取指定演员的所有影片(分页)，按发布日期最新排序，支持关键字搜索和筛选"""
         try:
             if self.javbus_data_collection is None:
                 return None, 0
             
             # 基础查询条件：包含该演员
             base_query = {'actresses': {'$regex': actress_name, '$options': 'i'}}
+            
+            # 构建查询条件列表
+            query_conditions = [base_query]
             
             # 如果有搜索关键字，添加额外的查询条件
             if search_keyword and search_keyword.strip():
@@ -451,8 +454,19 @@ class DatabaseManager:
                         {'genres': search_regex}
                     ]
                 }
-                # 合并查询条件
-                final_query = {'$and': [base_query, search_query]}
+                query_conditions.append(search_query)
+            
+            # 添加is_single筛选条件
+            if is_single is not None:
+                query_conditions.append({'is_single': is_single})
+            
+            # 添加is_subtitle筛选条件
+            if is_subtitle is not None:
+                query_conditions.append({'is_subtitle': is_subtitle})
+            
+            # 合并所有查询条件
+            if len(query_conditions) > 1:
+                final_query = {'$and': query_conditions}
             else:
                 final_query = base_query
                 
