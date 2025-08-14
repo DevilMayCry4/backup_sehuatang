@@ -432,6 +432,57 @@ class DatabaseManager:
             app_logger.error("更新重试状态失败: {url}, 错误: {e}")
             return False
             
+    def get_all_movies(self, page=1, per_page=20, search_keyword=None, is_single=None, is_subtitle=None, sort_by='release_date'):
+        """获取所有影片(分页)，支持关键字搜索和筛选"""
+        try:
+            if self.javbus_data_collection is None:
+                return None, 0
+            
+            # 构建查询条件列表
+            query_conditions = []
+            
+            # 如果有搜索关键字，添加搜索条件
+            if search_keyword and search_keyword.strip():
+                search_regex = {'$regex': search_keyword.strip(), '$options': 'i'}
+                # 在 title、code、actresses 或 genres 字段中搜索关键字
+                search_query = {
+                    '$or': [
+                        {'title': search_regex},
+                        {'code': search_regex},
+                        {'actresses': search_regex},
+                        {'genres': search_regex}
+                    ]
+                }
+                query_conditions.append(search_query)
+            
+            # 添加is_single筛选条件
+            if is_single is not None:
+                query_conditions.append({'is_single': is_single})
+            
+            # 添加is_subtitle筛选条件
+            if is_subtitle is not None:
+                query_conditions.append({'is_subtitle': is_subtitle})
+            
+            # 合并所有查询条件
+            if query_conditions:
+                final_query = {'$and': query_conditions}
+            else:
+                final_query = {}
+            
+            # 设置排序方式
+            sort_field = sort_by if sort_by in ['release_date', 'title', 'code'] else 'release_date'
+            sort_order = -1  # 降序排列
+            
+            movies = list(self.javbus_data_collection.find(
+                final_query
+            ).sort(sort_field, sort_order).skip((page-1)*per_page).limit(per_page))
+            
+            total = self.javbus_data_collection.count_documents(final_query)
+            return movies, total
+        except Exception as e:
+            app_logger.error(f"获取所有影片错误: {e}")
+            return None, 0
+    
     def get_actress_movies(self, actress_name, page=1, per_page=20, search_keyword=None, is_single=None, is_subtitle=None):
         """获取指定演员的所有影片(分页)，按发布日期最新排序，支持关键字搜索和筛选"""
         try:

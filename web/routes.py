@@ -963,3 +963,56 @@ def register_routes(app, jellyfin_checker, crawler):
                 'error': f'获取备份记录失败: {str(e)}'
             })
     
+    @app.route('/movies')
+    @login_required
+    def movies_page():
+        """电影列表页面"""
+        try:
+            # 获取查询参数
+            page = int(request.args.get('page', 1))
+            per_page = 20
+            search_keyword = request.args.get('search', '').strip()
+            is_single_filter = request.args.get('is_single', '')
+            is_subtitle_filter = request.args.get('is_subtitle', '')
+            sort_by = request.args.get('sort', 'release_date')
+            
+            # 转换筛选参数
+            is_single = None
+            if is_single_filter == 'true':
+                is_single = True
+            elif is_single_filter == 'false':
+                is_single = False
+                
+            is_subtitle = None
+            if is_subtitle_filter == 'true':
+                is_subtitle = True
+            elif is_subtitle_filter == 'false':
+                is_subtitle = False
+            
+            # 获取电影数据
+            movies, total = db_manager.get_all_movies(
+                page=page,
+                per_page=per_page,
+                search_keyword=search_keyword if search_keyword else None,
+                is_single=is_single,
+                is_subtitle=is_subtitle,
+                sort_by=sort_by
+            )
+            
+            if movies is None:
+                movies = []
+                total = 0
+            
+            return render_template('movies.html',
+                                movies=movies,
+                                page=page,
+                                per_page=per_page,
+                                total=total,
+                                search_keyword=search_keyword,
+                                is_single_filter=is_single_filter,
+                                is_subtitle_filter=is_subtitle_filter,
+                                sort_by=sort_by)
+                                
+        except Exception as e:
+            app_logger.error(f"电影列表页面错误: {e}")
+            return render_template('error.html', error_message="加载电影列表失败")
