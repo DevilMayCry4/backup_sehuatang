@@ -521,18 +521,18 @@ def register_routes(app, jellyfin_checker, crawler):
         # return
         try:
             import crawler.javbus.crawler as javbus_crawler
-            # 在后台线程中执行爬虫任务
-            import threading
+            # 在后台进程中执行爬虫任务
+            import multiprocessing
             def run_crawler():
                 try:
                     javbus_crawler.craw_all_star()
-                    print("全部演员电影更新完成")
+                    app_logger.info("全部演员电影更新完成")
                 except Exception as e:
-                    print(f"全部演员电影更新错误: {e}")
+                    app_logger.error(f"全部演员电影更新错误: {e}")
             
-            thread = threading.Thread(target=run_crawler)
-            thread.daemon = True
-            thread.start()
+            process = multiprocessing.Process(target=run_crawler)
+            process.daemon = True
+            process.start()
             
             return jsonify({
                 'success': True,
@@ -545,6 +545,7 @@ def register_routes(app, jellyfin_checker, crawler):
                 'success': False,
                 'error': f'启动失败: {str(e)}'
             })
+    
     
     @app.route('/api/crawl-top-star', methods=['POST'])
     def crawl_top_star():
