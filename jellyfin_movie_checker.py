@@ -247,7 +247,7 @@ class JellyfinMovieChecker:
         Returns:
             Dict[str, Any]: 检查结果
         """
-        app_logger.info("🎬 正在检查电影: '{movie_name}'")
+        app_logger.info(f"🎬 正在检查电影: '{movie_name}'")
         print("=" * 50)
         
         # 认证
