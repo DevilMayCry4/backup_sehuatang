@@ -34,7 +34,9 @@ from jellyfin_movie_checker import JellyfinMovieChecker
 from crawler.javbus_crawler import JavBusCrawler
   
 # 创建Flask应用
-app = Flask(__name__)
+app = Flask(__name__, 
+           static_folder=os.path.join("/server/", 'static'),  # 自定义文件夹名
+           static_url_path='/static')  # 自定义URL路径
 app.config['SECRET_KEY'] = 'your-secret-key-here-change-in-production'
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=24)
 
@@ -119,6 +121,6 @@ register_routes(app, jellyfin_checker, crawler)
 start_scheduler(jellyfin_checker, crawler)
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(debug=True, host='0.0.0.0', port=6000)
 
 

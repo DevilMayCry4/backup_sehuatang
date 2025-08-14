@@ -194,7 +194,9 @@ class DatabaseManager:
                 'actresses': dict_jav.get('演員', ''),
                 'genres': dict_jav.get('類別', ''),
                 'magnet_links': dict_jav.get('磁力链接', ''),
-                'uncensored': dict_jav.get('無碼', 0)
+                'uncensored': dict_jav.get('無碼', 0),
+                'is_single': dict_jav.get('is_single', False),
+                'is_subtitle': dict_jav.get('is_subtitle', False),
             }
             
             # 使用 upsert 操作，如果 URL 已存在则更新，否则插入

@@ -11,7 +11,6 @@ from urllib.parse import urlparse
 import re
 import os
 import requests
-from web.app import crawler 
 from database import db_manager
 
 headers = {
@@ -151,12 +150,7 @@ def parser_content(html):
     """parser_content(html),parser page's content of every url and yield the dict of content"""
 
     soup = BeautifulSoup(html, "html.parser")
-    
-    # 获取语言设置
-    lang_pattern = re.compile(r"var lang = '(.*?)'")
-    lang_match = lang_pattern.search(html)
-    lang = lang_match.group(1) if lang_match else 'zh'
-
+ 
     categories = {}
 
     # 使用正则表达式解析識別碼 - 通用模式，不依赖语言
@@ -284,10 +278,12 @@ def parser_content(html):
     categories['URL'] = url
 
     # 将磁力链接加入字典
+    is_subtitle = False
     try:
         magnet_html = get_html(_get_cili_url(soup), Referer_url=url)
         magnet = _parser_magnet(magnet_html)
         categories['磁力链接'] = magnet
+        is_subtitle = magnet.find('字幕') != -1
     except:
         categories['磁力链接'] = ''
 
@@ -304,7 +300,7 @@ def parser_content(html):
         # 下载封面图片
         if bigimage_url and categories.get('識別碼'):
             code_name = categories['識別碼']
-            save_dir = os.path.join('/root/backup_sehuatang/web/static/images', 'covers', code_name)
+            save_dir = os.path.join('/server/static/images', 'covers', code_name)
             cover_filename = f"{code_name}_cover.jpg"
             try:
                 download_image(bigimage_url, save_dir, cover_filename, code_name)
@@ -317,6 +313,9 @@ def parser_content(html):
     if title_match:
         title = title_match.group(1).strip().replace(" - JavBus", "")
         categories['標題'] = title
+    is_single = genre_text.find('單體') != -1
+    categories['is_single'] = is_single
+    categories['is_subtitle'] = is_subtitle 
     print(categories)
     return categories
 

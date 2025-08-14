@@ -11,6 +11,7 @@ from movie_search import process_movie_search_results
 from subscription import trigger_subscription_check_async
 from image_proxy import proxy_image
 from web import app_logger
+import os
  
 
 def register_routes(app, jellyfin_checker, crawler):
@@ -484,6 +485,39 @@ def register_routes(app, jellyfin_checker, crawler):
     @app.route('/api/crawl-all-star', methods=['POST'])
     def crawl_all_star():
         """更新全部演员电影API"""
+        # import threading 
+
+        # def update_covers():
+        #     all_count = 0
+        #     cursor = db_manager.javbus_data_collection.find()
+        #     if cursor is not None:
+        #         results = list(cursor)  # 将 Cursor 转换为列表
+        #         all_count = len(results)
+        #     else:
+        #         results = [] 
+        
+        #     for index, movie in enumerate(results):
+        #         cover = movie['cover']
+        #         genres = movie['genres']
+        #         magnet_links = movie['magnet_links']
+        #         is_single = genres.find('單體') != -1
+        #         is_subtitle = magnet_links.find('字幕') != -1
+        #         code_name = movie['code']
+        #         db_manager.javbus_data_collection.update_one({'code': code_name}, {'$set': {'is_single': is_single, 'is_subtitle': is_subtitle}})
+        #         save_dir = os.path.join('/server/static/images', 'covers', code_name)
+        #         cover_filename = f"{code_name}_cover.jpg"
+        #         try:
+        #             import crawler.javbus.pageparser as pageparser
+        #             pageparser.download_image(cover, save_dir, cover_filename, code_name)
+        #         except Exception as e:
+        #             app_logger.error(f"下载图片失败:{cover} 错误:{e}")
+        #         app_logger.info(f"处理完成：{index+1}/{all_count} {code_name}")
+
+        # thread = threading.Thread(target=update_covers)
+        # thread.daemon = True
+        # thread.start()
+
+        # return
         try:
             import crawler.javbus.crawler as javbus_crawler
             # 在后台线程中执行爬虫任务
