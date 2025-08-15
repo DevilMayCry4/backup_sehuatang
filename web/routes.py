@@ -1069,3 +1069,56 @@ def register_routes(app, jellyfin_checker, crawler):
         except Exception as e:
             app_logger.error(f"电影列表页面错误: {e}")
             return render_template('error.html', error_message="加载电影列表失败")
+    
+    @app.route('/studio/<studio_name>')
+    @login_required
+    def studio_movies_page(studio_name):
+        """制作商电影列表页面"""
+        try:
+            # 获取查询参数
+            page = int(request.args.get('page', 1))
+            per_page = 20
+            search_keyword = request.args.get('search', '').strip()
+            is_single_filter = request.args.get('is_single', '')
+            is_subtitle_filter = request.args.get('is_subtitle', '')
+            
+            # 转换筛选参数
+            is_single = None
+            if is_single_filter == 'true':
+                is_single = True
+            elif is_single_filter == 'false':
+                is_single = False
+                
+            is_subtitle = None
+            if is_subtitle_filter == 'true':
+                is_subtitle = True
+            elif is_subtitle_filter == 'false':
+                is_subtitle = False
+            
+            # 获取制作商电影数据
+            movies, total = db_manager.get_studio_movies(
+                studio_name=studio_name,
+                page=page,
+                per_page=per_page,
+                search_keyword=search_keyword if search_keyword else None,
+                is_single=is_single,
+                is_subtitle=is_subtitle
+            )
+            
+            if movies is None:
+                movies = []
+                total = 0
+            
+            return render_template('studio_movies.html',
+                                movies=movies,
+                                page=page,
+                                per_page=per_page,
+                                total=total,
+                                studio_name=studio_name,
+                                search_keyword=search_keyword,
+                                is_single_filter=is_single_filter,
+                                is_subtitle_filter=is_subtitle_filter)
+                                
+        except Exception as e:
+            app_logger.error(f"制作商电影列表页面错误: {e}")
+            return render_template('error.html', error_message=f"加载制作商 '{studio_name}' 的电影列表失败")

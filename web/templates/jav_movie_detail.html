@@ -88,7 +88,12 @@
             {% if movie.studio %}
             <div class="row mb-2">
                 <div class="col-4 text-muted">制作商:</div>
-                <div class="col-8">{{ movie.studio }}</div>
+                <div class="col-8">
+                    <a href="{{ url_for('studio_movies_page', studio_name=movie.studio) }}" 
+                       class="text-decoration-none text-primary fw-bold">
+                        {{ movie.studio }}
+                    </a>
+                </div>
             </div>
             {% endif %}
             
