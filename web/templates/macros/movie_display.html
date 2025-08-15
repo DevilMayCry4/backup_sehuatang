@@ -1,0 +1,97 @@
+{# 影片展示宏 #}
+{% macro render_movie_grid(movies) %}
+<div class="movies-grid">
+    {% for movie in movies %}
+    <div class="movie-card" onclick="window.location.href='/jav-movie-detail/{{ movie.code }}'">
+        <!-- 单体书签 -->
+        {% if movie.is_single %}
+        <div class="bookmark bookmark-single">单体</div>
+        {% endif %}
+        
+        <!-- 字幕书签 -->
+        {% if movie.is_subtitle %}
+        <div class="bookmark bookmark-subtitle">字幕</div>
+        {% endif %}
+        
+        <a href="#" onclick="openImageModal('{{ get_movie_cover_url(movie) }}', '{{ movie.title }}'); event.stopPropagation(); return false;">
+            <div class="movie-cover-container">
+                <img src="{{ get_movie_cover_url(movie) }}"
+                     class="movie-cover-image" 
+                     alt="{{ movie.title }}"
+                     loading="lazy"
+                     onerror="this.src='/static/images/no-image.jpg'">
+            </div>
+        </a>
+        <div class="movie-card-body">
+            <p class="movie-title">{{ movie.title }}</p>
+            {% if movie.genres %}
+            <small class="text-muted">{{ movie.genres }}</small>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endmacro %}
+
+{# 分页导航宏 #}
+{% macro render_pagination(page, total, per_page, url_for, url_params={}) %}
+{% if total > per_page %}
+<div class="pagination-container">
+    <nav aria-label="Page navigation">
+        <ul class="pagination justify-content-center flex-wrap">
+            {% if page > 1 %}
+            <li class="page-item">
+                {% if url_params.actress_movies %}
+                <a class="page-link" href="{{ url_for('actress_movies', code=url_params.code, page=page-1, search=url_params.search, is_single=url_params.is_single, is_subtitle=url_params.is_subtitle) }}">上一页</a>
+                {% elif url_params.series_movies_page %}
+                <a class="page-link" href="{{ url_for('series_movies_page', series_name=url_params.series_name, page=page-1, search=url_params.search, is_single=url_params.is_single, is_subtitle=url_params.is_subtitle) }}">上一页</a>
+                {% elif url_params.studio_movies_page %}
+                <a class="page-link" href="{{ url_for('studio_movies_page', studio_name=url_params.studio_name, page=page-1, search=url_params.search, is_single=url_params.is_single, is_subtitle=url_params.is_subtitle) }}">上一页</a>
+                {% endif %}
+            </li>
+            {% endif %}
+            
+            {% set total_pages = (total // per_page) + (1 if total % per_page > 0 else 0) %}
+            {% set start_page = [1, page-2]|max %}
+            {% set end_page = [start_page+4, total_pages]|min %}
+            {% if end_page - start_page < 4 %}
+                {% set start_page = [1, end_page-4]|max %}
+            {% endif %}
+            
+            {% for p in range(start_page, end_page+1) %}
+            <li class="page-item {% if p == page %}active{% endif %}">
+                {% if url_params.actress_movies %}
+                <a class="page-link" href="{{ url_for('actress_movies', code=url_params.code, page=p, search=url_params.search, is_single=url_params.is_single, is_subtitle=url_params.is_subtitle) }}">{{ p }}</a>
+                {% elif url_params.series_movies_page %}
+                <a class="page-link" href="{{ url_for('series_movies_page', series_name=url_params.series_name, page=p, search=url_params.search, is_single=url_params.is_single, is_subtitle=url_params.is_subtitle) }}">{{ p }}</a>
+                {% elif url_params.studio_movies_page %}
+                <a class="page-link" href="{{ url_for('studio_movies_page', studio_name=url_params.studio_name, page=p, search=url_params.search, is_single=url_params.is_single, is_subtitle=url_params.is_subtitle) }}">{{ p }}</a>
+                {% endif %}
+            </li>
+            {% endfor %}
+            
+            {% if page < total_pages %}
+            <li class="page-item">
+                {% if url_params.actress_movies %}
+                <a class="page-link" href="{{ url_for('actress_movies', code=url_params.code, page=page+1, search=url_params.search, is_single=url_params.is_single, is_subtitle=url_params.is_subtitle) }}">下一页</a>
+                {% elif url_params.series_movies_page %}
+                <a class="page-link" href="{{ url_for('series_movies_page', series_name=url_params.series_name, page=page+1, search=url_params.search, is_single=url_params.is_single, is_subtitle=url_params.is_subtitle) }}">下一页</a>
+                {% elif url_params.studio_movies_page %}
+                <a class="page-link" href="{{ url_for('studio_movies_page', studio_name=url_params.studio_name, page=page+1, search=url_params.search, is_single=url_params.is_single, is_subtitle=url_params.is_subtitle) }}">下一页</a>
+                {% endif %}
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+</div>
+{% endif %}
+{% endmacro %}
+
+{# 获取电影封面URL的辅助函数 #}
+{% macro get_movie_cover_url(movie) %}
+{%- if movie.cover_image_url -%}
+{{ movie.cover_image_url }}
+{%- else -%}
+{{ url_for('static', filename='images/covers/' + movie.code + '/' + movie.code + '_cover.jpg') }}
+{%- endif -%}
+{% endmacro %}

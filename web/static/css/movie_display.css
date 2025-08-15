@@ -1,0 +1,196 @@
+/* 影片展示通用样式 */
+
+/* 电影封面容器 */
+.movie-cover-container {
+    height: 200px;
+    overflow: hidden;
+    position: relative;
+    border-radius: 8px;
+}
+
+.movie-cover-image {
+    width: 200%;
+    height: 100%;
+    object-fit: cover;
+    object-position: right center;
+    transform: translateX(-53%) scale(1.1);
+    transition: transform 0.3s ease;
+}
+
+.movie-cover-container:hover .movie-cover-image {
+    transform: translateX(-40%) scale(1.1);
+}
+
+/* 瀑布流布局 */
+.movies-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 2rem;
+    padding: 0;
+    margin-bottom: 3rem;
+}
+
+/* 卡片样式 */
+.movie-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    cursor: pointer;
+    overflow: hidden;
+    border: 1px solid rgba(0,0,0,0.05);
+    position: relative;
+}
+
+.movie-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+}
+
+.movie-card-body {
+    padding: 1rem;
+}
+
+.movie-title {
+    font-size: 1.4rem;
+    color: #495057;
+    line-height: 1.4;
+    margin: 0;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    hyphens: auto;
+    font-weight: 500;
+}
+
+/* 书签标签样式 */
+.bookmark {
+    position: absolute;
+    top: 10px;
+    width: 60px;
+    height: 20px;
+    color: white;
+    font-size: 10px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    transform-origin: center;
+}
+
+.bookmark-single {
+    left: -5px;
+    transform: rotate(-45deg);
+    border-radius: 0 4px 4px 0;
+    background: linear-gradient(135deg, #ff8c00, #ff7700);
+}
+
+.bookmark-subtitle {
+    right: -5px;
+    transform: rotate(45deg);
+    border-radius: 4px 0 0 4px;
+    background: linear-gradient(135deg, #8a2be2, #6a1b9a);
+}
+
+/* 分页样式 */
+.pagination-container {
+    margin-top: 3rem;
+    margin-bottom: 2rem;
+    padding: 2rem 0;
+    border-top: 1px solid #e9ecef;
+}
+
+.pagination {
+    margin: 0;
+    gap: 0.5rem;
+}
+
+.page-link {
+    border-radius: 8px;
+    border: 1px solid #dee2e6;
+    color: #6c757d;
+    padding: 0.75rem 1rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.page-link:hover {
+    background-color: #f8f9fa;
+    border-color: #adb5bd;
+    color: #495057;
+    transform: translateY(-1px);
+}
+
+.page-item.active .page-link {
+    background-color: #007bff;
+    border-color: #007bff;
+    color: white;
+    box-shadow: 0 2px 8px rgba(0,123,255,0.3);
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .movies-grid {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2.5rem;
+    }
+    
+    .movie-title {
+        font-size: 1.2rem;
+        line-height: 1.3;
+    }
+    
+    .movie-card-body {
+        padding: 0.75rem;
+    }
+    
+    .pagination-container {
+        margin-top: 2rem;
+        padding: 1.5rem 0;
+    }
+    
+    .page-link {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.9rem;
+    }
+    
+    .bookmark {
+        width: 50px;
+        height: 18px;
+        font-size: 9px;
+        top: 8px;
+    }
+    
+    .bookmark-single {
+        left: -12px;
+    }
+    
+    .bookmark-subtitle {
+        right: -12px;
+    }
+}
+
+@media (max-width: 480px) {
+    .movies-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1.25rem;
+        margin-bottom: 2rem;
+    }
+    
+    .bookmark {
+        width: 45px;
+        height: 16px;
+        font-size: 8px;
+        top: 6px;
+    }
+    
+    .bookmark-single {
+        left: -10px;
+    }
+    
+    .bookmark-subtitle {
+        right: -10px;
+    }
+}

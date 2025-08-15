@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% from "macros/movie_display.html" import render_movie_grid, render_pagination, get_movie_cover_url %}
 
-{% block title %}系列: {{ series_name }}{% endblock %}
+{% block title %}制作商: {{ studio_name }}{% endblock %}
 
 {% block head %}
 {{ super() }}
@@ -14,22 +14,22 @@
     <nav aria-label="breadcrumb" class="mb-3">
         <ol class="breadcrumb">
             <li class="breadcrumb-item"><a href="/movies">电影列表</a></li>
-            <li class="breadcrumb-item active" aria-current="page">系列: {{ series_name }}</li>
+            <li class="breadcrumb-item active" aria-current="page">制作商: {{ studio_name }}</li>
         </ol>
     </nav>
     
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="mb-0">系列: {{ series_name }}</h2>
+        <h2 class="mb-0">制作商: {{ studio_name }}</h2>
         <span class="badge bg-primary fs-6">共 {{ total }} 部影片</span>
     </div>
     
     <!-- 搜索框和筛选区域 -->
     <div class="search-filters">
-        <form method="GET" action="{{ url_for('series_movies_page', series_name=series_name) }}">
+        <form method="GET" action="{{ url_for('studio_movies_page', studio_name=studio_name) }}">
             <div class="row">
                 <!-- 搜索框 -->
                 <div class="col-md-9 filter-group">
-                    <label class="filter-label">在该系列中搜索</label>
+                    <label class="filter-label">在该制作商中搜索</label>
                     <input type="text" 
                            class="form-control" 
                            name="search" 
@@ -44,7 +44,7 @@
                         <i class="bi bi-search"></i> 搜索
                     </button>
                     {% if search_keyword or is_single_filter or is_subtitle_filter %}
-                    <a href="{{ url_for('series_movies_page', series_name=series_name) }}" 
+                    <a href="{{ url_for('studio_movies_page', studio_name=studio_name) }}" 
                        class="btn btn-outline-secondary">
                         <i class="bi bi-x-circle"></i> 清除
                     </a>
@@ -96,7 +96,7 @@
     {% if search_keyword or is_single_filter or is_subtitle_filter %}
     <div class="alert alert-info mb-3">
         <i class="bi bi-info-circle"></i> 
-        在系列 "{{ series_name }}" 中的筛选结果：
+        在制作商 "{{ studio_name }}" 中的筛选结果：
         {% if search_keyword %}
             搜索"{{ search_keyword }}"
         {% endif %}
@@ -120,14 +120,14 @@
     {% else %}
     <div class="alert alert-warning text-center" role="alert">
         <i class="bi bi-exclamation-triangle"></i>
-        该系列暂无影片数据
+        该制作商暂无影片数据
     </div>
     {% endif %}
     
     <!-- 使用宏渲染分页导航 -->
     {{ render_pagination(page, total, per_page, url_for, {
-        'series_movies_page': True,
-        'series_name': series_name,
+        'studio_movies_page': True,
+        'studio_name': studio_name,
         'search': search_keyword,
         'is_single': is_single_filter,
         'is_subtitle': is_subtitle_filter
