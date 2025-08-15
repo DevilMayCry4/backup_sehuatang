@@ -483,6 +483,54 @@ class DatabaseManager:
             app_logger.error(f"获取所有影片错误: {e}")
             return None, 0
     
+    def get_series_movies(self, series_name, page=1, per_page=20, search_keyword=None, is_single=None, is_subtitle=None):
+        """获取指定系列的所有影片(分页)，按发布日期最新排序，支持关键字搜索和筛选"""
+        try:
+            if self.javbus_data_collection is None:
+                return None, 0
+            
+            # 基础查询条件：系列名称完全匹配
+            base_query = {'series': series_name}
+            
+            # 构建查询条件列表
+            query_conditions = [base_query]
+            
+            # 如果有搜索关键字，添加额外的查询条件
+            if search_keyword and search_keyword.strip():
+                search_regex = {'$regex': search_keyword.strip(), '$options': 'i'}
+                # 在 title 或 genres 字段中搜索关键字
+                search_query = {
+                    '$or': [
+                        {'title': search_regex},
+                        {'genres': search_regex}
+                    ]
+                }
+                query_conditions.append(search_query)
+            
+            # 添加is_single筛选条件
+            if is_single is not None:
+                query_conditions.append({'is_single': is_single})
+            
+            # 添加is_subtitle筛选条件
+            if is_subtitle is not None:
+                query_conditions.append({'is_subtitle': is_subtitle})
+            
+            # 合并所有查询条件
+            if len(query_conditions) > 1:
+                final_query = {'$and': query_conditions}
+            else:
+                final_query = base_query
+                
+            movies = list(self.javbus_data_collection.find(
+                final_query
+            ).sort('release_date', -1).skip((page-1)*per_page).limit(per_page))
+            
+            total = self.javbus_data_collection.count_documents(final_query)
+            return movies, total
+        except Exception as e:
+            app_logger.error(f"获取系列影片错误: {e}")
+            return None, 0
+    
     def get_actress_movies(self, actress_name, page=1, per_page=20, search_keyword=None, is_single=None, is_subtitle=None):
         """获取指定演员的所有影片(分页)，按发布日期最新排序，支持关键字搜索和筛选"""
         try:

@@ -1,0 +1,381 @@
+{% extends "base.html" %}
+
+{% block title %}系列: {{ series_name }}{% endblock %}
+
+{% block content %}
+<style>
+/* 复用 movies.html 的样式 */
+.movie-cover-container {
+    height: 200px;
+    overflow: hidden;
+    position: relative;
+    border-radius: 8px;
+}
+
+.movie-cover-image {
+    width: 200%;
+    height: 100%;
+    object-fit: cover;
+    object-position: right center;
+    transform: translateX(-53%) scale(1.1);
+}
+
+.movie-cover-container:hover .movie-cover-image {
+    transform: translateX(-40%) scale(1.1);
+}
+
+.movies-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 2rem;
+    padding: 0;
+    margin-bottom: 3rem;
+}
+
+@media (max-width: 768px) {
+    .movies-grid {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2.5rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .movies-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1.25rem;
+        margin-bottom: 2rem;
+    }
+}
+
+.movie-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    cursor: pointer;
+    overflow: hidden;
+    border: 1px solid rgba(0,0,0,0.05);
+    position: relative;
+}
+
+.movie-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+}
+
+.movie-card-body {
+    padding: 1rem;
+}
+
+.movie-title {
+    font-size: 1.4rem;
+    color: #495057;
+    margin-bottom: 0.5rem;
+    line-height: 1.4;
+    font-weight: 500;
+}
+
+.movie-code {
+    font-size: 0.9rem;
+    color: #6c757d;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.bookmark {
+    position: absolute;
+    top: 10px;
+    width: 60px;
+    height: 20px;
+    color: white;
+    font-size: 10px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 50%, calc(100% - 8px) 100%, 0 100%);
+}
+
+.bookmark-single {
+    background-color: #007bff;
+    left: -15px;
+}
+
+.bookmark-subtitle {
+    background-color: #28a745;
+    right: -15px;
+}
+
+.search-filters {
+    background: #f8f9fa;
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    border: 1px solid #e9ecef;
+}
+
+.filter-group {
+    margin-bottom: 1rem;
+}
+
+.filter-group:last-child {
+    margin-bottom: 0;
+}
+
+.filter-label {
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 0.5rem;
+    display: block;
+}
+
+.pagination-container {
+    margin-top: 3rem;
+    padding: 2rem 0;
+    border-top: 1px solid #e9ecef;
+}
+
+.page-link {
+    color: #495057;
+    border: 1px solid #dee2e6;
+    padding: 0.75rem 1rem;
+    margin: 0 0.25rem;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.page-link:hover {
+    background-color: #e9ecef;
+    border-color: #adb5bd;
+    color: #495057;
+    transform: translateY(-1px);
+}
+
+.page-item.active .page-link {
+    background-color: #007bff;
+    border-color: #007bff;
+    color: white;
+    box-shadow: 0 2px 8px rgba(0,123,255,0.3);
+}
+</style>
+
+<div class="container mt-4">
+    <!-- 面包屑导航 -->
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/movies">电影列表</a></li>
+            <li class="breadcrumb-item active" aria-current="page">系列: {{ series_name }}</li>
+        </ol>
+    </nav>
+    
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0">系列: {{ series_name }}</h2>
+        <span class="badge bg-primary fs-6">共 {{ total }} 部影片</span>
+    </div>
+    
+    <!-- 搜索框和筛选区域 -->
+    <div class="search-filters">
+        <form method="GET" action="{{ url_for('series_movies_page', series_name=series_name) }}">
+            <div class="row">
+                <!-- 搜索框 -->
+                <div class="col-md-9 filter-group">
+                    <label class="filter-label">在该系列中搜索</label>
+                    <input type="text" 
+                           class="form-control" 
+                           name="search" 
+                           value="{{ search_keyword or '' }}" 
+                           placeholder="搜索标题或类型..." 
+                           aria-label="搜索">
+                </div>
+                
+                <!-- 搜索按钮 -->
+                <div class="col-md-3 filter-group d-flex align-items-end">
+                    <button class="btn btn-primary me-2" type="submit">
+                        <i class="bi bi-search"></i> 搜索
+                    </button>
+                    {% if search_keyword or is_single_filter or is_subtitle_filter %}
+                    <a href="{{ url_for('series_movies_page', series_name=series_name) }}" 
+                       class="btn btn-outline-secondary">
+                        <i class="bi bi-x-circle"></i> 清除
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="row mt-3">
+                <!-- 单体筛选 -->
+                <div class="col-md-6 filter-group">
+                    <label class="filter-label">单体筛选</label>
+                    <div class="btn-group w-100" role="group">
+                        <input type="radio" class="btn-check" name="is_single" value="" id="single_all" 
+                               {% if not is_single_filter %}checked{% endif %}>
+                        <label class="btn btn-outline-secondary" for="single_all">全部</label>
+                        
+                        <input type="radio" class="btn-check" name="is_single" value="true" id="single_yes" 
+                               {% if is_single_filter == 'true' %}checked{% endif %}>
+                        <label class="btn btn-outline-primary" for="single_yes">单体</label>
+                        
+                        <input type="radio" class="btn-check" name="is_single" value="false" id="single_no" 
+                               {% if is_single_filter == 'false' %}checked{% endif %}>
+                        <label class="btn btn-outline-warning" for="single_no">非单体</label>
+                    </div>
+                </div>
+                
+                <!-- 字幕筛选 -->
+                <div class="col-md-6 filter-group">
+                    <label class="filter-label">字幕筛选</label>
+                    <div class="btn-group w-100" role="group">
+                        <input type="radio" class="btn-check" name="is_subtitle" value="" id="subtitle_all" 
+                               {% if not is_subtitle_filter %}checked{% endif %}>
+                        <label class="btn btn-outline-secondary" for="subtitle_all">全部</label>
+                        
+                        <input type="radio" class="btn-check" name="is_subtitle" value="true" id="subtitle_yes" 
+                               {% if is_subtitle_filter == 'true' %}checked{% endif %}>
+                        <label class="btn btn-outline-success" for="subtitle_yes">有字幕</label>
+                        
+                        <input type="radio" class="btn-check" name="is_subtitle" value="false" id="subtitle_no" 
+                               {% if is_subtitle_filter == 'false' %}checked{% endif %}>
+                        <label class="btn btn-outline-danger" for="subtitle_no">无字幕</label>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+    
+    <!-- 筛选结果提示 -->
+    {% if search_keyword or is_single_filter or is_subtitle_filter %}
+    <div class="alert alert-info mb-3">
+        <i class="bi bi-info-circle"></i> 
+        在系列 "{{ series_name }}" 中的筛选结果：
+        {% if search_keyword %}
+            搜索"{{ search_keyword }}"
+        {% endif %}
+        {% if is_single_filter == 'true' %}
+            {% if search_keyword %}，{% endif %}单体作品
+        {% elif is_single_filter == 'false' %}
+            {% if search_keyword %}，{% endif %}非单体作品
+        {% endif %}
+        {% if is_subtitle_filter == 'true' %}
+            {% if search_keyword or is_single_filter %}，{% endif %}有字幕
+        {% elif is_subtitle_filter == 'false' %}
+            {% if search_keyword or is_single_filter %}，{% endif %}无字幕
+        {% endif %}
+        ，共找到 {{ total }} 部电影
+    </div>
+    {% endif %}
+    
+    <!-- 电影网格 -->
+    {% if movies %}
+    <div class="movies-grid">
+        {% for movie in movies %}
+        <div class="movie-card" onclick="window.location.href='/jav-movie-detail/{{ movie.code }}'">
+            <!-- 单体书签 -->
+            {% if movie.is_single %}
+            <div class="bookmark bookmark-single">单体</div>
+            {% endif %}
+            
+            <!-- 字幕书签 -->
+            {% if movie.is_subtitle %}
+            <div class="bookmark bookmark-subtitle">字幕</div>
+            {% endif %}
+            
+            <a href="#" onclick="openImageModal('{{ url_for('static', filename='images/covers/' + movie.code + '/' + movie.code + '_cover.jpg') }}', '{{ movie.title }}'); event.stopPropagation(); return false;">
+                <div class="movie-cover-container">
+                    <img src="{{ url_for('static', filename='images/covers/' + movie.code + '/' + movie.code + '_cover.jpg') }}"
+                         class="movie-cover-image" 
+                         alt="{{ movie.title }}"
+                         loading="lazy">
+                </div>
+            </a>
+            <div class="movie-card-body">
+                <div class="movie-code">{{ movie.code }}</div>
+                <p class="movie-title">{{ movie.title }}</p>
+                {% if movie.actresses %}
+                <small class="text-muted">演员: {{ movie.actresses[:50] }}{% if movie.actresses|length > 50 %}...{% endif %}</small><br>
+                {% endif %}
+                {% if movie.genres %}
+                <small class="text-muted">类型: {{ movie.genres[:50] }}{% if movie.genres|length > 50 %}...{% endif %}</small>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="alert alert-warning text-center" role="alert">
+        <i class="bi bi-exclamation-triangle"></i>
+        该系列暂无影片数据
+    </div>
+    {% endif %}
+    
+    <!-- 分页导航 -->
+    {% if total > per_page %}
+    <div class="pagination-container">
+        <nav aria-label="Page navigation">
+            <ul class="pagination justify-content-center flex-wrap">
+                {% if page > 1 %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('series_movies_page', series_name=series_name, page=page-1, search=search_keyword, is_single=is_single_filter, is_subtitle=is_subtitle_filter) }}">上一页</a>
+                </li>
+                {% endif %}
+                
+                {% set total_pages = (total // per_page) + (1 if total % per_page > 0 else 0) %}
+                {% set start_page = [1, page-2]|max %}
+                {% set end_page = [start_page+4, total_pages]|min %}
+                {% if end_page - start_page < 4 %}
+                    {% set start_page = [1, end_page-4]|max %}
+                {% endif %}
+                
+                {% for p in range(start_page, end_page+1) %}
+                <li class="page-item {% if p == page %}active{% endif %}">
+                    <a class="page-link" href="{{ url_for('series_movies_page', series_name=series_name, page=p, search=search_keyword, is_single=is_single_filter, is_subtitle=is_subtitle_filter) }}">{{ p }}</a>
+                </li>
+                {% endfor %}
+                
+                {% if page < total_pages %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('series_movies_page', series_name=series_name, page=page+1, search=search_keyword, is_single=is_single_filter, is_subtitle=is_subtitle_filter) }}">下一页</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+</div>
+
+<!-- 图片放大模态框 -->
+<div id="imageModal" class="image-modal" onclick="closeImageModal()">
+    <div class="image-modal-content">
+        <span class="image-modal-close" onclick="closeImageModal()">&times;</span>
+        <img id="modalImage" class="modal-image" src="" alt="">
+        <div id="modalCaption" class="image-modal-caption"></div>
+    </div>
+</div>
+
+<script>
+function openImageModal(src, caption) {
+    document.getElementById('imageModal').style.display = 'block';
+    document.getElementById('modalImage').src = src;
+    document.getElementById('modalCaption').textContent = caption;
+}
+
+function closeImageModal() {
+    document.getElementById('imageModal').style.display = 'none';
+}
+
+// 点击模态框外部关闭
+document.getElementById('imageModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeImageModal();
+    }
+});
+
+// ESC键关闭模态框
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeImageModal();
+    }
+});
+</script>
+{% endblock %}

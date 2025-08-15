@@ -963,6 +963,59 @@ def register_routes(app, jellyfin_checker, crawler):
                 'error': f'获取备份记录失败: {str(e)}'
             })
     
+    @app.route('/series/<series_name>')
+    @login_required
+    def series_movies_page(series_name):
+        """系列电影列表页面"""
+        try:
+            # 获取查询参数
+            page = int(request.args.get('page', 1))
+            per_page = 20
+            search_keyword = request.args.get('search', '').strip()
+            is_single_filter = request.args.get('is_single', '')
+            is_subtitle_filter = request.args.get('is_subtitle', '')
+            
+            # 转换筛选参数
+            is_single = None
+            if is_single_filter == 'true':
+                is_single = True
+            elif is_single_filter == 'false':
+                is_single = False
+                
+            is_subtitle = None
+            if is_subtitle_filter == 'true':
+                is_subtitle = True
+            elif is_subtitle_filter == 'false':
+                is_subtitle = False
+            
+            # 获取系列电影数据
+            movies, total = db_manager.get_series_movies(
+                series_name=series_name,
+                page=page,
+                per_page=per_page,
+                search_keyword=search_keyword if search_keyword else None,
+                is_single=is_single,
+                is_subtitle=is_subtitle
+            )
+            
+            if movies is None:
+                movies = []
+                total = 0
+            
+            return render_template('series_movies.html',
+                                movies=movies,
+                                page=page,
+                                per_page=per_page,
+                                total=total,
+                                series_name=series_name,
+                                search_keyword=search_keyword,
+                                is_single_filter=is_single_filter,
+                                is_subtitle_filter=is_subtitle_filter)
+                                
+        except Exception as e:
+            app_logger.error(f"系列电影列表页面错误: {e}")
+            return render_template('error.html', error_message=f"加载系列 '{series_name}' 的电影列表失败")
+    
     @app.route('/movies')
     @login_required
     def movies_page():

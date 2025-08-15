@@ -95,7 +95,13 @@
             {% if movie.series %}
             <div class="row mb-2">
                 <div class="col-4 text-muted">系列:</div>
-                <div class="col-8">{{ movie.series }}</div>
+                <div class="col-8">
+                    <a href="{{ url_for('series_movies_page', series_name=movie.series) }}" 
+                       class="text-decoration-none text-primary fw-bold"
+                       title="查看该系列的所有影片">
+                        {{ movie.series }}
+                    </a>
+                </div>
             </div>
             {% endif %}
             

@@ -172,11 +172,11 @@ class JavBusSeleniumController(BaseSeleniumController):
                     app_logger.warning(f"解析大模型返回的JSON失败: {e}")
                     return None
             else:
-                app_logger.error("大模型API调用失败: {response.status_code} - {response.text}")
+                app_logger.error(f"大模型API调用失败: {response.status_code} - {response.text}")
                 return None
                 
         except Exception as e:
-            app_logger.error("调用大模型处理驾驶证考试题失败: {e}")
+            app_logger.error(f"调用大模型处理驾驶证考试题失败: {e}")
             return None
     
     def extract_questions_from_page(self):
