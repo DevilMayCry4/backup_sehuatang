@@ -4,23 +4,11 @@
 Flask Web应用 - Jellyfin电影查询 (重构版)
 """
 
-from flask import Flask, render_template, request, jsonify, Response, session, redirect, url_for
+from flask import Flask, session, redirect, url_for, jsonify
 from flask_cors import CORS
 import sys
 import os
-import requests
-from urllib.parse import urlparse
-from pymongo import MongoClient
-import re
-from datetime import datetime, timedelta
-from bson import ObjectId
-import threading
-import time
-import schedule
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-from email.header import Header
+from datetime import timedelta
 from functools import wraps
 
 # 添加父目录到路径，以便导入项目模块
