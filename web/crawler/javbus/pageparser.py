@@ -313,7 +313,7 @@ def parser_content(html):
     if title_match:
         title = title_match.group(1).strip().replace(" - JavBus", "")
         categories['標題'] = title
-    is_single = len(actor_matches)
+    is_single = len(actor_matches) == 1 
     categories['is_single'] = is_single
     categories['is_subtitle'] = is_subtitle 
     print(categories)

@@ -70,7 +70,7 @@
 }
 
 .movie-title {
-    font-size: 1.4rem;
+    font-size: 1.0rem;
     color: #495057;
     line-height: 1.4;
     margin: 0;
@@ -183,7 +183,7 @@
 /* 移动端优化 */
 @media (max-width: 768px) {
     .movie-title {
-        font-size: 1.2rem;
+        font-size: 1.0rem;
         line-height: 1.3;
     }
     
@@ -370,9 +370,6 @@
                 <p class="movie-title">{{ movie.title }}</p>
                 {% if movie.actresses %}
                 <small class="text-muted">演员: {{ movie.actresses[:50] }}{% if movie.actresses|length > 50 %}...{% endif %}</small><br>
-                {% endif %}
-                {% if movie.genres %}
-                <small class="text-muted">类型: {{ movie.genres[:50] }}{% if movie.genres|length > 50 %}...{% endif %}</small>
                 {% endif %}
             </div>
         </div>
