@@ -129,7 +129,15 @@
             <div class="row">
                 {% for actress_name in movie.actresses %}
                 <div class="col-6 col-md-4 mb-2">
-                    <span class="badge bg-primary">{{ actress_name }}</span>
+                    {% set actress_code = db_manager.get_actress_code_by_name(actress_name) %}
+                    {% if actress_code %}
+                        <a href="{{ url_for('actress_movies', code=actress_code) }}" 
+                           class="text-decoration-none">
+                            <span class="badge bg-primary">{{ actress_name }}</span>
+                        </a>
+                    {% else %}
+                        <span class="badge bg-primary">{{ actress_name }}</span>
+                    {% endif %}
                 </div>
                 {% endfor %}
             </div>

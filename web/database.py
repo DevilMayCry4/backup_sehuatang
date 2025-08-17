@@ -812,6 +812,27 @@ class DatabaseManager:
         except Exception as e:
             app_logger.error(f"清空已处理演员记录失败: {e}")
             return False
+    
+    def get_actress_code_by_name(self, actress_name):
+        """根据演员名称查询演员code"""
+        if self.processed_actresses_collection is None:
+            return None
+        
+        try:
+            # 在processed_actresses集合中查找匹配的演员名称
+            actress = self.processed_actresses_collection.find_one(
+                {'actress_name': {'$regex': f'^{actress_name}$', '$options': 'i'}}
+            )
+            
+            if actress:
+                return actress.get('actress_code')
+            else:
+                app_logger.info(f"未找到演员 {actress_name} 的code")
+                return None
+        except Exception as e:
+            app_logger.error(f"查询演员code失败: {e}")
+            return None
+    
     def _create_default_admin(self):
         """创建默认管理员用户"""
         try:

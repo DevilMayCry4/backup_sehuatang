@@ -4,7 +4,6 @@
 路由模块
 """
 
-from pickle import FALSE
 from flask import render_template, request, jsonify, session, redirect, url_for
 from urllib.parse import quote
 from database import db_manager
@@ -714,7 +713,8 @@ def register_routes(app, jellyfin_checker, crawler):
             parse_actress_to_array = db_manager.parse_actress_to_array(movie)
             movie['actresses'] = parse_actress_to_array
             return render_template('jav_movie_detail.html',  
-                                 movie=movie)
+                                 movie=movie,
+                                 db_manager=db_manager)
             
         except Exception as e:
             print(f"获取演员影片详情错误: {e}")
