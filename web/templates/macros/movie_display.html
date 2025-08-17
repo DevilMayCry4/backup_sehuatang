@@ -56,13 +56,17 @@
             {% endif %}
             
             {% for p in range(start_page, end_page+1) %}
-            <li class="page-item {% if p == page %}active{% endif %}">
-                {% if url_params.actress_movies %}
-                <a class="page-link" href="{{ url_for('actress_movies', code=url_params.code, page=p, search=url_params.search, is_single=url_params.is_single, is_subtitle=url_params.is_subtitle) }}">{{ p }}</a>
-                {% elif url_params.series_movies_page %}
-                <a class="page-link" href="{{ url_for('series_movies_page', series_name=url_params.series_name, page=p, search=url_params.search, is_single=url_params.is_single, is_subtitle=url_params.is_subtitle) }}">{{ p }}</a>
-                {% elif url_params.studio_movies_page %}
-                <a class="page-link" href="{{ url_for('studio_movies_page', studio_name=url_params.studio_name, page=p, search=url_params.search, is_single=url_params.is_single, is_subtitle=url_params.is_subtitle) }}">{{ p }}</a>
+            <li class="page-item {% if p == page %}active disabled{% endif %}">
+                {% if p == page %}
+                <span class="page-link">{{ p }}</span>
+                {% else %}
+                    {% if url_params.actress_movies %}
+                    <a class="page-link" href="{{ url_for('actress_movies', code=url_params.code, page=p, search=url_params.search, is_single=url_params.is_single, is_subtitle=url_params.is_subtitle) }}">{{ p }}</a>
+                    {% elif url_params.series_movies_page %}
+                    <a class="page-link" href="{{ url_for('series_movies_page', series_name=url_params.series_name, page=p, search=url_params.search, is_single=url_params.is_single, is_subtitle=url_params.is_subtitle) }}">{{ p }}</a>
+                    {% elif url_params.studio_movies_page %}
+                    <a class="page-link" href="{{ url_for('studio_movies_page', studio_name=url_params.studio_name, page=p, search=url_params.search, is_single=url_params.is_single, is_subtitle=url_params.is_subtitle) }}">{{ p }}</a>
+                    {% endif %}
                 {% endif %}
             </li>
             {% endfor %}
@@ -80,7 +84,51 @@
             {% endif %}
         </ul>
     </nav>
+    
+    <!-- 页码跳转输入框 -->
+    <div class="d-flex justify-content-center mt-3">
+        <div class="input-group" style="max-width: 300px;">
+            <input type="number" class="form-control" id="pageJumpInput" placeholder="输入页码" min="1" max="{{ total_pages }}" value="{{ page }}">
+            <button class="btn btn-outline-secondary" type="button" onclick="jumpToPage()">跳转</button>
+        </div>
+        <small class="text-muted ms-2 align-self-center">共 {{ total_pages }} 页</small>
+    </div>
 </div>
+
+<script>
+function jumpToPage() {
+    const input = document.getElementById('pageJumpInput');
+    const targetPage = parseInt(input.value);
+    const totalPages = {{ total_pages }};
+    
+    if (targetPage < 1 || targetPage > totalPages || isNaN(targetPage)) {
+        alert('请输入有效的页码 (1-' + totalPages + ')');
+        return;
+    }
+    
+    if (targetPage === {{ page }}) {
+        return; // 当前页不需要跳转
+    }
+    
+    // 构建跳转URL
+    {% if url_params.actress_movies %}
+    const url = "{{ url_for('actress_movies', code=url_params.code, page=1, search=url_params.search, is_single=url_params.is_single, is_subtitle=url_params.is_subtitle) }}".replace('page=1', 'page=' + targetPage);
+    {% elif url_params.series_movies_page %}
+    const url = "{{ url_for('series_movies_page', series_name=url_params.series_name, page=1, search=url_params.search, is_single=url_params.is_single, is_subtitle=url_params.is_subtitle) }}".replace('page=1', 'page=' + targetPage);
+    {% elif url_params.studio_movies_page %}
+    const url = "{{ url_for('studio_movies_page', studio_name=url_params.studio_name, page=1, search=url_params.search, is_single=url_params.is_single, is_subtitle=url_params.is_subtitle) }}".replace('page=1', 'page=' + targetPage);
+    {% endif %}
+    
+    window.location.href = url;
+}
+
+// 支持回车键跳转
+document.getElementById('pageJumpInput').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        jumpToPage();
+    }
+});
+</script>
 {% endif %}
 {% endmacro %}
 
