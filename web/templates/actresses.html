@@ -4,64 +4,140 @@
 <div class="container mt-4">
     <h2 class="mb-4">演员列表</h2>
     
-    <!-- 罩杯筛选器 -->
+    <!-- 收藏和筛选器 -->
     <div class="row mb-4">
         <div class="col-12">
             <div class="card">
                 <div class="card-body">
-                    <h6 class="card-title">按罩杯筛选</h6>
-                    <form method="GET" action="{{ url_for('actresses_list') }}" class="d-flex flex-wrap align-items-center">
-                        <div class="me-3 mb-2">
-                            <select name="cup_size" class="form-select" onchange="this.form.submit()">
-                                <option value="">全部罩杯</option>
-                                {% for cup_size in all_cup_sizes %}
-                                <option value="{{ cup_size }}" {% if cup_size_filter == cup_size %}selected{% endif %}>
-                                    {{ cup_size }}杯
-                                </option>
-                                {% endfor %}
-                            </select>
+                    <!-- 收藏切换按钮 -->
+                    <div class="mb-3">
+                        <div class="btn-group" role="group">
+                            <input type="radio" class="btn-check" name="view-mode" id="all-actresses" autocomplete="off" checked>
+                            <label class="btn btn-outline-primary" for="all-actresses">全部演员</label>
+                            
+                            <input type="radio" class="btn-check" name="view-mode" id="favorite-actresses" autocomplete="off">
+                            <label class="btn btn-outline-primary" for="favorite-actresses">我的收藏</label>
                         </div>
+                    </div>
+                    
+                    <!-- 罩杯筛选器 -->
+                    <div id="cup-size-filter" class="mt-3">
+                        <h6 class="card-subtitle mb-2">按罩杯筛选</h6>
+                        <form method="GET" action="{{ url_for('actresses_list') }}" class="d-flex flex-wrap align-items-center">
+                            <div class="me-3 mb-2">
+                                <select name="cup_size" class="form-select" onchange="this.form.submit()">
+                                    <option value="">全部罩杯</option>
+                                    {% for cup_size in all_cup_sizes %}
+                                    <option value="{{ cup_size }}" {% if cup_size_filter == cup_size %}selected{% endif %}>
+                                        {{ cup_size }}杯
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            {% if cup_size_filter %}
+                            <div class="mb-2">
+                                <a href="{{ url_for('actresses_list') }}" class="btn btn-outline-secondary btn-sm">清除筛选</a>
+                            </div>
+                            {% endif %}
+                        </form>
+                    </div>
+                    
+                    <!-- 收藏筛选器 -->
+                    <div id="favorite-filter" class="mt-3" style="display: none;">
+                        <h6 class="card-subtitle mb-2">收藏列表筛选</h6>
+                        <div class="d-flex flex-wrap align-items-center">
+                            <div class="me-3 mb-2">
+                                <select id="favorite-cup-filter" class="form-select">
+                                    <option value="">全部罩杯</option>
+                                    {% for cup_size in all_cup_sizes %}
+                                    <option value="{{ cup_size }}">{{ cup_size }}杯</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="mb-2">
+                                <button id="clear-favorite-filter" class="btn btn-outline-secondary btn-sm">清除筛选</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 状态显示 -->
+                    <div id="status-info">
                         {% if cup_size_filter %}
-                        <div class="mb-2">
-                            <a href="{{ url_for('actresses_list') }}" class="btn btn-outline-secondary btn-sm">清除筛选</a>
-                        </div>
+                        <small class="text-muted">当前筛选：{{ cup_size_filter }}杯，共 {{ total }} 位演员</small>
+                        {% else %}
+                        <small class="text-muted">共 {{ total }} 位演员</small>
                         {% endif %}
-                    </form>
-                    {% if cup_size_filter %}
-                    <small class="text-muted">当前筛选：{{ cup_size_filter }}杯，共 {{ total }} 位演员</small>
-                    {% else %}
-                    <small class="text-muted">共 {{ total }} 位演员</small>
-                    {% endif %}
+                    </div>
+                    
+                    <!-- 收藏状态显示 -->
+                    <div id="favorite-status-info" style="display: none;">
+                        <small class="text-muted">正在加载收藏列表...</small>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
     
-    <div class="row">
+    <!-- 演员列表 -->
+    <div id="actresses-grid" class="row">
         {% for actress in actresses %}
         <div class="col-6 col-md-3 mb-4">
-            <div class="card h-100" onclick="window.location.href='{{url_for('actress_movies', code=actress.code) }}';">
-                <img id="actress-img-{{ loop.index }}" 
-                     src="{{ url_for('static', filename='images/actresses/' + actress.code+'_'+actress.name+'.jpg') }}" 
-                     class="card-img-top img-fluid" 
-                     alt="{{ actress.name }}"
-                     data-actress-code="{{ actress.code }}"
-                     data-actress-name="{{ actress.name }}"
-                     data-fallback-url="{{ actress.image_url }}"
-                     onerror="tryAlternativeFormats(this)">
-                <div class="card-body">
-                    <h5 class="card-title text-truncate">{{ actress.name }}</h5>
-                    <p class="card-text">
-                        <small class="text-muted">罩杯{{ actress.cup_size }}</small>
-                    </p>
+            <div class="card h-100 actress-card" data-actress-code="{{ actress.code }}" data-actress-name="{{ actress.name }}" data-cup-size="{{ actress.cup_size }}">
+                <!-- 收藏按钮 -->
+                <div class="favorite-btn-container">
+                    <button class="btn btn-sm favorite-btn" 
+                            data-actress-code="{{ actress.code }}" 
+                            data-actress-name="{{ actress.name }}"
+                            title="收藏演员">
+                        <i class="fas fa-heart"></i>
+                    </button>
+                </div>
+                
+                <div class="actress-content" onclick="window.location.href='{{url_for('actress_movies', code=actress.code) }}';"> 
+                    <img id="actress-img-{{ loop.index }}" 
+                         src="{{ url_for('static', filename='images/actresses/' + actress.code+'_'+actress.name+'.jpg') }}" 
+                         class="card-img-top img-fluid" 
+                         alt="{{ actress.name }}"
+                         data-actress-code="{{ actress.code }}"
+                         data-actress-name="{{ actress.name }}"
+                         data-fallback-url="{{ actress.image_url }}"
+                         onerror="tryAlternativeFormats(this)">
+                    <div class="card-body">
+                        <h5 class="card-title text-truncate">{{ actress.name }}</h5>
+                        <p class="card-text">
+                            <small class="text-muted">罩杯{{ actress.cup_size }}</small>
+                        </p>
+                    </div>
                 </div>
             </div>
         </div>
         {% endfor %}
     </div>
     
+    <!-- 收藏列表容器 -->
+    <div id="favorite-actresses-grid" class="row" style="display: none;">
+        <!-- 收藏的演员将通过JavaScript动态加载 -->
+    </div>
+    
+    <!-- 加载状态 -->
+    <div id="loading-indicator" class="text-center" style="display: none;">
+        <div class="spinner-border" role="status">
+            <span class="visually-hidden">加载中...</span>
+        </div>
+        <p class="mt-2">正在加载...</p>
+    </div>
+    
+    <!-- 空状态提示 -->
+    <div id="empty-state" class="text-center" style="display: none;">
+        <div class="py-5">
+            <i class="fas fa-heart fa-3x text-muted mb-3"></i>
+            <h5 class="text-muted">还没有收藏任何演员</h5>
+            <p class="text-muted">点击演员卡片上的心形按钮来收藏喜欢的演员</p>
+        </div>
+    </div>
+    
     <!-- 分页导航 - 保持筛选参数 -->
-    <div class="pagination-container">
+    <div id="pagination-container" class="pagination-container">
         <nav aria-label="Page navigation">
             <ul class="pagination justify-content-center flex-wrap">
                 {% if page > 1 %}
@@ -91,9 +167,374 @@
             </ul>
         </nav>
     </div>
+    
+    <!-- 收藏分页导航 -->
+    <div id="favorite-pagination-container" class="pagination-container" style="display: none;">
+        <!-- 收藏分页将通过JavaScript动态生成 -->
+    </div>
 </div>
 
 <script>
+// 全局变量
+let currentViewMode = 'all'; // 'all' 或 'favorites'
+let currentFavoritePage = 1;
+let favoriteTotalPages = 1;
+let currentFavoriteCupFilter = '';
+let favoriteActresses = [];
+
+// 页面加载完成后初始化
+document.addEventListener('DOMContentLoaded', function() {
+    initializeFavoriteButtons();
+    setupViewModeToggle();
+    setupFavoriteFilters();
+});
+
+// 初始化收藏按钮状态
+function initializeFavoriteButtons() {
+    const favoriteButtons = document.querySelectorAll('.favorite-btn');
+    favoriteButtons.forEach(button => {
+        const actressCode = button.dataset.actressCode;
+        checkFavoriteStatus(actressCode, button);
+        
+        // 添加点击事件
+        button.addEventListener('click', function(e) {
+            e.stopPropagation(); // 防止触发卡片点击事件
+            toggleFavorite(this);
+        });
+    });
+}
+
+// 检查收藏状态
+function checkFavoriteStatus(actressCode, button) {
+    fetch(`/api/actress/favorite/check/${actressCode}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.is_favorited) {
+                button.classList.add('favorited');
+                button.title = '取消收藏';
+            } else {
+                button.classList.remove('favorited');
+                button.title = '收藏演员';
+            }
+        })
+        .catch(error => {
+            console.error('检查收藏状态失败:', error);
+        });
+}
+
+// 切换收藏状态
+function toggleFavorite(button) {
+    const actressCode = button.dataset.actressCode;
+    const actressName = button.dataset.actressName;
+    const isFavorited = button.classList.contains('favorited');
+    
+    // 显示加载状态
+    button.disabled = true;
+    const originalHtml = button.innerHTML;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    
+    const url = '/api/actress/favorite';
+    const method = isFavorited ? 'DELETE' : 'POST';
+    const body = {
+        actress_code: actressCode,
+        actress_name: actressName
+    };
+    
+    fetch(url, {
+        method: method,
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(body)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            if (isFavorited) {
+                button.classList.remove('favorited');
+                button.title = '收藏演员';
+                // 如果当前在收藏列表视图，需要移除该演员
+                if (currentViewMode === 'favorites') {
+                    removeActressFromFavoriteView(actressCode);
+                }
+            } else {
+                button.classList.add('favorited');
+                button.title = '取消收藏';
+            }
+        } else {
+            alert(data.error || '操作失败，请稍后重试');
+        }
+    })
+    .catch(error => {
+        console.error('收藏操作失败:', error);
+        alert('操作失败，请稍后重试');
+    })
+    .finally(() => {
+        button.disabled = false;
+        button.innerHTML = originalHtml;
+    });
+}
+
+// 设置视图模式切换
+function setupViewModeToggle() {
+    const allActressesRadio = document.getElementById('all-actresses');
+    const favoriteActressesRadio = document.getElementById('favorite-actresses');
+    
+    allActressesRadio.addEventListener('change', function() {
+        if (this.checked) {
+            switchToAllView();
+        }
+    });
+    
+    favoriteActressesRadio.addEventListener('change', function() {
+        if (this.checked) {
+            switchToFavoriteView();
+        }
+    });
+}
+
+// 切换到全部演员视图
+function switchToAllView() {
+    currentViewMode = 'all';
+    
+    // 显示/隐藏相关元素
+    document.getElementById('actresses-grid').style.display = 'flex';
+    document.getElementById('favorite-actresses-grid').style.display = 'none';
+    document.getElementById('cup-size-filter').style.display = 'block';
+    document.getElementById('favorite-filter').style.display = 'none';
+    document.getElementById('status-info').style.display = 'block';
+    document.getElementById('favorite-status-info').style.display = 'none';
+    document.getElementById('pagination-container').style.display = 'block';
+    document.getElementById('favorite-pagination-container').style.display = 'none';
+    document.getElementById('empty-state').style.display = 'none';
+}
+
+// 切换到收藏视图
+function switchToFavoriteView() {
+    currentViewMode = 'favorites';
+    
+    // 显示/隐藏相关元素
+    document.getElementById('actresses-grid').style.display = 'none';
+    document.getElementById('favorite-actresses-grid').style.display = 'flex';
+    document.getElementById('cup-size-filter').style.display = 'none';
+    document.getElementById('favorite-filter').style.display = 'block';
+    document.getElementById('status-info').style.display = 'none';
+    document.getElementById('favorite-status-info').style.display = 'block';
+    document.getElementById('pagination-container').style.display = 'none';
+    
+    // 加载收藏列表
+    loadFavoriteActresses();
+}
+
+// 加载收藏的演员列表
+function loadFavoriteActresses(page = 1, cupFilter = '') {
+    showLoading();
+    
+    const params = new URLSearchParams({
+        page: page,
+        per_page: 20
+    });
+    
+    if (cupFilter) {
+        params.append('cup_size', cupFilter);
+    }
+    
+    fetch(`/api/actress/favorites?${params}`)
+        .then(response => response.json())
+        .then(data => {
+            hideLoading();
+            
+            if (data.success) {
+                favoriteActresses = data.actresses;
+                currentFavoritePage = data.pagination.page;
+                favoriteTotalPages = data.pagination.total_pages;
+                
+                renderFavoriteActresses(data.actresses);
+                renderFavoritePagination(data.pagination);
+                updateFavoriteStatusInfo(data.pagination.total, cupFilter);
+                
+                if (data.actresses.length === 0) {
+                    showEmptyState();
+                } else {
+                    hideEmptyState();
+                }
+            } else {
+                console.error('加载收藏列表失败:', data.error);
+                showEmptyState();
+            }
+        })
+        .catch(error => {
+            hideLoading();
+            console.error('加载收藏列表失败:', error);
+            showEmptyState();
+        });
+}
+
+// 渲染收藏的演员列表
+function renderFavoriteActresses(actresses) {
+    const container = document.getElementById('favorite-actresses-grid');
+    container.innerHTML = '';
+    
+    actresses.forEach((actress, index) => {
+        const actressCard = createActressCard(actress, index);
+        container.appendChild(actressCard);
+    });
+    
+    // 初始化新创建的收藏按钮
+    const newButtons = container.querySelectorAll('.favorite-btn');
+    newButtons.forEach(button => {
+        button.classList.add('favorited');
+        button.title = '取消收藏';
+        
+        button.addEventListener('click', function(e) {
+            e.stopPropagation();
+            toggleFavorite(this);
+        });
+    });
+}
+
+// 创建演员卡片元素
+function createActressCard(actress, index) {
+    const col = document.createElement('div');
+    col.className = 'col-6 col-md-3 mb-4';
+    
+    col.innerHTML = `
+        <div class="card h-100 actress-card" data-actress-code="${actress.code}" data-actress-name="${actress.name}" data-cup-size="${actress.cup_size}">
+            <div class="favorite-btn-container">
+                <button class="btn btn-sm favorite-btn favorited" 
+                        data-actress-code="${actress.code}" 
+                        data-actress-name="${actress.name}"
+                        title="取消收藏">
+                    <i class="fas fa-heart"></i>
+                </button>
+            </div>
+            
+            <div class="actress-content" onclick="window.location.href='/actress/${actress.code}';">
+                <img src="/static/images/actresses/${actress.code}_${actress.name}.jpg" 
+                     class="card-img-top img-fluid" 
+                     alt="${actress.name}"
+                     data-actress-code="${actress.code}"
+                     data-actress-name="${actress.name}"
+                     data-fallback-url="${actress.image_url || ''}"
+                     onerror="tryAlternativeFormats(this)">
+                <div class="card-body">
+                    <h5 class="card-title text-truncate">${actress.name}</h5>
+                    <p class="card-text">
+                        <small class="text-muted">罩杯${actress.cup_size}</small>
+                    </p>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    return col;
+}
+
+// 渲染收藏分页
+function renderFavoritePagination(pagination) {
+    const container = document.getElementById('favorite-pagination-container');
+    
+    if (pagination.total_pages <= 1) {
+        container.style.display = 'none';
+        return;
+    }
+    
+    container.style.display = 'block';
+    
+    let paginationHtml = '<nav aria-label="收藏分页导航"><ul class="pagination justify-content-center flex-wrap">';
+    
+    // 上一页
+    if (pagination.has_prev) {
+        paginationHtml += `<li class="page-item"><a class="page-link" href="#" onclick="loadFavoriteActresses(${pagination.page - 1}, '${currentFavoriteCupFilter}')">上一页</a></li>`;
+    }
+    
+    // 页码
+    const startPage = Math.max(1, pagination.page - 2);
+    const endPage = Math.min(startPage + 4, pagination.total_pages);
+    
+    for (let p = startPage; p <= endPage; p++) {
+        const activeClass = p === pagination.page ? 'active' : '';
+        paginationHtml += `<li class="page-item ${activeClass}"><a class="page-link" href="#" onclick="loadFavoriteActresses(${p}, '${currentFavoriteCupFilter}')">${p}</a></li>`;
+    }
+    
+    // 下一页
+    if (pagination.has_next) {
+        paginationHtml += `<li class="page-item"><a class="page-link" href="#" onclick="loadFavoriteActresses(${pagination.page + 1}, '${currentFavoriteCupFilter}')">下一页</a></li>`;
+    }
+    
+    paginationHtml += '</ul></nav>';
+    container.innerHTML = paginationHtml;
+}
+
+// 设置收藏筛选器
+function setupFavoriteFilters() {
+    const cupFilter = document.getElementById('favorite-cup-filter');
+    const clearButton = document.getElementById('clear-favorite-filter');
+    
+    cupFilter.addEventListener('change', function() {
+        currentFavoriteCupFilter = this.value;
+        loadFavoriteActresses(1, currentFavoriteCupFilter);
+    });
+    
+    clearButton.addEventListener('click', function() {
+        cupFilter.value = '';
+        currentFavoriteCupFilter = '';
+        loadFavoriteActresses(1, '');
+    });
+}
+
+// 从收藏视图中移除演员
+function removeActressFromFavoriteView(actressCode) {
+    const actressCard = document.querySelector(`#favorite-actresses-grid .actress-card[data-actress-code="${actressCode}"]`);
+    if (actressCard) {
+        actressCard.closest('.col-6').remove();
+        
+        // 如果当前页没有演员了，重新加载
+        const remainingCards = document.querySelectorAll('#favorite-actresses-grid .actress-card');
+        if (remainingCards.length === 0 && currentFavoritePage > 1) {
+            loadFavoriteActresses(currentFavoritePage - 1, currentFavoriteCupFilter);
+        } else if (remainingCards.length === 0) {
+            loadFavoriteActresses(1, currentFavoriteCupFilter);
+        }
+    }
+}
+
+// 更新收藏状态信息
+function updateFavoriteStatusInfo(total, cupFilter) {
+    const statusInfo = document.getElementById('favorite-status-info');
+    let text = `共收藏 ${total} 位演员`;
+    if (cupFilter) {
+        text = `${cupFilter}杯收藏，共 ${total} 位演员`;
+    }
+    statusInfo.innerHTML = `<small class="text-muted">${text}</small>`;
+}
+
+// 显示加载状态
+function showLoading() {
+    document.getElementById('loading-indicator').style.display = 'block';
+    document.getElementById('favorite-actresses-grid').style.display = 'none';
+    document.getElementById('empty-state').style.display = 'none';
+}
+
+// 隐藏加载状态
+function hideLoading() {
+    document.getElementById('loading-indicator').style.display = 'none';
+    document.getElementById('favorite-actresses-grid').style.display = 'flex';
+}
+
+// 显示空状态
+function showEmptyState() {
+    document.getElementById('empty-state').style.display = 'block';
+    document.getElementById('favorite-actresses-grid').style.display = 'none';
+    document.getElementById('favorite-pagination-container').style.display = 'none';
+}
+
+// 隐藏空状态
+function hideEmptyState() {
+    document.getElementById('empty-state').style.display = 'none';
+}
+
+// 原有的图片加载函数
 function tryAlternativeFormats(img) {
     const code = img.dataset.actressCode;
     const name = img.dataset.actressName;
@@ -113,7 +554,7 @@ function tryAlternativeFormats(img) {
     if (nextFormat) {
         // 尝试下一个格式
         img.dataset.triedFormats = triedFormats.concat([nextFormat]).join(',');
-        const newSrc = `{{ url_for('static', filename='images/actresses/') }}${code}_${name}.${nextFormat}`;
+        const newSrc = `/static/images/actresses/${code}_${name}.${nextFormat}`;
         img.src = newSrc;
     } else {
         // 所有格式都尝试过了，使用原始URL作为最后的回退
@@ -126,58 +567,175 @@ function tryAlternativeFormats(img) {
 </script>
  
 <style>
-/* 分页样式优化 */
-.pagination-container {
-    margin-top: 3rem;
-    margin-bottom: 2rem;
-    padding: 2rem 0; /* 增加上下内边距 */
-    border-top: 1px solid #e9ecef; /* 添加分隔线 */
+/* 收藏按钮容器 */
+.favorite-btn-container {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 10;
 }
 
-.pagination {
-    margin: 0;
-    gap: 0.5rem; /* 增加分页按钮间距 */
+/* 收藏按钮基础样式 */
+.favorite-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
 }
 
-.page-link {
-    border-radius: 8px;
-    border: 1px solid #dee2e6;
+.favorite-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+    background: rgba(255, 255, 255, 0.95);
+}
+
+.favorite-btn:active {
+    transform: scale(0.95);
+}
+
+/* 心形图标样式 */
+.favorite-btn i {
+    font-size: 18px;
     color: #6c757d;
-    padding: 0.75rem 1rem;
-    font-weight: 500;
-    transition: all 0.2s ease;
+    transition: all 0.3s ease;
+    position: relative;
+    z-index: 2;
 }
 
-.page-link:hover {
-    background-color: #f8f9fa;
-    border-color: #adb5bd;
-    color: #495057;
-    transform: translateY(-1px);
+/* 收藏状态样式 */
+.favorite-btn.favorited {
+    background: linear-gradient(135deg, #ff6b6b, #ee5a52);
+    box-shadow: 0 4px 15px rgba(255, 107, 107, 0.4);
 }
 
-.page-item.active .page-link {
-    background-color: #007bff;
-    border-color: #007bff;
+.favorite-btn.favorited:hover {
+    background: linear-gradient(135deg, #ff5252, #e53935);
+    box-shadow: 0 6px 25px rgba(255, 107, 107, 0.6);
+    transform: scale(1.15);
+}
+
+.favorite-btn.favorited i {
     color: white;
-    box-shadow: 0 2px 8px rgba(0,123,255,0.3);
+    animation: heartBeat 0.6s ease-in-out;
 }
 
-/* 移动端优化样式 */
+/* 心跳动画 */
+@keyframes heartBeat {
+    0% { transform: scale(1); }
+    25% { transform: scale(1.2); }
+    50% { transform: scale(1); }
+    75% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+
+/* 点击波纹效果 */
+.favorite-btn::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.6);
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+}
+
+.favorite-btn:active::before {
+    width: 60px;
+    height: 60px;
+}
+
+/* 加载状态 */
+.favorite-btn:disabled {
+    pointer-events: none;
+    opacity: 0.7;
+}
+
+.favorite-btn:disabled i {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* 演员卡片悬停时的收藏按钮效果 */
+.actress-card:hover .favorite-btn {
+    transform: scale(1.05);
+}
+
+.actress-card:hover .favorite-btn:hover {
+    transform: scale(1.2);
+}
+
+/* 响应式设计 */
 @media (max-width: 768px) {
-    .card {
-        margin-bottom: 15px;
+    .favorite-btn {
+        width: 36px;
+        height: 36px;
     }
-    .card-title {
-        font-size: 0.9rem;
+    
+    .favorite-btn i {
+        font-size: 16px;
     }
-    .page-link {
-        padding: 0.5rem 0.75rem;
-        font-size: 0.9rem;
+    
+    .favorite-btn-container {
+        top: 6px;
+        right: 6px;
     }
-    .pagination-container {
-        margin-top: 2rem;
-        padding: 1.5rem 0;
+}
+
+@media (max-width: 480px) {
+    .favorite-btn {
+        width: 32px;
+        height: 32px;
     }
+    
+    .favorite-btn i {
+        font-size: 14px;
+    }
+    
+    .favorite-btn-container {
+        top: 4px;
+        right: 4px;
+    }
+}
+
+/* 演员卡片样式优化 */
+.actress-card {
+    position: relative;
+    transition: all 0.3s ease;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.actress-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+/* 演员内容区域 */
+.actress-content {
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.actress-content:hover {
+    transform: scale(1.02);
 }
 </style>
 {% endblock %}

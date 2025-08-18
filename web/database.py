@@ -31,6 +31,10 @@ class DatabaseManager:
         # 用户认证相关集合
         self.users_collection = None
         self.sessions_collection = None
+        # 类别数据集合
+        self.genres_collection = None
+        # 演员收藏集合
+        self.actress_favorites_collection = None
         
     def init_mongodb(self):
         """初始化MongoDB连接"""
@@ -54,6 +58,12 @@ class DatabaseManager:
             # 用户认证相关集合
             self.users_collection = self.mongo_db['users']
             self.sessions_collection = self.mongo_db['sessions']
+            
+            # 类别数据集合
+            self.genres_collection = self.mongo_db['genres_data']
+            
+            # 演员收藏集合
+            self.actress_favorites_collection = self.mongo_db['actress_favorites']
             
             # 创建默认管理员用户（如果不存在）
             self._create_default_admin()
@@ -476,6 +486,11 @@ class DatabaseManager:
             movies = list(self.javbus_data_collection.find(
                 final_query
             ).sort(sort_field, sort_order).skip((page-1)*per_page).limit(per_page))
+            
+            # 转换 ObjectId 为字符串以支持 JSON 序列化
+            for movie in movies:
+                if '_id' in movie:
+                    movie['_id'] = str(movie['_id'])
             
             total = self.javbus_data_collection.count_documents(final_query)
             return movies, total
@@ -1049,6 +1064,294 @@ class DatabaseManager:
                 backed_up_folders.update(record['folders_backed_up'])
         
         return backed_up_folders
+    
+    def save_genre_data(self, genre_info):
+        """保存类别数据到数据库"""
+        try:
+            if self.genres_collection is None:
+                app_logger.error("genres_collection未初始化")
+                return False
+            
+            # 检查是否已存在相同的类别代码
+            existing = self.genres_collection.find_one({'code': genre_info['code']})
+            
+            if existing:
+                # 更新现有记录
+                result = self.genres_collection.update_one(
+                    {'code': genre_info['code']},
+                    {'$set': {
+                        'name': genre_info['name'],
+                        'url': genre_info['url'],
+                        'category': genre_info.get('category', ''),
+                        'updated_at': datetime.now()
+                    }}
+                )
+                app_logger.info(f"更新类别数据: {genre_info['name']} ({genre_info['code']})")
+                return result.modified_count > 0
+            else:
+                # 插入新记录
+                genre_doc = {
+                    'code': genre_info['code'],
+                    'name': genre_info['name'],
+                    'url': genre_info['url'],
+                    'category': genre_info.get('category', ''),
+                    'created_at': datetime.now(),
+                    'updated_at': datetime.now()
+                }
+                
+                result = self.genres_collection.insert_one(genre_doc)
+                app_logger.info(f"保存新类别数据: {genre_info['name']} ({genre_info['code']})")
+                return result.inserted_id is not None
+                
+        except Exception as e:
+            app_logger.error(f"保存类别数据失败: {e}")
+            return False
+    
+    def get_all_genres(self, category=None):
+        """获取所有类别数据"""
+        try:
+            if self.genres_collection is None:
+                return []
+            
+            query = {}
+            if category:
+                query['category'] = category
+            
+            genres = list(self.genres_collection.find(query).sort('name', 1))
+            return genres
+            
+        except Exception as e:
+            app_logger.error(f"获取类别数据失败: {e}")
+            return []
+    
+    def get_genre_by_code(self, code):
+        """根据代码获取类别信息"""
+        try:
+            if self.genres_collection is None:
+                return None
+            
+            return self.genres_collection.find_one({'code': code})
+            
+        except Exception as e:
+            app_logger.error(f"获取类别信息失败: {e}")
+            return None
+    
+    def search_movies_by_genres(self, names=None, page=1, per_page=20, search_keyword=None, is_single=None, is_subtitle=None, sort_by='release_date'):
+        """根据分类代码搜索影片，支持多选分类、关键字、单体、字幕筛选"""
+        try:
+            if self.javbus_data_collection is None:
+                return None, 0
+            
+            # 构建查询条件列表
+            query_conditions = []
+            genre_names = names
+            # 如果指定了分类代码，添加分类筛选条件
+            if genre_names and len(genre_names) > 0:
+                # 支持多选分类，影片的genres字段包含任一指定分类即可
+                genre_query = {
+                    '$or': [
+                        {'genres': {'$regex': name, '$options': 'i'}} for name in genre_names
+                    ]
+                }
+                query_conditions.append(genre_query)
+            
+            # 如果有搜索关键字，添加搜索条件
+            if search_keyword and search_keyword.strip():
+                search_regex = {'$regex': search_keyword.strip(), '$options': 'i'}
+                # 在 title、code、actresses 或 genres 字段中搜索关键字
+                search_query = {
+                    '$or': [
+                        {'title': search_regex}
+                    ]
+                }
+                query_conditions.append(search_query)
+            
+            # 添加is_single筛选条件
+            if is_single is not None:
+                query_conditions.append({'is_single': is_single})
+            
+            # 添加is_subtitle筛选条件
+            if is_subtitle is not None:
+                query_conditions.append({'is_subtitle': is_subtitle})
+            
+            # 合并所有查询条件
+            if query_conditions:
+                final_query = {'$and': query_conditions}
+            else:
+                final_query = {}
+            
+            # 设置排序方式
+            sort_field = sort_by if sort_by in ['release_date', 'title', 'code'] else 'release_date'
+            sort_order = -1  # 降序排列
+            
+            movies = list(self.javbus_data_collection.find(
+                final_query
+            ).sort(sort_field, sort_order).skip((page-1)*per_page).limit(per_page))
+            movies = list(self.javbus_data_collection.find(
+                final_query
+            ).sort(sort_field, sort_order).skip((page-1)*per_page).limit(per_page))
+            
+            # 转换 ObjectId 为字符串以支持 JSON 序列化
+            for movie in movies:
+                if '_id' in movie:
+                    movie['_id'] = str(movie['_id'])
+             
+            total = self.javbus_data_collection.count_documents(final_query)
+            return movies, total
+            
+        except Exception as e:
+            app_logger.error(f"根据分类搜索影片错误: {e}")
+            return None, 0
+    
+    def get_genres_by_category(self):
+        """按分类分组获取所有类别数据"""
+        try:
+            if self.genres_collection is None:
+                return {}
+            
+            # 获取所有类别数据
+            all_genres = list(self.genres_collection.find({}).sort('name', 1))
+            
+            # 按category分组
+            genres_by_category = {}
+            for genre in all_genres:
+                category = genre.get('category', '其他')
+                if category not in genres_by_category:
+                    genres_by_category[category] = []
+                genres_by_category[category].append(genre)
+            
+            return genres_by_category
+            
+        except Exception as e:
+            app_logger.error(f"按分类获取类别数据失败: {e}")
+            return {}
+    
+    def add_actress_favorite(self, user_id, actress_code, actress_name):
+        """添加演员收藏"""
+        try:
+            if self.actress_favorites_collection is None:
+                raise Exception('MongoDB未初始化')
+            
+            # 检查是否已经收藏
+            existing = self.actress_favorites_collection.find_one({
+                'user_id': user_id,
+                'actress_code': actress_code
+            })
+            
+            if existing:
+                return {'success': False, 'message': '已经收藏过该演员'}
+            
+            # 添加收藏记录
+            favorite_doc = {
+                'user_id': user_id,
+                'actress_code': actress_code,
+                'actress_name': actress_name,
+                'created_at': datetime.now()
+            }
+            
+            result = self.actress_favorites_collection.insert_one(favorite_doc)
+            
+            if result.inserted_id:
+                app_logger.info(f"用户 {user_id} 收藏演员 {actress_name} ({actress_code})")
+                return {'success': True, 'message': '收藏成功'}
+            else:
+                return {'success': False, 'message': '收藏失败'}
+                
+        except Exception as e:
+            app_logger.error(f"添加演员收藏失败: {e}")
+            return {'success': False, 'message': f'收藏失败: {str(e)}'}
+    
+    def remove_actress_favorite(self, user_id, actress_code):
+        """取消演员收藏"""
+        try:
+            if self.actress_favorites_collection is None:
+                raise Exception('MongoDB未初始化')
+            
+            result = self.actress_favorites_collection.delete_one({
+                'user_id': user_id,
+                'actress_code': actress_code
+            })
+            
+            if result.deleted_count > 0:
+                app_logger.info(f"用户 {user_id} 取消收藏演员 {actress_code}")
+                return {'success': True, 'message': '取消收藏成功'}
+            else:
+                return {'success': False, 'message': '未找到收藏记录'}
+                
+        except Exception as e:
+            app_logger.error(f"取消演员收藏失败: {e}")
+            return {'success': False, 'message': f'取消收藏失败: {str(e)}'}
+    
+    def is_actress_favorited(self, user_id, actress_code):
+        """检查演员是否已被收藏"""
+        try:
+            if self.actress_favorites_collection is None:
+                return False
+            
+            favorite = self.actress_favorites_collection.find_one({
+                'user_id': user_id,
+                'actress_code': actress_code
+            })
+            
+            return favorite is not None
+            
+        except Exception as e:
+            app_logger.error(f"检查演员收藏状态失败: {e}")
+            return False
+    
+    def get_user_favorite_actresses(self, user_id, page=1, per_page=20, cup_size_filter=None):
+        """获取用户收藏的演员列表（分页）"""
+        try:
+            if self.actress_favorites_collection is None or self.actresses_data_collection is None:
+                return None, 0
+            
+            # 获取用户收藏的演员代码列表
+            favorite_codes = []
+            favorites = self.actress_favorites_collection.find({'user_id': user_id})
+            for fav in favorites:
+                favorite_codes.append(fav['actress_code'])
+            
+            if not favorite_codes:
+                return [], 0
+            
+            # 构建查询条件
+            query = {'code': {'$in': favorite_codes}}
+            if cup_size_filter:
+                query['cup_size'] = cup_size_filter
+            
+            # 获取演员详细信息
+            actresses = list(self.actresses_data_collection.find(query)
+                           .skip((page-1)*per_page)
+                           .limit(per_page))
+            
+            # 转换ObjectId为字符串
+            for actress in actresses:
+                if '_id' in actress:
+                    actress['_id'] = str(actress['_id'])
+            
+            total = self.actresses_data_collection.count_documents(query)
+            
+            return actresses, total
+            
+        except Exception as e:
+            app_logger.error(f"获取用户收藏演员列表失败: {e}")
+            return None, 0
+    
+    def get_actress_favorite_count(self, actress_code):
+        """获取演员的收藏数量"""
+        try:
+            if self.actress_favorites_collection is None:
+                return 0
+            
+            count = self.actress_favorites_collection.count_documents({
+                'actress_code': actress_code
+            })
+            
+            return count
+            
+        except Exception as e:
+            app_logger.error(f"获取演员收藏数量失败: {e}")
+            return 0
 # 创建全局数据库管理器实例
 db_manager = DatabaseManager()
 

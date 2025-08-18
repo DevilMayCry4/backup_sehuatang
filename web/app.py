@@ -72,6 +72,9 @@ def api_login_required(f):
                 'redirect': '/login'
             }), 401
         
+        # 设置用户ID到session中，供API使用
+        session['user_id'] = user_info.get('user_id') or str(user_info.get('_id'))
+        
         return f(*args, **kwargs)
     return decorated_function
 

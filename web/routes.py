@@ -1122,3 +1122,265 @@ def register_routes(app, jellyfin_checker, crawler):
         except Exception as e:
             app_logger.error(f"制作商电影列表页面错误: {e}")
             return render_template('error.html', error_message=f"加载制作商 '{studio_name}' 的电影列表失败")
+    
+    @app.route('/genres')
+    @login_required
+    def genres_page():
+        """分类管理页面"""
+        try:
+            # 获取所有分类数据，按分类分组
+            genres_by_category = db_manager.get_genres_by_category()
+            
+            return render_template('genres.html', 
+                                 genres_by_category=genres_by_category)
+                                 
+        except Exception as e:
+            app_logger.error(f"分类管理页面错误: {e}")
+            return render_template('error.html', error_message="加载分类管理页面失败")
+    
+    @app.route('/api/genres/search', methods=['POST'])
+    @api_login_required
+    def search_movies_by_genres_api():
+        """根据分类搜索影片API"""
+        try:
+            data = request.get_json()
+            
+            # 获取搜索参数
+            genre_names = data.get('genre_names', [])  # 选中的分类名称列表
+            search_keyword = data.get('search_keyword', '').strip()
+            is_single_filter = data.get('is_single', '')
+            is_subtitle_filter = data.get('is_subtitle', '')
+            page = int(data.get('page', 1))
+            per_page = int(data.get('per_page', 20))
+            sort_by = data.get('sort_by', 'release_date')
+            
+            # 转换筛选参数
+            is_single = None
+            if is_single_filter == 'true':
+                is_single = True
+            elif is_single_filter == 'false':
+                is_single = False
+                
+            is_subtitle = None
+            if is_subtitle_filter == 'true':
+                is_subtitle = True
+            elif is_subtitle_filter == 'false':
+                is_subtitle = False
+            
+            print(genre_names)
+            
+            # 搜索影片
+            movies, total = db_manager.search_movies_by_genres(
+                names=genre_names if genre_names else None,
+                page=page,
+                per_page=per_page,
+                search_keyword=search_keyword if search_keyword else None,
+                is_single=is_single,
+                is_subtitle=is_subtitle,
+                sort_by=sort_by
+            )
+
+            print(movies)
+
+            if movies is None:
+                movies = []
+                total = 0
+            
+            # 计算分页信息
+            total_pages = (total + per_page - 1) // per_page
+            
+            return jsonify({
+                'success': True,
+                'movies': movies,
+                'pagination': {
+                    'page': page,
+                    'per_page': per_page,
+                    'total': total,
+                    'pages': total_pages,
+                    'has_prev': page > 1,
+                    'has_next': page < total_pages,
+                    'prev_num': page - 1 if page > 1 else None,
+                    'next_num': page + 1 if page < total_pages else None
+                }
+            })
+            
+        except Exception as e:
+            app_logger.error(f"分类搜索影片API错误: {e}")
+            return jsonify({
+                'success': False,
+                'error': '搜索失败，请稍后重试'
+            })
+    
+    @app.route('/api/genres/categories')
+    @api_login_required
+    def get_genres_categories_api():
+        """获取所有分类数据API"""
+        try:
+            genres_by_category = db_manager.get_genres_by_category()
+            
+            return jsonify({
+                'success': True,
+                'genres_by_category': genres_by_category
+            })
+            
+        except Exception as e:
+            app_logger.error(f"获取分类数据API错误: {e}")
+            return jsonify({
+                'success': False,
+                'error': '获取分类数据失败'
+            })
+    
+    # 演员收藏相关API路由
+    @app.route('/api/actress/favorite', methods=['POST'])
+    @api_login_required
+    def add_actress_favorite():
+        """添加演员收藏API"""
+        try:
+            data = request.get_json()
+            actress_code = data.get('actress_code')
+            actress_name = data.get('actress_name')
+            
+            if not actress_code or not actress_name:
+                return jsonify({
+                    'success': False,
+                    'error': '演员代码和姓名不能为空'
+                })
+            
+            # 获取当前用户ID
+            user_id = session.get('user_id') 
+            if not user_id:
+                return jsonify({
+                    'success': False,   
+                    'error': '用户未登录'
+                })
+            
+            # 检查是否已经收藏
+            if db_manager.is_actress_favorited(user_id, actress_code):
+                return jsonify({
+                    'success': False,
+                    'error': '该演员已在收藏列表中'
+                })
+            
+            # 添加收藏
+            result = db_manager.add_actress_favorite(user_id, actress_code, actress_name)
+            
+            return jsonify(result)
+            
+        except Exception as e:
+            app_logger.error(f"添加演员收藏API错误: {e}")
+            return jsonify({
+                'success': False,
+                'error': '添加收藏失败，请稍后重试'
+            })
+    
+    @app.route('/api/actress/favorite', methods=['DELETE'])
+    @api_login_required
+    def remove_actress_favorite():
+        """取消演员收藏API"""
+        try:
+            data = request.get_json()
+            actress_code = data.get('actress_code')
+            
+            if not actress_code:
+                return jsonify({
+                    'success': False,
+                    'error': '演员代码不能为空'
+                })
+            
+            # 获取当前用户ID
+            user_id = session.get('user_id')
+            if not user_id:
+                return jsonify({
+                    'success': False,
+                    'error': '用户未登录'
+                })
+            
+            # 取消收藏
+            result = db_manager.remove_actress_favorite(user_id, actress_code)
+            
+            return jsonify(result)
+            
+        except Exception as e:
+            app_logger.error(f"取消演员收藏API错误: {e}")
+            return jsonify({
+                'success': False,
+                'error': '取消收藏失败，请稍后重试'
+            })
+    
+    @app.route('/api/actress/favorite/check/<actress_code>')
+    @api_login_required
+    def check_actress_favorite(actress_code):
+        """检查演员收藏状态API"""
+        try:
+            # 获取当前用户ID
+            user_id = session.get('user_id')
+            if not user_id:
+                return jsonify({
+                    'success': False,
+                    'error': '用户未登录'
+                })
+            
+            # 检查收藏状态
+            is_favorited = db_manager.is_actress_favorited(user_id, actress_code)
+            
+            return jsonify({
+                'success': True,
+                'is_favorited': is_favorited
+            })
+            
+        except Exception as e:
+            app_logger.error(f"检查演员收藏状态API错误: {e}")
+            return jsonify({
+                'success': False,
+                'error': '检查收藏状态失败'
+            })
+    
+    @app.route('/api/actress/favorites')
+    @api_login_required
+    def get_user_favorite_actresses():
+        """获取用户收藏的演员列表API"""
+        try:
+            # 获取查询参数
+            page = int(request.args.get('page', 1))
+            per_page = int(request.args.get('per_page', 20))
+            cup_size_filter = request.args.get('cup_size', None)
+            
+            # 获取当前用户ID
+            user_id = session.get('user_id')
+            if not user_id:
+                return jsonify({
+                    'success': False,
+                    'error': '用户未登录'
+                })
+            
+            # 获取收藏的演员列表
+            actresses, total = db_manager.get_user_favorite_actresses(
+                user_id, page, per_page, cup_size_filter
+            )
+            
+            if actresses is None:
+                actresses = []
+                total = 0
+            
+            # 计算分页信息
+            total_pages = (total + per_page - 1) // per_page
+            
+            return jsonify({
+                'success': True,
+                'actresses': actresses,
+                'pagination': {
+                    'page': page,
+                    'per_page': per_page,
+                    'total': total,
+                    'total_pages': total_pages,
+                    'has_prev': page > 1,
+                    'has_next': page < total_pages
+                }
+            })
+            
+        except Exception as e:
+            app_logger.error(f"获取用户收藏演员列表API错误: {e}")
+            return jsonify({
+                'success': False,
+                'error': '获取收藏列表失败，请稍后重试'
+            })
