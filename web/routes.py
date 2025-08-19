@@ -202,6 +202,12 @@ def register_routes(app, jellyfin_checker, crawler):
         """订阅管理页面"""
         return render_template('subscriptions.html')
     
+    @app.route('/favorites')
+    @login_required
+    def favorites_page():
+        """收藏页面"""
+        return render_template('favorites.html')
+    
     @app.route('/proxy-image')
     def proxy_image_route():
         """图片代理路由"""
@@ -1449,6 +1455,332 @@ def register_routes(app, jellyfin_checker, crawler):
             
         except Exception as e:
             app_logger.error(f"获取用户收藏演员列表API错误: {e}")
+            return jsonify({
+                'success': False,
+                'error': '获取收藏列表失败，请稍后重试'
+            })
+    
+    # 系列收藏相关API路由
+    @app.route('/api/series/favorite', methods=['POST'])
+    @api_login_required
+    def add_series_favorite():
+        """添加系列收藏API"""
+        try:
+            data = request.get_json()
+            series_name = data.get('series_name')
+            cover_image = data.get('cover_image')
+            
+            if not series_name:
+                return jsonify({
+                    'success': False,
+                    'error': '系列名称不能为空'
+                })
+            
+            # 获取当前用户ID
+            user_id = session.get('user_id') 
+            if not user_id:
+                return jsonify({
+                    'success': False,   
+                    'error': '用户未登录'
+                })
+            
+            # 检查是否已经收藏
+            if db_manager.is_series_favorited(user_id, series_name):
+                return jsonify({
+                    'success': False,
+                    'error': '该系列已在收藏列表中'
+                })
+            
+            # 添加收藏
+            result = db_manager.add_series_favorite(user_id, series_name, cover_image)
+            
+            if result:
+                return jsonify({
+                    'success': True,
+                    'message': '收藏成功'
+                })
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': '收藏失败'
+                })
+            
+        except Exception as e:
+            app_logger.error(f"添加系列收藏API错误: {e}")
+            return jsonify({
+                'success': False,
+                'error': '添加收藏失败，请稍后重试'
+            })
+    
+    @app.route('/api/series/favorite', methods=['DELETE'])
+    @api_login_required
+    def remove_series_favorite():
+        """取消系列收藏API"""
+        try:
+            data = request.get_json()
+            series_name = data.get('series_name')
+            
+            if not series_name:
+                return jsonify({
+                    'success': False,
+                    'error': '系列名称不能为空'
+                })
+            
+            # 获取当前用户ID
+            user_id = session.get('user_id')
+            if not user_id:
+                return jsonify({
+                    'success': False,
+                    'error': '用户未登录'
+                })
+            
+            # 取消收藏
+            result = db_manager.remove_series_favorite(user_id, series_name)
+            
+            if result:
+                return jsonify({
+                    'success': True,
+                    'message': '取消收藏成功'
+                })
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': '取消收藏失败'
+                })
+            
+        except Exception as e:
+            app_logger.error(f"取消系列收藏API错误: {e}")
+            return jsonify({
+                'success': False,
+                'error': '取消收藏失败，请稍后重试'
+            })
+    
+    @app.route('/api/series/favorite/check/<series_name>')
+    @api_login_required
+    def check_series_favorite(series_name):
+        """检查系列收藏状态API"""
+        try:
+            # 获取当前用户ID
+            user_id = session.get('user_id')
+            if not user_id:
+                return jsonify({
+                    'success': False,
+                    'error': '用户未登录'
+                })
+            
+            # 检查收藏状态
+            is_favorited = db_manager.is_series_favorited(user_id, series_name)
+            
+            return jsonify({
+                'success': True,
+                'is_favorited': is_favorited
+            })
+            
+        except Exception as e:
+            app_logger.error(f"检查系列收藏状态API错误: {e}")
+            return jsonify({
+                'success': False,
+                'error': '检查收藏状态失败'
+            })
+    
+    @app.route('/api/series/favorites')
+    @api_login_required
+    def get_user_favorite_series():
+        """获取用户收藏的系列列表API"""
+        try:
+            # 获取查询参数
+            page = int(request.args.get('page', 1))
+            per_page = int(request.args.get('per_page', 20))
+            
+            # 获取当前用户ID
+            user_id = session.get('user_id')
+            if not user_id:
+                return jsonify({
+                    'success': False,
+                    'error': '用户未登录'
+                })
+            
+            # 获取收藏的系列列表
+            result = db_manager.get_user_favorite_series(user_id, page, per_page)
+            
+            return jsonify({
+                'success': True,
+                'series': result['series'],
+                'pagination': {
+                    'page': result['page'],
+                    'per_page': result['per_page'],
+                    'total': result['total'],
+                    'total_pages': result['total_pages'],
+                    'has_prev': result['page'] > 1,
+                    'has_next': result['page'] < result['total_pages']
+                }
+            })
+            
+        except Exception as e:
+            app_logger.error(f"获取用户收藏系列列表API错误: {e}")
+            return jsonify({
+                'success': False,
+                'error': '获取收藏列表失败，请稍后重试'
+            })
+    
+    # 厂商收藏相关API路由
+    @app.route('/api/studio/favorite', methods=['POST'])
+    @api_login_required
+    def add_studio_favorite():
+        """添加厂商收藏API"""
+        try:
+            data = request.get_json()
+            studio_name = data.get('studio_name')
+            cover_image = data.get('cover_image')
+            
+            if not studio_name:
+                return jsonify({
+                    'success': False,
+                    'error': '厂商名称不能为空'
+                })
+            
+            # 获取当前用户ID
+            user_id = session.get('user_id') 
+            if not user_id:
+                return jsonify({
+                    'success': False,   
+                    'error': '用户未登录'
+                })
+            
+            # 检查是否已经收藏
+            if db_manager.is_studio_favorited(user_id, studio_name):
+                return jsonify({
+                    'success': False,
+                    'error': '该厂商已在收藏列表中'
+                })
+            
+            # 添加收藏
+            result = db_manager.add_studio_favorite(user_id, studio_name, cover_image)
+            
+            if result:
+                return jsonify({
+                    'success': True,
+                    'message': '收藏成功'
+                })
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': '收藏失败'
+                })
+            
+        except Exception as e:
+            app_logger.error(f"添加厂商收藏API错误: {e}")
+            return jsonify({
+                'success': False,
+                'error': '添加收藏失败，请稍后重试'
+            })
+    
+    @app.route('/api/studio/favorite', methods=['DELETE'])
+    @api_login_required
+    def remove_studio_favorite():
+        """取消厂商收藏API"""
+        try:
+            data = request.get_json()
+            studio_name = data.get('studio_name')
+            
+            if not studio_name:
+                return jsonify({
+                    'success': False,
+                    'error': '厂商名称不能为空'
+                })
+            
+            # 获取当前用户ID
+            user_id = session.get('user_id')
+            if not user_id:
+                return jsonify({
+                    'success': False,
+                    'error': '用户未登录'
+                })
+            
+            # 取消收藏
+            result = db_manager.remove_studio_favorite(user_id, studio_name)
+            
+            if result:
+                return jsonify({
+                    'success': True,
+                    'message': '取消收藏成功'
+                })
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': '取消收藏失败'
+                })
+            
+        except Exception as e:
+            app_logger.error(f"取消厂商收藏API错误: {e}")
+            return jsonify({
+                'success': False,
+                'error': '取消收藏失败，请稍后重试'
+            })
+    
+    @app.route('/api/studio/favorite/check/<studio_name>')
+    @api_login_required
+    def check_studio_favorite(studio_name):
+        """检查厂商收藏状态API"""
+        try:
+            # 获取当前用户ID
+            user_id = session.get('user_id')
+            if not user_id:
+                return jsonify({
+                    'success': False,
+                    'error': '用户未登录'
+                })
+            
+            # 检查收藏状态
+            is_favorited = db_manager.is_studio_favorited(user_id, studio_name)
+            
+            return jsonify({
+                'success': True,
+                'is_favorited': is_favorited
+            })
+            
+        except Exception as e:
+            app_logger.error(f"检查厂商收藏状态API错误: {e}")
+            return jsonify({
+                'success': False,
+                'error': '检查收藏状态失败'
+            })
+    
+    @app.route('/api/studio/favorites')
+    @api_login_required
+    def get_user_favorite_studios():
+        """获取用户收藏的厂商列表API"""
+        try:
+            # 获取查询参数
+            page = int(request.args.get('page', 1))
+            per_page = int(request.args.get('per_page', 20))
+            
+            # 获取当前用户ID
+            user_id = session.get('user_id')
+            if not user_id:
+                return jsonify({
+                    'success': False,
+                    'error': '用户未登录'
+                })
+            
+            # 获取收藏的厂商列表
+            result = db_manager.get_user_favorite_studios(user_id, page, per_page)
+            
+            return jsonify({
+                'success': True,
+                'studios': result['studios'],
+                'pagination': {
+                    'page': result['page'],
+                    'per_page': result['per_page'],
+                    'total': result['total'],
+                    'total_pages': result['total_pages'],
+                    'has_prev': result['page'] > 1,
+                    'has_next': result['page'] < result['total_pages']
+                }
+            })
+            
+        except Exception as e:
+            app_logger.error(f"获取用户收藏厂商列表API错误: {e}")
             return jsonify({
                 'success': False,
                 'error': '获取收藏列表失败，请稍后重试'

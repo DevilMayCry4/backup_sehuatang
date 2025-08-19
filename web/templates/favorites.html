@@ -1,0 +1,378 @@
+{% extends "base.html" %}
+{% from "macros/movie_display.html" import get_movie_cover_url %}
+
+{% block title %}我的收藏{% endblock %}
+
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/movie_display.css') }}">
+<style>
+.favorite-section {
+    margin-bottom: 2rem;
+}
+.favorite-item {
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    transition: all 0.3s ease;
+}
+.favorite-item:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    transform: translateY(-2px);
+}
+.favorite-cover {
+    width: 80px;
+    height: 120px;
+    object-fit: cover;
+    border-radius: 4px;
+}
+.favorite-info {
+    flex: 1;
+}
+.remove-btn {
+    opacity: 0.7;
+    transition: opacity 0.3s ease;
+}
+.remove-btn:hover {
+    opacity: 1;
+}
+.nav-tabs .nav-link {
+    color: #6c757d;
+}
+.nav-tabs .nav-link.active {
+    color: #495057;
+    background-color: #fff;
+    border-color: #dee2e6 #dee2e6 #fff;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- 面包屑导航 -->
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/movies">电影列表</a></li>
+            <li class="breadcrumb-item active" aria-current="page">我的收藏</li>
+        </ol>
+    </nav>
+    
+    <h2 class="mb-4"><i class="bi bi-heart-fill text-danger"></i> 我的收藏</h2>
+    
+    <!-- 标签页导航 -->
+    <ul class="nav nav-tabs" id="favoriteTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="actresses-tab" data-bs-toggle="tab" data-bs-target="#actresses" type="button" role="tab">
+                <i class="bi bi-person-fill"></i> 演员 <span class="badge bg-primary ms-1" id="actressCount">0</span>
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="series-tab" data-bs-toggle="tab" data-bs-target="#series" type="button" role="tab">
+                <i class="bi bi-collection"></i> 系列 <span class="badge bg-primary ms-1" id="seriesCount">0</span>
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="studios-tab" data-bs-toggle="tab" data-bs-target="#studios" type="button" role="tab">
+                <i class="bi bi-building"></i> 厂商 <span class="badge bg-primary ms-1" id="studioCount">0</span>
+            </button>
+        </li>
+    </ul>
+    
+    <!-- 标签页内容 -->
+    <div class="tab-content" id="favoriteTabContent">
+        <!-- 演员收藏 -->
+        <div class="tab-pane fade show active" id="actresses" role="tabpanel">
+            <div class="favorite-section">
+                <div id="actressList" class="mt-3">
+                    <div class="text-center py-4">
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden">加载中...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 系列收藏 -->
+        <div class="tab-pane fade" id="series" role="tabpanel">
+            <div class="favorite-section">
+                <div id="seriesList" class="mt-3">
+                    <div class="text-center py-4">
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden">加载中...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 厂商收藏 -->
+        <div class="tab-pane fade" id="studios" role="tabpanel">
+            <div class="favorite-section">
+                <div id="studiosList" class="mt-3">
+                    <div class="text-center py-4">
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden">加载中...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// 页面加载时获取所有收藏数据
+document.addEventListener('DOMContentLoaded', function() {
+    loadActressFavorites();
+    
+    // 标签页切换事件
+    document.getElementById('series-tab').addEventListener('shown.bs.tab', function() {
+        loadSeriesFavorites();
+    });
+    
+    document.getElementById('studios-tab').addEventListener('shown.bs.tab', function() {
+        loadStudioFavorites();
+    });
+});
+
+// 加载演员收藏
+function loadActressFavorites() {
+    fetch('/api/actress/favorites')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                displayActresses(data.favorites);
+                document.getElementById('actressCount').textContent = data.favorites.length;
+            } else {
+                document.getElementById('actressList').innerHTML = '<div class="alert alert-warning">加载失败</div>';
+            }
+        })
+        .catch(error => {
+            console.error('加载演员收藏失败:', error);
+            document.getElementById('actressList').innerHTML = '<div class="alert alert-danger">网络错误</div>';
+        });
+}
+
+// 加载系列收藏
+function loadSeriesFavorites() {
+    fetch('/api/series/favorites')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                displaySeries(data.favorites);
+                document.getElementById('seriesCount').textContent = data.favorites.length;
+            } else {
+                document.getElementById('seriesList').innerHTML = '<div class="alert alert-warning">加载失败</div>';
+            }
+        })
+        .catch(error => {
+            console.error('加载系列收藏失败:', error);
+            document.getElementById('seriesList').innerHTML = '<div class="alert alert-danger">网络错误</div>';
+        });
+}
+
+// 加载厂商收藏
+function loadStudioFavorites() {
+    fetch('/api/studio/favorites')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                displayStudios(data.favorites);
+                document.getElementById('studioCount').textContent = data.favorites.length;
+            } else {
+                document.getElementById('studiosList').innerHTML = '<div class="alert alert-warning">加载失败</div>';
+            }
+        })
+        .catch(error => {
+            console.error('加载厂商收藏失败:', error);
+            document.getElementById('studiosList').innerHTML = '<div class="alert alert-danger">网络错误</div>';
+        });
+}
+
+// 显示演员列表
+function displayActresses(actresses) {
+    const container = document.getElementById('actressList');
+    if (actresses.length === 0) {
+        container.innerHTML = '<div class="alert alert-info"><i class="bi bi-info-circle"></i> 暂无收藏的演员</div>';
+        return;
+    }
+    
+    const html = actresses.map(actress => `
+        <div class="favorite-item d-flex align-items-center">
+            <img src="${actress.cover_url || '/static/icon/default-actress.png'}" 
+                 alt="${actress.actress_code}" 
+                 class="favorite-cover me-3"
+                 onerror="this.src='/static/icon/default-actress.png'">
+            <div class="favorite-info">
+                <h5 class="mb-1">
+                    <a href="/actress/${encodeURIComponent(actress.actress_code)}" class="text-decoration-none">
+                        ${actress.actress_code}
+                    </a>
+                </h5>
+                <small class="text-muted">收藏时间: ${new Date(actress.created_at).toLocaleString()}</small>
+            </div>
+            <button class="btn btn-outline-danger btn-sm remove-btn" 
+                    onclick="removeActressFavorite('${actress.actress_code}')">
+                <i class="bi bi-trash"></i> 取消收藏
+            </button>
+        </div>
+    `).join('');
+    
+    container.innerHTML = html;
+}
+
+// 显示系列列表
+function displaySeries(series) {
+    const container = document.getElementById('seriesList');
+    if (series.length === 0) {
+        container.innerHTML = '<div class="alert alert-info"><i class="bi bi-info-circle"></i> 暂无收藏的系列</div>';
+        return;
+    }
+    
+    const html = series.map(item => `
+        <div class="favorite-item d-flex align-items-center">
+            <img src="${item.cover_url || '/static/icon/default-movie.png'}" 
+                 alt="${item.series_name}" 
+                 class="favorite-cover me-3"
+                 onerror="this.src='/static/icon/default-movie.png'">
+            <div class="favorite-info">
+                <h5 class="mb-1">
+                    <a href="/series/${encodeURIComponent(item.series_name)}" class="text-decoration-none">
+                        ${item.series_name}
+                    </a>
+                </h5>
+                <small class="text-muted">收藏时间: ${new Date(item.created_at).toLocaleString()}</small>
+            </div>
+            <button class="btn btn-outline-danger btn-sm remove-btn" 
+                    onclick="removeSeriesFavorite('${item.series_name}')">
+                <i class="bi bi-trash"></i> 取消收藏
+            </button>
+        </div>
+    `).join('');
+    
+    container.innerHTML = html;
+}
+
+// 显示厂商列表
+function displayStudios(studios) {
+    const container = document.getElementById('studiosList');
+    if (studios.length === 0) {
+        container.innerHTML = '<div class="alert alert-info"><i class="bi bi-info-circle"></i> 暂无收藏的厂商</div>';
+        return;
+    }
+    
+    const html = studios.map(item => `
+        <div class="favorite-item d-flex align-items-center">
+            <img src="${item.cover_url || '/static/icon/default-movie.png'}" 
+                 alt="${item.studio_name}" 
+                 class="favorite-cover me-3"
+                 onerror="this.src='/static/icon/default-movie.png'">
+            <div class="favorite-info">
+                <h5 class="mb-1">
+                    <a href="/studio/${encodeURIComponent(item.studio_name)}" class="text-decoration-none">
+                        ${item.studio_name}
+                    </a>
+                </h5>
+                <small class="text-muted">收藏时间: ${new Date(item.created_at).toLocaleString()}</small>
+            </div>
+            <button class="btn btn-outline-danger btn-sm remove-btn" 
+                    onclick="removeStudioFavorite('${item.studio_name}')">
+                <i class="bi bi-trash"></i> 取消收藏
+            </button>
+        </div>
+    `).join('');
+    
+    container.innerHTML = html;
+}
+
+// 取消演员收藏
+function removeActressFavorite(actressCode) {
+    if (!confirm('确定要取消收藏这个演员吗？')) return;
+    
+    fetch('/api/actress/favorite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'remove', actress_code: actressCode })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            loadActressFavorites();
+            showToast('已取消收藏');
+        } else {
+            showToast(data.error || '操作失败', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('取消收藏失败:', error);
+        showToast('网络错误', 'error');
+    });
+}
+
+// 取消系列收藏
+function removeSeriesFavorite(seriesName) {
+    if (!confirm('确定要取消收藏这个系列吗？')) return;
+    
+    fetch('/api/series/favorite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'remove', series_name: seriesName })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            loadSeriesFavorites();
+            showToast('已取消收藏');
+        } else {
+            showToast(data.error || '操作失败', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('取消收藏失败:', error);
+        showToast('网络错误', 'error');
+    });
+}
+
+// 取消厂商收藏
+function removeStudioFavorite(studioName) {
+    if (!confirm('确定要取消收藏这个厂商吗？')) return;
+    
+    fetch('/api/studio/favorite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'remove', studio_name: studioName })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            loadStudioFavorites();
+            showToast('已取消收藏');
+        } else {
+            showToast(data.error || '操作失败', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('取消收藏失败:', error);
+        showToast('网络错误', 'error');
+    });
+}
+
+// 显示提示消息
+function showToast(message, type = 'success') {
+    const toast = document.createElement('div');
+    toast.className = `alert alert-${type === 'error' ? 'danger' : 'success'} position-fixed`;
+    toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 200px;';
+    toast.textContent = message;
+    
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        if (toast.parentNode) {
+            toast.parentNode.removeChild(toast);
+        }
+    }, 3000);
+}
+</script>
+{% endblock %}

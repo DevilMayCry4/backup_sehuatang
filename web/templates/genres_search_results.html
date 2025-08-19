@@ -51,7 +51,8 @@
         
         <!-- 分页 -->
         {% if pagination.pages > 1 %}
-            {{ render_pagination(pagination, 'genres_search_results', {
+            {{ render_pagination(pagination.page, pagination.total, pagination.per_page, url_for, {
+                'genres_search_results': True,
                 'genres': genre_names,
                 'search': search_keyword,
                 'is_single': is_single_filter,

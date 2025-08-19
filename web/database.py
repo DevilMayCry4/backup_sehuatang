@@ -35,6 +35,10 @@ class DatabaseManager:
         self.genres_collection = None
         # 演员收藏集合
         self.actress_favorites_collection = None
+        # 系列收藏集合
+        self.series_favorites_collection = None
+        # 厂商收藏集合
+        self.studio_favorites_collection = None
         
     def init_mongodb(self):
         """初始化MongoDB连接"""
@@ -64,6 +68,12 @@ class DatabaseManager:
             
             # 演员收藏集合
             self.actress_favorites_collection = self.mongo_db['actress_favorites']
+            
+            # 系列收藏集合
+            self.series_favorites_collection = self.mongo_db['series_favorites']
+            
+            # 厂商收藏集合
+            self.studio_favorites_collection = self.mongo_db['studio_favorites']
             
             # 创建默认管理员用户（如果不存在）
             self._create_default_admin()
@@ -1187,9 +1197,6 @@ class DatabaseManager:
             movies = list(self.javbus_data_collection.find(
                 final_query
             ).sort(sort_field, sort_order).skip((page-1)*per_page).limit(per_page))
-            movies = list(self.javbus_data_collection.find(
-                final_query
-            ).sort(sort_field, sort_order).skip((page-1)*per_page).limit(per_page))
             
             # 转换 ObjectId 为字符串以支持 JSON 序列化
             for movie in movies:
@@ -1352,6 +1359,224 @@ class DatabaseManager:
         except Exception as e:
             app_logger.error(f"获取演员收藏数量失败: {e}")
             return 0
+    
+    # 系列收藏相关函数
+    def add_series_favorite(self, user_id, series_name, cover_image=None):
+        """添加系列收藏"""
+        try:
+            if self.series_favorites_collection is None:
+                app_logger.error("系列收藏集合未初始化")
+                return False
+            
+            # 检查是否已经收藏
+            existing = self.series_favorites_collection.find_one({
+                'user_id': user_id,
+                'series_name': series_name
+            })
+            
+            if existing:
+                app_logger.info(f"用户 {user_id} 已收藏系列 {series_name}")
+                return True
+            
+            favorite_doc = {
+                'user_id': user_id,
+                'series_name': series_name,
+                'cover_image': cover_image,
+                'created_at': datetime.now()
+            }
+            
+            result = self.series_favorites_collection.insert_one(favorite_doc)
+            app_logger.info(f"用户 {user_id} 收藏系列 {series_name} 成功")
+            return True
+            
+        except Exception as e:
+            app_logger.error(f"添加系列收藏失败: {e}")
+            return False
+    
+    def remove_series_favorite(self, user_id, series_name):
+        """取消系列收藏"""
+        try:
+            if self.series_favorites_collection is None:
+                app_logger.error("系列收藏集合未初始化")
+                return False
+            
+            result = self.series_favorites_collection.delete_one({
+                'user_id': user_id,
+                'series_name': series_name
+            })
+            
+            if result.deleted_count > 0:
+                app_logger.info(f"用户 {user_id} 取消收藏系列 {series_name} 成功")
+                return True
+            else:
+                app_logger.warning(f"用户 {user_id} 未收藏系列 {series_name}")
+                return False
+                
+        except Exception as e:
+            app_logger.error(f"取消系列收藏失败: {e}")
+            return False
+    
+    def is_series_favorited(self, user_id, series_name):
+        """检查系列是否已收藏"""
+        try:
+            if self.series_favorites_collection is None:
+                return False
+            
+            result = self.series_favorites_collection.find_one({
+                'user_id': user_id,
+                'series_name': series_name
+            })
+            
+            return result is not None
+            
+        except Exception as e:
+            app_logger.error(f"检查系列收藏状态失败: {e}")
+            return False
+    
+    def get_user_favorite_series(self, user_id, page=1, per_page=20):
+        """获取用户收藏的系列列表"""
+        try:
+            if self.series_favorites_collection is None:
+                return {'series': [], 'total': 0, 'page': page, 'per_page': per_page, 'total_pages': 0}
+            
+            skip = (page - 1) * per_page
+            
+            # 获取总数
+            total = self.series_favorites_collection.count_documents({'user_id': user_id})
+            
+            # 获取分页数据
+            cursor = self.series_favorites_collection.find(
+                {'user_id': user_id}
+            ).sort('created_at', -1).skip(skip).limit(per_page)
+            
+            series_list = list(cursor)
+            
+            # 转换ObjectId为字符串
+            for series in series_list:
+                series['_id'] = str(series['_id'])
+            
+            total_pages = (total + per_page - 1) // per_page
+            
+            return {
+                'series': series_list,
+                'total': total,
+                'page': page,
+                'per_page': per_page,
+                'total_pages': total_pages
+            }
+            
+        except Exception as e:
+            app_logger.error(f"获取用户收藏系列失败: {e}")
+            return {'series': [], 'total': 0, 'page': page, 'per_page': per_page, 'total_pages': 0}
+    
+    # 厂商收藏相关函数
+    def add_studio_favorite(self, user_id, studio_name, cover_image=None):
+        """添加厂商收藏"""
+        try:
+            if self.studio_favorites_collection is None:
+                app_logger.error("厂商收藏集合未初始化")
+                return False
+            
+            # 检查是否已经收藏
+            existing = self.studio_favorites_collection.find_one({
+                'user_id': user_id,
+                'studio_name': studio_name
+            })
+            
+            if existing:
+                app_logger.info(f"用户 {user_id} 已收藏厂商 {studio_name}")
+                return True
+            
+            favorite_doc = {
+                'user_id': user_id,
+                'studio_name': studio_name,
+                'cover_image': cover_image,
+                'created_at': datetime.now()
+            }
+            
+            result = self.studio_favorites_collection.insert_one(favorite_doc)
+            app_logger.info(f"用户 {user_id} 收藏厂商 {studio_name} 成功")
+            return True
+            
+        except Exception as e:
+            app_logger.error(f"添加厂商收藏失败: {e}")
+            return False
+    
+    def remove_studio_favorite(self, user_id, studio_name):
+        """取消厂商收藏"""
+        try:
+            if self.studio_favorites_collection is None:
+                app_logger.error("厂商收藏集合未初始化")
+                return False
+            
+            result = self.studio_favorites_collection.delete_one({
+                'user_id': user_id,
+                'studio_name': studio_name
+            })
+            
+            if result.deleted_count > 0:
+                app_logger.info(f"用户 {user_id} 取消收藏厂商 {studio_name} 成功")
+                return True
+            else:
+                app_logger.warning(f"用户 {user_id} 未收藏厂商 {studio_name}")
+                return False
+                
+        except Exception as e:
+            app_logger.error(f"取消厂商收藏失败: {e}")
+            return False
+    
+    def is_studio_favorited(self, user_id, studio_name):
+        """检查厂商是否已收藏"""
+        try:
+            if self.studio_favorites_collection is None:
+                return False
+            
+            result = self.studio_favorites_collection.find_one({
+                'user_id': user_id,
+                'studio_name': studio_name
+            })
+            
+            return result is not None
+            
+        except Exception as e:
+            app_logger.error(f"检查厂商收藏状态失败: {e}")
+            return False
+    
+    def get_user_favorite_studios(self, user_id, page=1, per_page=20):
+        """获取用户收藏的厂商列表"""
+        try:
+            if self.studio_favorites_collection is None:
+                return {'studios': [], 'total': 0, 'page': page, 'per_page': per_page, 'total_pages': 0}
+            
+            skip = (page - 1) * per_page
+            
+            # 获取总数
+            total = self.studio_favorites_collection.count_documents({'user_id': user_id})
+            
+            # 获取分页数据
+            cursor = self.studio_favorites_collection.find(
+                {'user_id': user_id}
+            ).sort('created_at', -1).skip(skip).limit(per_page)
+            
+            studios_list = list(cursor)
+            
+            # 转换ObjectId为字符串
+            for studio in studios_list:
+                studio['_id'] = str(studio['_id'])
+            
+            total_pages = (total + per_page - 1) // per_page
+            
+            return {
+                'studios': studios_list,
+                'total': total,
+                'page': page,
+                'per_page': per_page,
+                'total_pages': total_pages
+            }
+            
+        except Exception as e:
+            app_logger.error(f"获取用户收藏厂商失败: {e}")
+            return {'studios': [], 'total': 0, 'page': page, 'per_page': per_page, 'total_pages': 0}
 # 创建全局数据库管理器实例
 db_manager = DatabaseManager()
 
