@@ -1138,6 +1138,75 @@ def register_routes(app, jellyfin_checker, crawler):
             app_logger.error(f"分类管理页面错误: {e}")
             return render_template('error.html', error_message="加载分类管理页面失败")
     
+    @app.route('/genres/search')
+    @login_required
+    def genres_search_results():
+        """分类搜索结果页面"""
+        try:
+            # 获取查询参数
+            page = int(request.args.get('page', 1))
+            per_page = 20
+            genre_names = request.args.getlist('genres')  # 支持多个分类
+            search_keyword = request.args.get('search', '').strip()
+            is_single_filter = request.args.get('is_single', '')
+            is_subtitle_filter = request.args.get('is_subtitle', '')
+            sort_by = request.args.get('sort_by', 'release_date')
+            
+            # 转换筛选参数
+            is_single = None
+            if is_single_filter == 'true':
+                is_single = True
+            elif is_single_filter == 'false':
+                is_single = False
+                
+            is_subtitle = None
+            if is_subtitle_filter == 'true':
+                is_subtitle = True
+            elif is_subtitle_filter == 'false':
+                is_subtitle = False
+            
+            # 搜索影片
+            movies, total = db_manager.search_movies_by_genres(
+                names=genre_names if genre_names else None,
+                page=page,
+                per_page=per_page,
+                search_keyword=search_keyword if search_keyword else None,
+                is_single=is_single,
+                is_subtitle=is_subtitle,
+                sort_by=sort_by
+            )
+            
+            if movies is None:
+                movies = []
+                total = 0
+            
+            # 计算分页信息
+            total_pages = (total + per_page - 1) // per_page
+            
+            pagination = {
+                'page': page,
+                'per_page': per_page,
+                'total': total,
+                'pages': total_pages,
+                'has_prev': page > 1,
+                'has_next': page < total_pages,
+                'prev_num': page - 1 if page > 1 else None,
+                'next_num': page + 1 if page < total_pages else None
+            }
+            
+            return render_template('genres_search_results.html',
+                                movies=movies,
+                                pagination=pagination,
+                                genre_names=genre_names,
+                                search_keyword=search_keyword,
+                                is_single_filter=is_single_filter,
+                                is_subtitle_filter=is_subtitle_filter,
+                                sort_by=sort_by)
+                                
+        except Exception as e:
+            app_logger.error(f"分类搜索结果页面错误: {e}")
+            return render_template('error.html', error_message="加载搜索结果失败")
+    
     @app.route('/api/genres/search', methods=['POST'])
     @api_login_required
     def search_movies_by_genres_api():
@@ -1344,7 +1413,7 @@ def register_routes(app, jellyfin_checker, crawler):
             page = int(request.args.get('page', 1))
             per_page = int(request.args.get('per_page', 20))
             cup_size_filter = request.args.get('cup_size', None)
-            
+            print(cup_size_filter)
             # 获取当前用户ID
             user_id = session.get('user_id')
             if not user_id:

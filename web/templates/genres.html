@@ -342,74 +342,106 @@ function updateSelectedCount() {
 
 // 执行搜索
 function performSearch(page = 1) {
-    if (isLoading) return;
-    
     const searchKeyword = searchKeywordInput.value.trim();
     const genreNames = selectedGenres.map(genre => genre.name);
-    
     // 如果没有分类选择且没有搜索关键词，显示提示
     if (genreNames.length === 0 && !searchKeyword) {
         showInitialTip();
         return;
     }
     
-    isLoading = true;
-    currentPage = page;
-    
-    // 如果不是第一页，滚动到搜索结果区域
-    if (page > 1) {
-        scrollToResults();
-    }
-    
-    // 显示加载状态
-    showLoading();
-    
     // 获取筛选条件
     const isSingle = document.querySelector('input[name="is_single"]:checked').value;
     const isSubtitle = document.querySelector('input[name="is_subtitle"]:checked').value;
     const sortBy = sortBySelect.value;
     
-    // 构建请求数据
-    const requestData = {
-        names: genreNames,  // 修改参数名以匹配后端
-        search_keyword: searchKeyword,
-        is_single: isSingle,
-        is_subtitle: isSubtitle,
-        sort_by: sortBy,
-        page: page,
-        per_page: 20
-    };
+    // 构建URL参数
+    const params = new URLSearchParams();
     
-    // 发送搜索请求
-    fetch('/api/genres/search', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestData)
-    })
-    .then(response => response.json())
-    .then(data => {
-        isLoading = false;
-        
-        if (data.success) {
-            currentMovies = data.movies;
-            currentPagination = data.pagination;
-            displaySearchResults(data.movies, data.pagination);
-            
-            // 如果是分页跳转，滚动到搜索结果区域
-            if (page > 1) {
-                setTimeout(() => scrollToResults(), 100);
-            }
-        } else {
-            showError(data.error || '搜索失败，请稍后重试');
-        }
-    })
-    .catch(error => {
-        isLoading = false;
-        console.error('搜索错误:', error);
-        showError('网络错误，请检查连接后重试');
+    // 添加分类参数
+    genreNames.forEach(name => {
+        params.append('genres', name);
     });
+    
+    // 添加其他参数
+    if (searchKeyword) {
+        params.append('search', searchKeyword);
+    }
+    if (isSingle) {
+        params.append('is_single', isSingle);
+    }
+    if (isSubtitle) {
+        params.append('is_subtitle', isSubtitle);
+    }
+    if (sortBy !== 'release_date') {
+        params.append('sort_by', sortBy);
+    }
+    if (page > 1) {
+        params.append('page', page);
+    }
+    
+    // 跳转到搜索结果页面
+    const searchUrl = '/genres/search?' + params.toString();
+    window.location.href = searchUrl;
+}
+
+isLoading = true;
+currentPage = page;
+
+// 如果不是第一页，滚动到搜索结果区域
+if (page > 1) {
+    scrollToResults();
+}
+
+// 显示加载状态
+showLoading();
+
+// 获取筛选条件
+const isSingle = document.querySelector('input[name="is_single"]:checked').value;
+const isSubtitle = document.querySelector('input[name="is_subtitle"]:checked').value;
+const sortBy = sortBySelect.value;
+
+// 构建请求数据
+const requestData = {
+    names: genreNames,  // 修改参数名以匹配后端
+    search_keyword: searchKeyword,
+    is_single: isSingle,
+    is_subtitle: isSubtitle,
+    sort_by: sortBy,
+    page: page,
+    per_page: 20
+};
+
+// 发送搜索请求
+fetch('/api/genres/search', {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(requestData)
+})
+.then(response => response.json())
+.then(data => {
+    isLoading = false;
+    
+    if (data.success) {
+        currentMovies = data.movies;
+        currentPagination = data.pagination;
+        displaySearchResults(data.movies, data.pagination);
+        
+        // 如果是分页跳转，滚动到搜索结果区域
+        if (page > 1) {
+            setTimeout(() => scrollToResults(), 100);
+        }
+    } else {
+        showError(data.error || '搜索失败，请稍后重试');
+    }
+})
+.catch(error => {
+    isLoading = false;
+    console.error('搜索错误:', error);
+    showError('网络错误，请检查连接后重试');
+});
 }
 
 // 页码跳转
@@ -684,7 +716,6 @@ function clearSearch() {
     document.getElementById('single_all').checked = true;
     document.getElementById('subtitle_all').checked = true;
     sortBySelect.value = 'release_date';
-    
     if (selectedGenres.length === 0) {
         showInitialTip();
     } else {

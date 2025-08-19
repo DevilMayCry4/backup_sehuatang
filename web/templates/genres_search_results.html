@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% from 'macros/movie_display.html' import render_movie_grid, render_pagination %}
+
+{% block title %}分类搜索结果{% endblock %}
+
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/movie_display.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- 返回按钮和搜索条件 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <a href="{{ url_for('genres_page') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> 返回分类管理
+            </a>
+        </div>
+        <h2 class="mb-0">搜索结果</h2>
+        <div></div>
+    </div>
+    
+    <!-- 搜索条件显示 -->
+    <div class="alert alert-info mb-4">
+        <i class="bi bi-info-circle"></i> 
+        <strong>搜索条件：</strong>
+        {% if genre_names %}
+            分类：{{ genre_names | join('、') }}
+        {% endif %}
+        {% if search_keyword %}
+            {% if genre_names %}，{% endif %}关键词：{{ search_keyword }}
+        {% endif %}
+        {% if is_single_filter == 'true' %}
+            ，单体：是
+        {% elif is_single_filter == 'false' %}
+            ，单体：否
+        {% endif %}
+        {% if is_subtitle_filter == 'true' %}
+            ，字幕：有
+        {% elif is_subtitle_filter == 'false' %}
+            ，字幕：无
+        {% endif %}
+        <br>
+        <strong>共找到 {{ pagination.total }} 部影片</strong>
+    </div>
+    
+    <!-- 搜索结果 -->
+    {% if movies %}
+        {{ render_movie_grid(movies) }}
+        
+        <!-- 分页 -->
+        {% if pagination.pages > 1 %}
+            {{ render_pagination(pagination, 'genres_search_results', {
+                'genres': genre_names,
+                'search': search_keyword,
+                'is_single': is_single_filter,
+                'is_subtitle': is_subtitle_filter,
+                'sort_by': sort_by
+            }) }}
+        {% endif %}
+    {% else %}
+        <div class="alert alert-warning text-center">
+            <i class="bi bi-exclamation-triangle"></i> 
+            没有找到符合条件的影片
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

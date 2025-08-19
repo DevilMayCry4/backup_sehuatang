@@ -89,7 +89,7 @@
                             data-actress-code="{{ actress.code }}" 
                             data-actress-name="{{ actress.name }}"
                             title="收藏演员">
-                        <i class="fas fa-heart"></i>
+                        <img src="{{ url_for('static', filename='icon/favorite.png') }}" alt="收藏" class="favorite-icon">
                     </button>
                 </div>
                 
@@ -130,9 +130,9 @@
     <!-- 空状态提示 -->
     <div id="empty-state" class="text-center" style="display: none;">
         <div class="py-5">
-            <i class="fas fa-heart fa-3x text-muted mb-3"></i>
+            <img src="{{ url_for('static', filename='icon/favorite.png') }}" alt="收藏" class="mb-3" style="width: 48px; height: 48px; opacity: 0.5;">
             <h5 class="text-muted">还没有收藏任何演员</h5>
-            <p class="text-muted">点击演员卡片上的心形按钮来收藏喜欢的演员</p>
+            <p class="text-muted">点击演员卡片上的收藏按钮来收藏喜欢的演员</p>
         </div>
     </div>
     
@@ -400,14 +400,14 @@ function createActressCard(actress, index) {
     
     col.innerHTML = `
         <div class="card h-100 actress-card" data-actress-code="${actress.code}" data-actress-name="${actress.name}" data-cup-size="${actress.cup_size}">
-            <div class="favorite-btn-container">
-                <button class="btn btn-sm favorite-btn favorited" 
-                        data-actress-code="${actress.code}" 
-                        data-actress-name="${actress.name}"
-                        title="取消收藏">
-                    <i class="fas fa-heart"></i>
-                </button>
-            </div>
+          <div class="favorite-btn-container">
+    <button class="btn btn-sm favorite-btn favorited" 
+            data-actress-code="${actress.code}" 
+            data-actress-name="${actress.name}"
+            title="取消收藏">
+        <img src="/static/icon/favorite.png" alt="收藏" class="favorite-icon">
+    </button>
+</div>
             
             <div class="actress-content" onclick="window.location.href='/actress/${actress.code}';">
                 <img src="/static/images/actresses/${actress.code}_${actress.name}.jpg" 
@@ -612,22 +612,8 @@ function tryAlternativeFormats(img) {
     z-index: 2;
 }
 
-/* 收藏状态样式 */
-.favorite-btn.favorited {
-    background: linear-gradient(135deg, #ff6b6b, #ee5a52);
-    box-shadow: 0 4px 15px rgba(255, 107, 107, 0.4);
-}
 
-.favorite-btn.favorited:hover {
-    background: linear-gradient(135deg, #ff5252, #e53935);
-    box-shadow: 0 6px 25px rgba(255, 107, 107, 0.6);
-    transform: scale(1.15);
-}
-
-.favorite-btn.favorited i {
-    color: white;
-    animation: heartBeat 0.6s ease-in-out;
-}
+ 
 
 /* 心跳动画 */
 @keyframes heartBeat {
@@ -737,5 +723,24 @@ function tryAlternativeFormats(img) {
 .actress-content:hover {
     transform: scale(1.02);
 }
+
+
+.favorite-icon {
+    width: 16px;
+    height: 16px;
+    filter: grayscale(100%);
+    transition: filter 0.3s ease;
+}
+
+/* 收藏状态样式 */
+.favorite-btn.favorited .favorite-icon {
+    filter: none;
+}
+
+.favorite-btn:hover .favorite-icon {
+    filter: none;
+    transform: scale(1.1);
+}
+
 </style>
 {% endblock %}
