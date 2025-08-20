@@ -25,6 +25,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 from database import db_manager
 
 base_url = 'https://www.javbus.com'
+javbus_controller = JavBusSeleniumController()
  
 def download_actress_image(image_url, actress_code, actress_name):
     """下载演员头像到本地"""
@@ -209,8 +210,7 @@ def craw_top_star():
 def process_single_url(url):
     try:
         # 获取影片详细页面
-        controller = JavBusSeleniumController()
-        movie_html =  controller.get_page_content(url) 
+        movie_html =  javbus_controller.get_page_content(url) 
         if movie_html:
             # 使用pageparser解析影片详细信息
             movie_detail = pageparser.parser_content(movie_html)

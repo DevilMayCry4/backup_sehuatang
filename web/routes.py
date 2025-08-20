@@ -784,24 +784,19 @@ def register_routes(app, jellyfin_checker, crawler):
                     import sys
                     import os
                     crawler_dir = os.path.join(os.path.dirname(__file__), 'crawler')
-                    sys.path.insert(0, crawler_dir)
-                    
-                    from selenium_crawler import ForumSeleniumCrawler
-                    crawler_instance = ForumSeleniumCrawler()
-                    
+                    sys.path.insert(0, crawler_dir) 
                     success_count = 0
                     failed_count = 0
-                    
+                    import crawler.javbus.crawler as javbus_crawler
                     for retry_url in retry_urls:
                         url = retry_url['url']
-                        code = retry_url.get('code', '')
                         retry_count = retry_url.get('retry_count', 0)
                         
                         try:
                             app_logger.debug(f"重试处理 URL: {url}")
                             
                             # 根据 URL 类型选择处理方法
-                            import crawler.javbus.crawler as javbus_crawler
+                           
                             result = javbus_crawler.process_single_url(url)
                             success = result is not None
                              
@@ -826,9 +821,11 @@ def register_routes(app, jellyfin_checker, crawler):
                     import traceback
                     traceback.print_exc()
             
-            thread = threading.Thread(target=run_retry)
-            thread.daemon = True
-            thread.start()
+            import multiprocessing 
+            process = multiprocessing.Process(target=run_retry)
+            process.daemon = True
+            process.start()
+             
             
             return jsonify({
                 'success': True,
@@ -1418,8 +1415,6 @@ def register_routes(app, jellyfin_checker, crawler):
             # 获取查询参数
             page = int(request.args.get('page', 1))
             per_page = int(request.args.get('per_page', 20))
-            cup_size_filter = request.args.get('cup_size', None)
-            print(cup_size_filter)
             # 获取当前用户ID
             user_id = session.get('user_id')
             if not user_id:
@@ -1430,7 +1425,7 @@ def register_routes(app, jellyfin_checker, crawler):
             
             # 获取收藏的演员列表
             actresses, total = db_manager.get_user_favorite_actresses(
-                user_id, page, per_page, cup_size_filter
+                user_id, page, per_page
             )
             
             if actresses is None:
@@ -1439,7 +1434,7 @@ def register_routes(app, jellyfin_checker, crawler):
             
             # 计算分页信息
             total_pages = (total + per_page - 1) // per_page
-            
+            print(actresses)
             return jsonify({
                 'success': True,
                 'actresses': actresses,
@@ -1602,7 +1597,7 @@ def register_routes(app, jellyfin_checker, crawler):
             
             # 获取收藏的系列列表
             result = db_manager.get_user_favorite_series(user_id, page, per_page)
-            
+            print(result)
             return jsonify({
                 'success': True,
                 'series': result['series'],
@@ -1765,7 +1760,6 @@ def register_routes(app, jellyfin_checker, crawler):
             
             # 获取收藏的厂商列表
             result = db_manager.get_user_favorite_studios(user_id, page, per_page)
-            
             return jsonify({
                 'success': True,
                 'studios': result['studios'],

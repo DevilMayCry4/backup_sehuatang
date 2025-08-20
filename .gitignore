@@ -24,3 +24,4 @@ logs/app_debug.log
 logs/app_error.log
 logs/app_warning.log
 logs/app_info.log.1
+logs/app_info.log.4
