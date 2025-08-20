@@ -394,6 +394,55 @@ class DatabaseManager:
             app_logger.info(f"Error getting top actresses from MongoDB: {e}")
             return None
     
+    def search_actresses(self, search_keyword=None, page=1, per_page=20, cup_size_filter=None):
+        """搜索演员数据，支持按名称和代码搜索"""
+        try:
+            if self.actresses_data_collection is None:
+                return None, 0
+                
+            # 构建查询条件
+            query_conditions = []
+            
+            # 如果有搜索关键字，添加搜索条件
+            if search_keyword and search_keyword.strip():
+                search_regex = {'$regex': search_keyword.strip(), '$options': 'i'}
+                # 在 name 和 code 字段中搜索关键字
+                search_query = {
+                    '$or': [
+                        {'name': search_regex},
+                        {'code': search_regex}
+                    ]
+                }
+                query_conditions.append(search_query)
+            
+            # 添加罩杯筛选条件
+            if cup_size_filter:
+                query_conditions.append({'cup_size': cup_size_filter})
+            
+            # 合并所有查询条件
+            if query_conditions:
+                if len(query_conditions) > 1:
+                    final_query = {'$and': query_conditions}
+                else:
+                    final_query = query_conditions[0]
+            else:
+                final_query = {}
+                
+            actresses = list(self.actresses_data_collection.find(final_query)
+                            .skip((page-1)*per_page)
+                            .limit(per_page))
+            total = self.actresses_data_collection.count_documents(final_query)
+            
+            # 转换ObjectId为字符串
+            for actress in actresses:
+                if '_id' in actress:
+                    actress['_id'] = str(actress['_id'])
+                    
+            return actresses, total
+        except Exception as e:
+            app_logger.info(f"搜索演员数据错误: {e}")
+            return None, 0
+    
     def add_retry_url(self, url, error_type, error_message,code):
         """添加失败URL到重试表"""
         try:

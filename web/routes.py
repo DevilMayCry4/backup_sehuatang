@@ -772,7 +772,7 @@ def register_routes(app, jellyfin_checker, crawler):
             def run_retry():
                 try:
                     # 获取待重试的 URL
-                    retry_urls = db_manager.get_pending_retry_urls()
+                    retry_urls = db_manager.get_pending_retry_urls(limit=1000)
                     
                     if not retry_urls:
                         print("没有待重试的 URL")
@@ -1434,10 +1434,9 @@ def register_routes(app, jellyfin_checker, crawler):
             
             # 计算分页信息
             total_pages = (total + per_page - 1) // per_page
-            print(actresses)
             return jsonify({
                 'success': True,
-                'actresses': actresses,
+                'favorites': actresses,
                 'pagination': {
                     'page': page,
                     'per_page': per_page,
