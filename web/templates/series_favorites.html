@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+
+{% block title %}我的系列收藏{% endblock %}
+
+{% block head %}
+{{ super() }}
+<style>
+.favorite-item {
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    transition: all 0.3s ease;
+}
+.favorite-item:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    transform: translateY(-2px);
+}
+.favorite-cover {
+    width: 80px;
+    height: 120px;
+    object-fit: cover;
+    border-radius: 4px;
+}
+.remove-btn {
+    opacity: 0.7;
+    transition: opacity 0.3s ease;
+}
+.remove-btn:hover {
+    opacity: 1;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- 面包屑导航 -->
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/movies">电影列表</a></li>
+            <li class="breadcrumb-item active" aria-current="page">我的系列收藏</li>
+        </ol>
+    </nav>
+    
+    <h2 class="mb-4"><i class="bi bi-collection-fill text-danger"></i> 我的系列收藏</h2>
+    
+    <!-- 系列收藏列表 -->
+    <div id="seriesList">
+        <div class="text-center py-4">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">加载中...</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// 页面加载时获取系列收藏数据
+document.addEventListener('DOMContentLoaded', function() {
+    loadSeriesFavorites();
+});
+
+// 加载系列收藏
+function loadSeriesFavorites() {
+    fetch('/api/series/favorites')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                displaySeries(data.favorites);
+            } else {
+                document.getElementById('seriesList').innerHTML = '<div class="alert alert-warning">加载失败</div>';
+            }
+        })
+        .catch(error => {
+            console.error('加载系列收藏失败:', error);
+            document.getElementById('seriesList').innerHTML = '<div class="alert alert-danger">网络错误</div>';
+        });
+}
+
+// 显示系列列表
+function displaySeries(series) {
+    const container = document.getElementById('seriesList');
+    if (series.length === 0) {
+        container.innerHTML = '<div class="alert alert-info"><i class="bi bi-info-circle"></i> 暂无收藏的系列</div>';
+        return;
+    }
+    
+    const html = series.map(item => `
+        <div class="favorite-item d-flex align-items-center">
+            <img src="${item.cover_url || '/static/icon/default-movie.png'}" 
+                 alt="${item.series_name}" 
+                 class="favorite-cover me-3"
+                 onerror="this.src='/static/icon/default-movie.png'">
+            <div class="favorite-info flex-grow-1">
+                <h5 class="mb-1">
+                    <a href="/series/${encodeURIComponent(item.series_name)}" class="text-decoration-none">
+                        ${item.series_name}
+                    </a>
+                </h5>
+                <small class="text-muted">收藏时间: ${new Date(item.created_at).toLocaleString()}</small>
+            </div>
+            <button class="btn btn-outline-danger btn-sm remove-btn" 
+                    onclick="removeSeriesFavorite('${item.series_name}')">
+                <i class="bi bi-trash"></i> 取消收藏
+            </button>
+        </div>
+    `).join('');
+    
+    container.innerHTML = html;
+}
+
+// 取消系列收藏
+function removeSeriesFavorite(seriesName) {
+    if (!confirm('确定要取消收藏这个系列吗？')) return;
+    
+    fetch('/api/series/favorite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'remove', series_name: seriesName })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            loadSeriesFavorites();
+            showToast('已取消收藏');
+        } else {
+            showToast(data.error || '操作失败', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('取消收藏失败:', error);
+        showToast('网络错误', 'error');
+    });
+}
+
+// 显示提示消息
+function showToast(message, type = 'success') {
+    const toast = document.createElement('div');
+    toast.className = `alert alert-${type === 'error' ? 'danger' : 'success'} position-fixed`;
+    toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 200px;';
+    toast.textContent = message;
+    
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        if (toast.parentNode) {
+            toast.parentNode.removeChild(toast);
+        }
+    }, 3000);
+}
+</script>
+{% endblock %}

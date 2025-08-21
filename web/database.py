@@ -1409,6 +1409,110 @@ class DatabaseManager:
             app_logger.error(f"获取演员收藏数量失败: {e}")
             return 0
     
+    def get_actress_favorites(self, user_id, page=1, per_page=20, search='', cup_size='', sort_order='latest'):
+        """获取用户收藏的演员列表（支持搜索、筛选和排序）"""
+        try:
+            if self.actress_favorites_collection is None or self.actresses_data_collection is None:
+                return {
+                    'favorites': [],
+                    'pagination': {
+                        'page': page,
+                        'per_page': per_page,
+                        'total': 0,
+                        'total_pages': 0,
+                        'has_prev': False,
+                        'has_next': False
+                    }
+                }
+            
+            # 获取用户收藏的演员代码列表
+            favorite_codes = []
+            favorites = self.actress_favorites_collection.find({'user_id': user_id})
+            for fav in favorites:
+                favorite_codes.append(fav['actress_code'])
+            
+            if not favorite_codes:
+                return {
+                    'favorites': [],
+                    'pagination': {
+                        'page': page,
+                        'per_page': per_page,
+                        'total': 0,
+                        'total_pages': 0,
+                        'has_prev': False,
+                        'has_next': False
+                    }
+                }
+            
+            # 构建查询条件
+            query = {'code': {'$in': favorite_codes}}
+            
+            # 添加搜索条件
+            if search:
+                query['name'] = {'$regex': search, '$options': 'i'}
+            
+            # 添加罩杯筛选
+            if cup_size:
+                query['cup_size'] = cup_size
+            
+            # 设置排序
+            sort_field = '_id'
+            sort_direction = -1  # 默认降序（最新）
+            
+            if sort_order == 'name_asc':
+                sort_field = 'name'
+                sort_direction = 1
+            elif sort_order == 'name_desc':
+                sort_field = 'name'
+                sort_direction = -1
+            elif sort_order == 'oldest':
+                sort_field = '_id'
+                sort_direction = 1
+            # 'latest' 使用默认值
+            
+            # 获取总数
+            total = self.actresses_data_collection.count_documents(query)
+            
+            # 获取演员详细信息
+            actresses = list(self.actresses_data_collection.find(query)
+                           .sort(sort_field, sort_direction)
+                           .skip((page-1)*per_page)
+                           .limit(per_page))
+            
+            # 转换ObjectId为字符串
+            for actress in actresses:
+                if '_id' in actress:
+                    actress['_id'] = str(actress['_id'])
+            
+            # 计算分页信息
+            total_pages = (total + per_page - 1) // per_page
+            
+            return {
+                'favorites': actresses,
+                'pagination': {
+                    'page': page,
+                    'per_page': per_page,
+                    'total': total,
+                    'total_pages': total_pages,
+                    'has_prev': page > 1,
+                    'has_next': page < total_pages
+                }
+            }
+            
+        except Exception as e:
+            app_logger.error(f"获取用户收藏演员列表失败: {e}")
+            return {
+                'favorites': [],
+                'pagination': {
+                    'page': page,
+                    'per_page': per_page,
+                    'total': 0,
+                    'total_pages': 0,
+                    'has_prev': False,
+                    'has_next': False
+                }
+            }
+
     # 系列收藏相关函数
     def add_series_favorite(self, user_id, series_name, cover_image=None):
         """添加系列收藏"""

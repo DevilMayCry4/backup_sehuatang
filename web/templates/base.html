@@ -117,10 +117,27 @@
                             <i class="bi bi-tags"></i> 分类管理
                         </a>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/favorites">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="favoritesDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                             <i class="bi bi-heart-fill"></i> 我的收藏
                         </a>
+                        <ul class="dropdown-menu" aria-labelledby="favoritesDropdown">
+                            <li>
+                                <a class="dropdown-item" href="/actress-favorites">
+                                    <i class="bi bi-person-fill"></i> 收藏演员
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="/series-favorites">
+                                    <i class="bi bi-collection"></i> 收藏系列
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="/studio-favorites">
+                                    <i class="bi bi-building"></i> 收藏厂商
+                                </a>
+                            </li>
+                        </ul>
                     </li>
                 </ul>
                 

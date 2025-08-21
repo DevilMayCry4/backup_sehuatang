@@ -208,6 +208,49 @@ def register_routes(app, jellyfin_checker, crawler):
         """收藏页面"""
         return render_template('favorites.html')
     
+    @app.route('/actress-favorites')
+    @login_required
+    def actress_favorites():
+        """演员收藏页面"""
+        page = request.args.get('page', 1, type=int)
+        search = request.args.get('search', '', type=str)
+        cup_size = request.args.get('cup_size', '', type=str)
+        sort_order = request.args.get('sort', 'latest', type=str)
+        
+        # 获取当前用户ID
+        user_id = session.get('user_id')
+        if not user_id:
+            return redirect(url_for('login_page'))
+        
+        # 获取收藏演员数据
+        result = db_manager.get_actress_favorites(
+            user_id=user_id,
+            page=page,
+            per_page=20,
+            search=search,
+            cup_size=cup_size,
+            sort_order=sort_order
+        )
+        
+        return render_template('actress_favorites.html', 
+                             actresses=result['favorites'],
+                             pagination=result['pagination'],
+                             current_search=search,
+                             current_cup_size=cup_size,
+                             current_sort=sort_order)
+
+    @app.route('/series-favorites')
+    @login_required
+    def series_favorites():
+        """系列收藏页面"""
+        return render_template('series_favorites.html')
+
+    @app.route('/studio-favorites')
+    @login_required
+    def studio_favorites():
+        """厂商收藏页面"""
+        return render_template('studio_favorites.html')
+    
     @app.route('/proxy-image')
     def proxy_image_route():
         """图片代理路由"""
