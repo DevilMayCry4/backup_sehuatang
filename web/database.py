@@ -1514,7 +1514,7 @@ class DatabaseManager:
             }
 
     # 系列收藏相关函数
-    def add_series_favorite(self, user_id, series_name, cover_image=None):
+    def add_series_favorite(self, user_id, series_name, cover_url=None):
         """添加系列收藏"""
         try:
             if self.series_favorites_collection is None:
@@ -1534,7 +1534,7 @@ class DatabaseManager:
             favorite_doc = {
                 'user_id': user_id,
                 'series_name': series_name,
-                'cover_image': cover_image,
+                'cover_url': cover_url,
                 'created_at': datetime.now()
             }
             

@@ -539,7 +539,7 @@ function displaySearchResults(movies, pagination) {
             // 电影封面
             html += '<a href="#" onclick="openImageModal(\'' + getMovieCoverUrl(movie) + '\', \'' + movie.title + '\'); event.stopPropagation(); return false;">';
             html += '<div class="movie-cover-container">';
-            html += '<img src="' + getMovieCoverUrl(movie) + '" class="movie-cover-image" alt="' + movie.title + '" loading="lazy" onerror="this.src=\'/static/images/no-image.jpg\'">';
+            html += '<img src="' + getMovieCoverUrl(movie) + '" class="movie-cover-image" alt="' + movie.title + '" loading="lazy" onerror="this.src=\'/static/icon/default-movie.png\'">';
             html += '</div>';
             html += '</a>';
             

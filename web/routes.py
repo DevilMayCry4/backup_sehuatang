@@ -1505,8 +1505,9 @@ def register_routes(app, jellyfin_checker, crawler):
         try:
             data = request.get_json()
             series_name = data.get('series_name')
-            cover_image = data.get('cover_image')
-            
+            cover_url = data.get('cover_url')
+            print(data)
+            print(cover_url)
             if not series_name:
                 return jsonify({
                     'success': False,
@@ -1529,7 +1530,7 @@ def register_routes(app, jellyfin_checker, crawler):
                 })
             
             # 添加收藏
-            result = db_manager.add_series_favorite(user_id, series_name, cover_image)
+            result = db_manager.add_series_favorite(user_id, series_name, cover_url)
             
             if result:
                 return jsonify({

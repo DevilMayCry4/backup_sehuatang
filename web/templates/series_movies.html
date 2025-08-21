@@ -274,7 +274,7 @@ document.addEventListener('keydown', function(e) {
 // 系列收藏功能
 let isSeriesFavorited = false;
 const seriesName = '{{ series_name }}';
-const firstMovieCover = '{{ movies[0].cover_url if movies else "" }}';
+const firstMovieCover = '{{ get_movie_cover_url(movies[0]) if movies else "" }}';
 
 // 页面加载时检查收藏状态
 document.addEventListener('DOMContentLoaded', function() {
@@ -301,7 +301,7 @@ function toggleSeriesFavorite() {
     const action = isSeriesFavorited ? 'remove' : 'add';
     
     fetch('/api/series/favorite', {
-        method: 'POST',
+        method: isSeriesFavorited?'DELETE':'POST',
         headers: {
             'Content-Type': 'application/json',
         },

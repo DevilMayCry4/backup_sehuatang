@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "macros/movie_display.html" import get_movie_cover_url %}
 
 {% block title %}我的系列收藏{% endblock %}
 
@@ -17,8 +18,8 @@
     transform: translateY(-2px);
 }
 .favorite-cover {
-    width: 80px;
-    height: 120px;
+    width: 160px;
+    height: 90px;
     object-fit: cover;
     border-radius: 4px;
 }
@@ -66,7 +67,7 @@ function loadSeriesFavorites() {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                displaySeries(data.favorites);
+                displaySeries(data.series);
             } else {
                 document.getElementById('seriesList').innerHTML = '<div class="alert alert-warning">加载失败</div>';
             }
@@ -90,7 +91,7 @@ function displaySeries(series) {
             <img src="${item.cover_url || '/static/icon/default-movie.png'}" 
                  alt="${item.series_name}" 
                  class="favorite-cover me-3"
-                 onerror="this.src='/static/icon/default-movie.png'">
+                 >
             <div class="favorite-info flex-grow-1">
                 <h5 class="mb-1">
                     <a href="/series/${encodeURIComponent(item.series_name)}" class="text-decoration-none">
@@ -114,7 +115,7 @@ function removeSeriesFavorite(seriesName) {
     if (!confirm('确定要取消收藏这个系列吗？')) return;
     
     fetch('/api/series/favorite', {
-        method: 'POST',
+        method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'remove', series_name: seriesName })
     })

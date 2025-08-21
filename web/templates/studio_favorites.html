@@ -66,7 +66,7 @@ function loadStudioFavorites() {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                displayStudios(data.favorites);
+                displayStudios(data.studios);
             } else {
                 document.getElementById('studiosList').innerHTML = '<div class="alert alert-warning">加载失败</div>';
             }
