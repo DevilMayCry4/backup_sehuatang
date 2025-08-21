@@ -1643,7 +1643,7 @@ class DatabaseManager:
             favorite_doc = {
                 'user_id': user_id,
                 'studio_name': studio_name,
-                'cover_image': cover_image,
+                'cover_url': cover_image,
                 'created_at': datetime.now()
             }
             

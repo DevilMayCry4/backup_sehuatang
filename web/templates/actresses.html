@@ -535,15 +535,15 @@ function loadFavoriteActresses(page = 1, cupFilter = '') {
             hideLoading();
             
             if (data.success) {
-                favoriteActresses = data.actresses;
+                favoriteActresses = data.favorites
                 currentFavoritePage = data.pagination.page;
                 favoriteTotalPages = data.pagination.total_pages;
                 
-                renderFavoriteActresses(data.actresses);
+                renderFavoriteActresses(favoriteActresses);
                 renderFavoritePagination(data.pagination);
                 updateFavoriteStatusInfo(data.pagination.total, cupFilter);
                 
-                if (data.actresses.length === 0) {
+                if (favoriteActresses.length === 0) {
                     showEmptyState();
                 } else {
                     hideEmptyState();
