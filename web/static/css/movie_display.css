@@ -1,6 +1,6 @@
 /* 影片展示通用样式 */
 
-/* 电影封面容器 */
+/* 电影封面容器 - PC端优化 */
 .movie-cover-container {
     height: 200px;
     overflow: hidden;
@@ -9,16 +9,63 @@
 }
 
 .movie-cover-image {
-    width: 200%;
+    width: 100%;
     height: 100%;
     object-fit: cover;
-    object-position: right center;
-    transform: translateX(-53%) scale(1.1);
+    object-position: center center;
+    transform: scale(1.0);
     transition: transform 0.3s ease;
 }
 
 .movie-cover-container:hover .movie-cover-image {
-    transform: translateX(-40%) scale(1.1);
+    transform: scale(1.05);
+}
+
+/* PC端特殊优化 - 显示完整背景图 */
+@media (min-width: 992px) {
+    .movie-cover-container {
+        height: 200px; /* 增加高度以更好展示完整图片 */
+    }
+    
+    .movie-cover-image {
+        width: 100%;
+        height: 100%;
+        object-fit: contain; /* 使用contain确保完整显示 */
+        object-position: top center; /* 改为顶部对齐 */
+        background-color: #f8f9fa; /* 添加背景色填充空白区域 */
+    }
+    
+    .movie-cover-container:hover .movie-cover-image {
+        transform: scale(1.02); /* 轻微缩放效果 */
+    }
+}
+
+/* 平板端适配 */
+@media (min-width: 768px) and (max-width: 991px) {
+    .movie-cover-container {
+        height: 220px;
+    }
+    
+    .movie-cover-image {
+        width: 100%;
+        object-fit: cover;
+        object-position: center center;
+        transform: scale(1.0);
+    }
+}
+
+/* 移动端保持原有效果 */
+@media (max-width: 767px) {
+    .movie-cover-image {
+        width: 200%;
+        object-fit: cover;
+        object-position: right center;
+        transform: translateX(-53%) scale(1.1);
+    }
+    
+    .movie-cover-container:hover .movie-cover-image {
+        transform: translateX(-40%) scale(1.1);
+    }
 }
 
 /* 瀑布流布局 */
