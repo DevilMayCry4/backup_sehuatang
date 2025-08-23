@@ -1513,6 +1513,32 @@ class DatabaseManager:
                 }
             }
 
+    def get_all_favorite_actresses(self):
+        """获取所有收藏的演员列表（不分用户）"""
+        try:
+            if self.actress_favorites_collection is None or self.actresses_data_collection is None:
+                return None
+            
+            # 获取所有收藏的演员代码列表（去重）
+            favorite_codes = self.actress_favorites_collection.distinct('actress_code')
+            
+            if not favorite_codes:
+                return []
+            
+            # 获取演员详细信息
+            actresses = list(self.actresses_data_collection.find({'code': {'$in': favorite_codes}}))
+            
+            # 转换ObjectId为字符串
+            for actress in actresses:
+                if '_id' in actress:
+                    actress['_id'] = str(actress['_id'])
+            
+            return actresses
+            
+        except Exception as e:
+            app_logger.error(f"获取所有收藏演员列表失败: {e}")
+            return None
+
     # 系列收藏相关函数
     def add_series_favorite(self, user_id, series_name, cover_url=None):
         """添加系列收藏"""

@@ -13,6 +13,7 @@ from image_proxy import proxy_image
 from web import app_logger
 import os
 from datetime import datetime
+import multiprocessing
 
 def register_routes(app, jellyfin_checker, crawler):
     """注册所有路由"""
@@ -570,7 +571,7 @@ def register_routes(app, jellyfin_checker, crawler):
         try:
             import crawler.javbus.crawler as javbus_crawler
             # 在后台进程中执行爬虫任务
-            import multiprocessing
+            
             def run_crawler():
                 try:
                     javbus_crawler.craw_all_star()
@@ -600,7 +601,6 @@ def register_routes(app, jellyfin_checker, crawler):
         """更新热门演员API"""
         try: 
             # 在后台线程中执行爬虫任务
-            import threading 
             def run_crawler():
                 try:
                     import crawler.javbus.crawler as javbus_crawler
@@ -609,9 +609,9 @@ def register_routes(app, jellyfin_checker, crawler):
                 except Exception as e:
                     print(f"热门演员更新错误: {e}")
             
-            thread = threading.Thread(target=run_crawler)
-            thread.daemon = True
-            thread.start()
+            process = multiprocessing.Process(target=run_crawler)
+            process.daemon = True
+            process.start()
             
             return jsonify({
                 'success': True,
@@ -1495,6 +1495,52 @@ def register_routes(app, jellyfin_checker, crawler):
             return jsonify({
                 'success': False,
                 'error': '获取收藏列表失败，请稍后重试'
+            })
+    
+    # 演员搜索API
+    @app.route('/api/actresses/search')
+    def search_actresses_api():
+        """演员搜索API"""
+        try:
+            # 获取查询参数
+            search_keyword = request.args.get('search', '').strip()
+            page = int(request.args.get('page', 1))
+            per_page = int(request.args.get('per_page', 20))
+            cup_size_filter = request.args.get('cup_size', None)
+            
+            # 搜索演员
+            actresses, total = db_manager.search_actresses(
+                search_keyword=search_keyword if search_keyword else None,
+                page=page,
+                per_page=per_page,
+                cup_size_filter=cup_size_filter
+            )
+            
+            if actresses is None:
+                actresses = []
+                total = 0
+            
+            # 计算分页信息
+            total_pages = (total + per_page - 1) // per_page
+            
+            return jsonify({
+                'success': True,
+                'actresses': actresses,
+                'pagination': {
+                    'page': page,
+                    'per_page': per_page,
+                    'total': total,
+                    'total_pages': total_pages,
+                    'has_prev': page > 1,
+                    'has_next': page < total_pages
+                }
+            })
+            
+        except Exception as e:
+            app_logger.error(f"演员搜索API错误: {e}")
+            return jsonify({
+                'success': False,
+                'error': '搜索失败，请稍后重试'
             })
     
     # 系列收藏相关API路由

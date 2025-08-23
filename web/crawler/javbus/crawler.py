@@ -177,10 +177,9 @@ def craw_all_star():
     app_logger.info(f"全部演员处理完成 - 总数: {all_count}, 新处理: {processed_count}, 跳过: {skipped_count}")
 
 def craw_top_star():
-    cursor = db_manager.get_top_star()
-    if cursor is not None:
-        results = list(cursor)  # 将 Cursor 转换为列表
-        print(results)
+    # 获取收藏的演员列表
+    results = db_manager.get_all_favorite_actresses()
+    if results is not None:
         all_count = len(results)
     else:
         results = []
@@ -197,6 +196,7 @@ def craw_top_star():
             continue
         
         try:
+            # 获取该演员的电影列表
             controller.process_actress_page(star['code'])
             # 处理完成后标记为已处理
             db_manager.mark_actress_as_processed(star['code'], star.get('name'))
@@ -205,7 +205,7 @@ def craw_top_star():
         except Exception as e:
             app_logger.error(f"处理演员 {star['code']} 时出错: {e}")
     
-    app_logger.info(f"热门演员处理完成 - 总数: {all_count}, 新处理: {processed_count}, 跳过: {skipped_count}")
+    app_logger.info(f"收藏演员处理完成 - 总数: {all_count}, 新处理: {processed_count}, 跳过: {skipped_count}")
 
 def process_single_url(url):
     try:

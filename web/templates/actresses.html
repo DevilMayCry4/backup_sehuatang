@@ -264,36 +264,188 @@ function setupActressSearch() {
     });
 }
 
-// 执行演员搜索（全部演员视图）
-function performActressSearch(query) {
-    const searchStatus = document.getElementById('search-status');
-    const actressesGrid = document.getElementById('actresses-grid');
+function performActressSearch(query = '', cupSize = '', resetPage = true) {
+    if (resetPage) {
+        currentPage = 1;
+    }
     
-    if (!query) {
-        // 显示所有演员
-        originalActresses.forEach(actress => {
-            actress.element.style.display = 'block';
+    // 显示加载状态
+    showLoadingState();
+    
+    // 构建API请求参数
+    const params = new URLSearchParams({
+        page: currentPage,
+        per_page: 20
+    });
+    
+    if (query.trim()) {
+        params.append('search', query.trim());
+    }
+    
+    if (cupSize) {
+        params.append('cup_size', cupSize);
+    }
+    
+    // 调用搜索API
+    fetch(`/api/actresses/search?${params.toString()}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // 更新演员列表
+                updateActressList(data.actresses);
+                
+                // 更新分页信息
+                updatePagination(data.pagination);
+                
+                // 更新URL参数
+                updateUrlParams(query, cupSize, currentPage);
+            } else {
+                console.error('搜索失败:', data.error);
+                showErrorState(data.error || '搜索失败，请稍后重试');
+            }
+        })
+        .catch(error => {
+            console.error('搜索请求失败:', error);
+            showErrorState('网络错误，请稍后重试');
+        })
+        .finally(() => {
+            hideLoadingState();
         });
-        searchStatus.textContent = '';
-        updateSearchStatus(originalActresses.length, '');
+}
+
+// 添加辅助函数
+function updateActressList(actresses) {
+    const container = document.getElementById('actresses-grid');
+    if (!container) return;
+    
+    if (actresses.length === 0) {
+        container.innerHTML = '<div class="col-12"><div class="alert alert-info text-center">没有找到匹配的演员</div></div>';
         return;
     }
     
-    const lowerQuery = query.toLowerCase();
-    let visibleCount = 0;
-    
-    originalActresses.forEach(actress => {
-        const isMatch = actress.name.includes(lowerQuery) || actress.code.includes(lowerQuery);
-        
-        if (isMatch) {
-            actress.element.style.display = 'block';
-            visibleCount++;
-        } else {
-            actress.element.style.display = 'none';
-        }
+    let html = '';
+    actresses.forEach(actress => {
+        html += `
+            <div class="col-6 col-md-3 mb-4">
+                <div class="card h-100 actress-card" data-actress-code="${actress.code}" data-actress-name="${actress.name}" data-cup-size="${actress.cup_size}">                    
+                    <!-- 收藏按钮 -->
+                    <div class="favorite-btn-container">
+                        <button class="btn btn-sm favorite-btn" 
+                                data-actress-code="${actress.code}" 
+                                data-actress-name="${actress.name}"
+                                title="收藏演员">
+                            <img src="/static/icon/favorite.png" alt="收藏" class="favorite-icon">
+                        </button>
+                    </div>
+                    
+                    <div class="actress-content" onclick="window.location.href='/actress/${actress.code}';">
+                        <img src="/static/images/actresses/${actress.code}_${actress.name}.jpg" 
+                             class="card-img-top img-fluid" 
+                             alt="${actress.name}"
+                             data-actress-code="${actress.code}"
+                             data-actress-name="${actress.name}"
+                             data-fallback-url="${actress.image_url || ''}"
+                             onerror="tryAlternativeFormats(this)">
+                        <div class="card-body">
+                            <h5 class="card-title text-truncate">${actress.name}</h5>
+                            <p class="card-text">
+                                <small class="text-muted">罩杯${actress.cup_size || ''}</small>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
     });
     
-    updateSearchStatus(visibleCount, query);
+    container.innerHTML = html;
+    
+    // 重新初始化收藏按钮
+    initializeFavoriteButtons();
+}
+
+function updatePagination(pagination) {
+    const paginationContainer = document.querySelector('.pagination');
+    if (!paginationContainer) return;
+    
+    let html = '';
+    
+    // 上一页按钮
+    if (pagination.has_prev) {
+        html += `<li class="page-item"><a class="page-link" href="#" onclick="goToPage(${pagination.page - 1})">上一页</a></li>`;
+    } else {
+        html += `<li class="page-item disabled"><span class="page-link">上一页</span></li>`;
+    }
+    
+    // 页码
+    const startPage = Math.max(1, pagination.page - 2);
+    const endPage = Math.min(pagination.total_pages, pagination.page + 2);
+    
+    for (let i = startPage; i <= endPage; i++) {
+        if (i === pagination.page) {
+            html += `<li class="page-item active"><span class="page-link">${i}</span></li>`;
+        } else {
+            html += `<li class="page-item"><a class="page-link" href="#" onclick="goToPage(${i})">${i}</a></li>`;
+        }
+    }
+    
+    // 下一页按钮
+    if (pagination.has_next) {
+        html += `<li class="page-item"><a class="page-link" href="#" onclick="goToPage(${pagination.page + 1})">下一页</a></li>`;
+    } else {
+        html += `<li class="page-item disabled"><span class="page-link">下一页</span></li>`;
+    }
+    
+    paginationContainer.innerHTML = html;
+}
+
+function goToPage(page) {
+    currentPage = page;
+    const searchInput = document.getElementById('actress-search');
+    const cupSizeSelect = document.getElementById('cup-size-filter');
+    performActressSearch(searchInput.value, cupSizeSelect.value, false);
+}
+
+function updateUrlParams(search, cupSize, page) {
+    const url = new URL(window.location);
+    
+    if (search) {
+        url.searchParams.set('search', search);
+    } else {
+        url.searchParams.delete('search');
+    }
+    
+    if (cupSize) {
+        url.searchParams.set('cup_size', cupSize);
+    } else {
+        url.searchParams.delete('cup_size');
+    }
+    
+    if (page > 1) {
+        url.searchParams.set('page', page);
+    } else {
+        url.searchParams.delete('page');
+    }
+    
+    window.history.replaceState({}, '', url);
+}
+
+function showLoadingState() {
+    const container = document.getElementById('actresses-container');
+    if (container) {
+        container.innerHTML = '<div class="col-12 text-center"><div class="spinner-border" role="status"><span class="sr-only">加载中...</span></div></div>';
+    }
+}
+
+function hideLoadingState() {
+    // 加载状态会在updateActressList中被替换
+}
+
+function showErrorState(message) {
+    const container = document.getElementById('actresses-container');
+    if (container) {
+        container.innerHTML = `<div class="col-12"><div class="alert alert-danger text-center">${message}</div></div>`;
+    }
 }
 
 // 执行收藏演员搜索
@@ -927,8 +1079,16 @@ function tryAlternativeFormats(img) {
     filter: none;
 }
 
-.favorite-btn:hover .favorite-icon {
+/* 悬停状态 - 只有已收藏的按钮悬停时才显示彩色 */
+.favorite-btn.favorited:hover .favorite-icon {
     filter: none;
+    transform: scale(1.1);
+}
+
+/* 未收藏按钮悬停时保持灰色，但可以有轻微的透明度变化 */
+.favorite-btn:not(.favorited):hover .favorite-icon {
+    filter: grayscale(100%);
+    opacity: 0.8;
     transform: scale(1.1);
 }
 
