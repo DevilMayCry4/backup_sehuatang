@@ -131,6 +131,10 @@
                         <button type="button" class="btn btn-secondary" id="backupImagesBtnMobile">
                             <i class="bi bi-archive"></i> 备份图片
                         </button>
+                        <button type="button" class="btn btn-warning" id="retryFailedImagesBtnMobile">
+                            <i class="bi bi-arrow-repeat"></i> 重试失败图片
+                        </button>
+                        
                     </div>
                 </div>
                 
@@ -159,6 +163,11 @@
                     <div class="col-md-3">
                         <button type="button" class="btn btn-secondary" id="backupImagesBtn">
                             <i class="bi bi-archive"></i> 备份图片
+                        </button>
+                    </div>
+                    <div class="col-md-3">
+                        <button type="button" class="btn btn-warning" id="retryFailedImagesBtn">
+                            <i class="bi bi-arrow-repeat"></i> 重试失败图片
                         </button>
                     </div>
                 </div>
@@ -314,6 +323,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const backupImagesBtnMobile = document.getElementById('backupImagesBtnMobile');
     const retryFailedMoviesBtn = document.getElementById('retryFailedMoviesBtn');
     const retryFailedMoviesBtnMobile = document.getElementById('retryFailedMoviesBtnMobile');
+    const retryFailedImagesBtn = document.getElementById('retryFailedImagesBtn');
+    const retryFailedImagesBtnMobile = document.getElementById('retryFailedImagesBtnMobile');
     const crawlerStatus = document.getElementById('crawlerStatus');
     const crawlerStatusText = document.getElementById('crawlerStatusText');
     
@@ -394,6 +405,19 @@ document.addEventListener('DOMContentLoaded', function() {
     if (retryFailedMoviesBtnMobile) {
         retryFailedMoviesBtnMobile.addEventListener('click', function() {
             retryFailedMovies();
+        });
+    }
+    
+    // 重试失败图片按钮事件监听器
+    if (retryFailedImagesBtn) {
+        retryFailedImagesBtn.addEventListener('click', function() {
+            retryFailedImages();
+        });
+    }
+    
+    if (retryFailedImagesBtnMobile) {
+        retryFailedImagesBtnMobile.addEventListener('click', function() {
+            retryFailedImages();
         });
     }
     
@@ -1019,6 +1043,41 @@ document.addEventListener('DOMContentLoaded', function() {
             crawlerStatus.classList.add('d-none');
             if (retryFailedMoviesBtn) retryFailedMoviesBtn.disabled = false;
             if (retryFailedMoviesBtnMobile) retryFailedMoviesBtnMobile.disabled = false;
+        }
+    }
+    
+    // 重试失败图片功能函数
+    async function retryFailedImages() {
+        if (!confirm('确定要重试失败的图片下载吗？这将重新下载所有失败的图片。')) return;
+        
+        // 显示加载状态
+        crawlerStatus.classList.remove('d-none');
+        crawlerStatusText.textContent = '正在重试失败的图片...';
+        if (retryFailedImagesBtn) retryFailedImagesBtn.disabled = true;
+        if (retryFailedImagesBtnMobile) retryFailedImagesBtnMobile.disabled = true;
+        
+        try {
+            const response = await fetch('/api/retry-failed-images', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                showToast(data.message, 'success');
+            } else {
+                showToast(data.error || '启动失败', 'error');
+            }
+        } catch (err) {
+            console.error('重试失败图片错误:', err);
+            showToast('网络错误，请稍后重试', 'error');
+        } finally {
+            crawlerStatus.classList.add('d-none');
+            if (retryFailedImagesBtn) retryFailedImagesBtn.disabled = false;
+            if (retryFailedImagesBtnMobile) retryFailedImagesBtnMobile.disabled = false;
         }
     }
 });

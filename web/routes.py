@@ -882,6 +882,86 @@ def register_routes(app, jellyfin_checker, crawler):
                 'error': f'启动失败: {str(e)}'
             })
 
+    @app.route('/api/retry-failed-images', methods=['POST'])
+    @api_login_required
+    def retry_failed_images():
+        """重试失败图片API"""
+        try:
+            import threading
+            
+            def run_retry():
+                try:
+                    # 获取失败的图片记录
+                    failed_images = db_manager.get_retry_image_urls(limit=1000)
+                    
+                    if not failed_images:
+                        app_logger.info("没有失败的图片需要重试")
+                        return
+                    
+                    app_logger.info(f"开始重试 {len(failed_images)} 个失败的图片")
+                    
+                    success_count = 0
+                    failed_count = 0
+                    
+                    # 导入图片下载模块
+                    import sys
+                    import os
+                    crawler_dir = os.path.join(os.path.dirname(__file__), 'crawler')
+                    sys.path.insert(0, crawler_dir)
+                    
+                    import crawler.javbus.pageparser as pageparser
+                    
+                    for failed_image in failed_images:
+                        image_url = failed_image['image_url']
+                        movie_code = failed_image.get('movie_code', 'unknown')
+                        
+                        try:
+                            app_logger.info(f"重试下载图片: {image_url}")
+                            
+                            # 构建保存路径
+                            save_dir = os.path.join(app.static_folder, 'images', 'covers', movie_code)
+                            cover_filename = f"{movie_code}_cover.jpg"
+                            
+                            # 重试下载图片
+                            result = pageparser.download_image(image_url, save_dir, cover_filename, movie_code,remove=True)
+                            
+                            if result:
+                                success_count += 1
+                                # 从失败记录中删除
+                                db_manager.remove_failed_image(image_url)
+                                app_logger.info(f"图片重试下载成功: {image_url}")
+                            else:
+                                failed_count += 1
+                                app_logger.warning(f"图片重试下载失败: {image_url}")
+                                
+                        except Exception as e:
+                            failed_count += 1
+                            app_logger.error(f"重试下载图片 {image_url} 时发生错误: {e}")
+                    
+                    app_logger.info(f"图片重试完成: 成功 {success_count} 个，失败 {failed_count} 个")
+                    
+                except Exception as e:
+                    app_logger.error(f"重试失败图片错误: {e}")
+                    import traceback
+                    traceback.print_exc()
+            
+            # 在后台线程中执行重试
+            thread = threading.Thread(target=run_retry)
+            thread.daemon = True
+            thread.start()
+            
+            return jsonify({
+                'success': True,
+                'message': '失败图片重试任务已开始执行，请查看控制台日志了解进度'
+            })
+            
+        except Exception as e:
+            app_logger.error(f"启动失败图片重试错误: {e}")
+            return jsonify({
+                'success': False,
+                'error': f'启动失败: {str(e)}'
+            })
+
     @app.route('/api/backup-images', methods=['POST'])
     @api_login_required
     def backup_images():

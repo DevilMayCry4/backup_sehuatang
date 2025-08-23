@@ -108,13 +108,17 @@ def parser_homeurl(html):
         yield url['href']
 
 # 添加图片下载函数
-def download_image(image_url, save_path, filename,code_name):
+def download_image(image_url, save_path, filename,code_name,remove=False):
     """下载图片到本地"""
     try:
         # 创建保存目录
         os.makedirs(save_path, exist_ok=True)
         file_path = os.path.join(save_path, filename)
         if(os.path.exists(file_path)):
+            if(remove):
+                db_manager.remove_failed_image(image_url)
+
+
             print(f'文件已存在:{file_path}')
             return file_path
         else:

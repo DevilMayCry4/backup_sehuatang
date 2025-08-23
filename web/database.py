@@ -75,6 +75,9 @@ class DatabaseManager:
             # 厂商收藏集合
             self.studio_favorites_collection = self.mongo_db['studio_favorites']
             
+            # 失败图片集合c
+            self.failed_images_collection = self.mongo_db['failed_images']
+            
             # 创建默认管理员用户（如果不存在）
             self._create_default_admin()
             
@@ -470,6 +473,10 @@ class DatabaseManager:
     def get_pending_retry_urls(self, limit=100):
         """获取待重试的URL"""
         return list(self.retry_collection.find().limit(limit))
+
+    def get_retry_image_urls(self, limit=100):
+        """获取待重试图片的URL"""
+        return list(self.failed_images_collection.find().limit(limit))
     
     def remove_retry(self, url):
         """删除重试URL记录"""
@@ -788,17 +795,24 @@ class DatabaseManager:
             app_logger.info(f"记录失败图片时出错: {e}")
             return False
 
-    def get_failed_images(self, limit=100):
-        """获取失败的图片记录"""
+    def remove_failed_image(self, image_url):
+        """删除失败图片记录"""
         try:
             if not hasattr(self, 'failed_images_collection'):
-                return []
+                return False
             
-            failed_images = list(self.failed_images_collection.find().sort("last_failed_at", -1).limit(limit))
-            return failed_images
+            result = self.failed_images_collection.delete_one({"image_url": image_url})
+            
+            if result.deleted_count > 0:
+                app_logger.info(f"成功删除失败图片记录: {image_url}")
+                return True
+            else:
+                app_logger.warning(f"未找到要删除的失败图片记录: {image_url}")
+                return False
+                
         except Exception as e:
-            app_logger.info(f"获取失败图片记录时出错: {e}")
-            return []
+            app_logger.error(f"删除失败图片记录时出错: {e}")
+            return False
 
     def close_connection(self):
         """关闭 MongoDB 连接"""
@@ -1206,9 +1220,9 @@ class DatabaseManager:
             genre_names = names
             # 如果指定了分类代码，添加分类筛选条件
             if genre_names and len(genre_names) > 0:
-                # 支持多选分类，影片的genres字段包含任一指定分类即可
+                # 支持多选分类，影片必须包含所有指定分类（AND操作）
                 genre_query = {
-                    '$or': [
+                    '$and': [
                         {'genres': {'$regex': name, '$options': 'i'}} for name in genre_names
                     ]
                 }
