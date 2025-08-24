@@ -689,10 +689,17 @@ def register_routes(app, jellyfin_checker, crawler):
                                  error_message='加载电影详情失败'), 500
     
     @app.route('/actresses')
+    @login_required
     def actresses_list():
         page = request.args.get('page', 1, type=int)
         cup_size_filter = request.args.get('cup_size', None)
         per_page = 20
+        
+        # 设置用户ID到session中，供收藏功能使用
+        if 'session_id' in session:
+            user_info = db_manager.get_user_session(session['session_id'])
+            if user_info:
+                session['user_id'] = user_info.get('user_id') or str(user_info.get('_id'))
         
         actresses, total = db_manager.get_paginated_actresses(page, per_page, cup_size_filter)
         
