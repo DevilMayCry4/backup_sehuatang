@@ -535,39 +535,7 @@ def register_routes(app, jellyfin_checker, crawler):
     @app.route('/api/crawl-all-star', methods=['POST'])
     def crawl_all_star():
         """更新全部演员电影API"""
-        # import threading 
-
-        # def update_covers():
-        #     all_count = 0
-        #     cursor = db_manager.javbus_data_collection.find()
-        #     if cursor is not None:
-        #         results = list(cursor)  # 将 Cursor 转换为列表
-        #         all_count = len(results)
-        #     else:
-        #         results = [] 
         
-        #     for index, movie in enumerate(results):
-        #         cover = movie['cover']
-        #         genres = movie['genres']
-        #         magnet_links = movie['magnet_links']
-        #         is_single = genres.find('單體') != -1
-        #         is_subtitle = magnet_links.find('字幕') != -1
-        #         code_name = movie['code']
-        #         db_manager.javbus_data_collection.update_one({'code': code_name}, {'$set': {'is_single': is_single, 'is_subtitle': is_subtitle}})
-        #         save_dir = os.path.join('/server/static/images', 'covers', code_name)
-        #         cover_filename = f"{code_name}_cover.jpg"
-        #         try:
-        #             import crawler.javbus.pageparser as pageparser
-        #             pageparser.download_image(cover, save_dir, cover_filename, code_name)
-        #         except Exception as e:
-        #             app_logger.error(f"下载图片失败:{cover} 错误:{e}")
-        #         app_logger.info(f"处理完成：{index+1}/{all_count} {code_name}")
-
-        # thread = threading.Thread(target=update_covers)
-        # thread.daemon = True
-        # thread.start()
-
-        # return
         try:
             import crawler.javbus.crawler as javbus_crawler
             # 在后台进程中执行爬虫任务
@@ -1954,4 +1922,49 @@ def register_routes(app, jellyfin_checker, crawler):
             return jsonify({
                 'success': False,
                 'error': '获取收藏列表失败，请稍后重试'
+            })
+    
+    @app.route('/api/update-jav-home', methods=['POST'])
+    @api_login_required
+    def update_jav_home():
+        """更新JAV首页API"""
+        try:
+            # 在后台进程中执行爬虫任务
+            def run_crawler():
+                try:
+                    # 在多进程中设置正确的Python路径
+                    import sys
+                    import os
+                    
+                    # 添加crawler目录到Python路径
+                    crawler_dir = os.path.join(os.path.dirname(__file__), 'crawler')
+                    if crawler_dir not in sys.path:
+                        sys.path.insert(0, crawler_dir)
+                    
+                    # 添加javbus目录到Python路径
+                    javbus_dir = os.path.join(crawler_dir, 'javbus')
+                    if javbus_dir not in sys.path:
+                        sys.path.insert(0, javbus_dir)
+                    
+                    # 导入爬虫模块
+                    import crawler.javbus.crawler as javbus_crawler
+                    javbus_crawler.process_home_page()  # 这个函数会调用 controller.process_home_page()
+                    app_logger.info("JAV首页更新完成")
+                except Exception as e:
+                    app_logger.error(f"JAV首页更新错误: {e}")
+            
+            process = multiprocessing.Process(target=run_crawler)
+            process.daemon = True
+            process.start()
+            
+            return jsonify({
+                'success': True,
+                'message': 'JAV首页更新任务已开始执行，请查看控制台日志了解进度'
+            })
+            
+        except Exception as e:
+            app_logger.error(f"启动JAV首页更新错误: {e}")
+            return jsonify({
+                'success': False,
+                'error': f'启动失败: {str(e)}'
             })

@@ -815,6 +815,73 @@ def update_actress_data(actress_info,code):
         app_logger.info("更新演员数据时出错: {e}")
         return False
 
+def process_home_page(max_pages = 100):
+    try:
+        current_url = jav_base_url
+        app_logger.info(f"开始处理页面: {jav_base_url}")
+        page_count = 0
+        total_moviesCount = 0
+        
+        while current_url and (max_pages is None or page_count < max_pages):
+            app_logger.info(f"正在处理第 {page_count + 1} 页: {current_url}")
+            
+            # 获取页面内容
+            html_content = controller.get_page_content(current_url)
+            if not html_content:
+                app_logger.info(f"无法获取页面内容: {current_url}")
+                break
+            
+            
+            # 解析影片列表
+            movies =  parse_actress_movies(html_content)
+            app_logger.info(f"第 {page_count + 1} 页找到 {len(movies)} 部影片")
+            total_moviesCount += len(movies)
+            for movie in movies: 
+                code = movie['code'] 
+                if code and db_manager.is_movie_crawed(code) == False:
+                    try:
+                        # 获取影片详细页面
+                        movie_html =  controller.get_page_content(movie['url']) 
+                        if movie_html:
+                            # 使用pageparser解析影片详细信息
+                            movie_detail = pageparser.parser_content(movie_html)
+                            #app_logger.info(f'解析影片详细页面: {movie_detail}')
+                            if movie_detail:
+                                # 写入数据库
+                                db_manager.write_jav_movie(movie_detail)
+                            else:
+                                app_logger.error(f"✗ 无法解析影片详情: {movie['url']}")
+                                db_manager.add_retry_url(movie['url'], 'parse_error', '无法解析影片详情',code)
+                        else:
+                            app_logger.error(f"✗ 无法获取影片页面: {movie['url']}")
+                            db_manager.add_retry_url(movie['url'], 'fetch_error', '无法获取影片页面',code)
+                    except Exception as e:
+                        app_logger.error(f"✗ 处理影片时出错 {movie['url']}: {e}")
+                        db_manager.add_retry_url(movie['url'], 'process_error', str(e),code)
+                else:
+                    app_logger.info(f"跳过已处理的影片: {movie['url']}")
+            
+            # 获取下一页URL
+            next_url =  get_next_page_url_actress(current_url, html_content)
+            if next_url:
+                app_logger.info(f"找到下一页: {next_url}")
+                current_url = next_url
+                page_count += 1
+                
+                # 添加延迟避免请求过快
+                import time
+                time.sleep(2)
+            else:
+                app_logger.info("没有更多页面")
+                break
+        
+        app_logger.info(f"演员页面处理完成，共处理 {page_count + 1} 页，{total_moviesCount} 部影片")
+        
+        
+        
+    except Exception as e:
+        app_logger.info(f"处理演员页面时出错: {e}")
+
 def process_actress_page(code, max_pages=None):
     """处理演员页面，获取演员信息和所有影片"""
     try:

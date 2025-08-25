@@ -147,6 +147,7 @@ def crawl_actresses():
         actresses_handler(url)
 
 def craw_all_star(): 
+    
     cursor = db_manager.get_all_star()
     if cursor is not None:
         results = list(cursor)  # 将 Cursor 转换为列表
@@ -175,6 +176,8 @@ def craw_all_star():
             app_logger.error(f"处理演员 {star['code']} 时出错: {e}")
     
     app_logger.info(f"全部演员处理完成 - 总数: {all_count}, 新处理: {processed_count}, 跳过: {skipped_count}")
+
+     
 
 def craw_top_star():
     # 获取收藏的演员列表
@@ -226,28 +229,11 @@ def process_single_url(url):
     except Exception as e:
             app_logger.error(f"✗ 无法获取影片页面: {e}")
             return None
-    
+
+def process_home_page():
+    controller.process_home_page()
 
 if __name__ == '__main__':
-     
-    #crawl_actresses()
-      
     craw_top_star()
 
-    #homeurl_handler('https://www.javbus.com')
-    # homeurl_handler('https://www.javbus.com/ja/page/38')
-    #homeurl_handler('https://www.javbus.com/ja/uncensored')
-    # homeurl_handler('https://www.javbus.com/ja/SDJS-271') # 1 + 5
-    # singleurl_handler('https://www.javbus.com/ja/SDJS-271')
-    # singleurl_handler('https://www.javbus.com/ja/SP-1000') # test 404 error
-    # singleurl_handler('https://www.javbus.com/ja/page/6') # test err url
-    # singleurl_handler('https://www.javbus.com/ja/HEYZO-3379') # test uncensored
-    # singleurl_handler('https://www.javbus.com/ja/EZD-269') # test bad page
-    # singleurl_handler('https://www.javbus.com/ja/SDDL-478')
-    # singleurl_handler('https://www.javbus.com/ja/BIG-054')
-    # singleurl_handler('https://www.javbus.com/ja/FAA-250')
-    # singleurl_handler('https://www.javbus.com/ja/STCV-036')
-    # homeurl_handler(sys.argv[1])
-    # singleurl_handler(sys.argv[1])
-	# singleurl_handler('https://www.javbus.com/ja/' + sys.argv[1])
 
