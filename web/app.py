@@ -20,6 +20,7 @@ from routes import register_routes
 from subscription import start_scheduler
 from jellyfin_movie_checker import JellyfinMovieChecker
 from crawler.javbus_crawler import JavBusCrawler
+from crawler.selenium_crawler import ForumSeleniumCrawler
   
 # 创建Flask应用
 app = Flask(__name__, 
@@ -98,18 +99,26 @@ def init_components():
     except Exception as e:
         print(f"JavBusCrawler初始化失败: {e}")
         crawler = None
+
+    try:
+        # 初始化Sehuatang爬虫
+        sehuatang_crawler = ForumSeleniumCrawler()
+        print("Sehuatang爬虫初始化成功")
+    except Exception as e:
+        print(f"Sehuatang爬虫初始化失败: {e}")
+        sehuatang_crawler = None
     
-    return jellyfin_checker, crawler
+    return jellyfin_checker, crawler,sehuatang_crawler
 
 
 # 保留这个调用，它会处理所有初始化
-jellyfin_checker, crawler = init_components()
+jellyfin_checker, crawler,sehuatang_crawler = init_components()
 
 # 注册路由
 register_routes(app, jellyfin_checker, crawler)
 
 # 启动定时任务调度器
-start_scheduler(jellyfin_checker, crawler)
+start_scheduler(jellyfin_checker, crawler,sehuatang_crawler)
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=6000)

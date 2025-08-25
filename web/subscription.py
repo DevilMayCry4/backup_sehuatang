@@ -12,7 +12,10 @@ from datetime import datetime, timedelta
 from database import db_manager
 from email_notification import send_batch_email_notification
 
-def check_subscribed_series(jellyfin_checker, crawler):
+def check_subscribed_series(jellyfin_checker, crawler,sehuatang_crawler):
+
+    sehuatang_crawler.update_sehuatang()
+
     """检查订阅的电影系列"""
     if any(component is None for component in [db_manager.add_movie_collection, db_manager.mongo_collection, jellyfin_checker, crawler, db_manager.found_movies_collection]):
         print("必要组件未初始化，跳过检查")
@@ -145,10 +148,10 @@ def check_subscribed_series(jellyfin_checker, crawler):
     except Exception as e:
         print(f"执行定时推送任务时出错: {e}")
 
-def start_scheduler(jellyfin_checker, crawler):
+def start_scheduler(jellyfin_checker, crawler,sehuatang_crawler):
     """启动定时任务调度器"""
     # 每天晚上10点执行
-    schedule.every().day.at("23:00").do(lambda: check_subscribed_series(jellyfin_checker, crawler))
+    schedule.every().day.at("23:00").do(lambda: check_subscribed_series(jellyfin_checker, crawler,sehuatang_crawler))
     
     def run_scheduler():
         while True:
