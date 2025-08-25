@@ -221,7 +221,7 @@ class ForumSeleniumCrawler(BaseSeleniumController):
                 'url': thread_url,
                 'title': title,
                 'magnet_link': magnet_link,
-                'id':self.extract_tid_id(thread_url),
+                'tid':self.extract_tid_id(thread_url),
  
             }
             # 保存到MongoDB
@@ -235,9 +235,7 @@ class ForumSeleniumCrawler(BaseSeleniumController):
     def crawl_from_url(self, home_url):
         """从网络URL开始爬取"""
         app_logger.info(f"开始从URL爬取: {home_url}")
-        
-        # 先测试网络连接
-       
+   
         
         # 获取首页内容
         html_content = self.get_page_content(home_url)
@@ -291,7 +289,7 @@ class ForumSeleniumCrawler(BaseSeleniumController):
         crawler = ForumSeleniumCrawler(delay=3, headless=headless)  # 设置3秒延时
         
         try: 
-            pageNumbers = 100
+            pageNumbers = 50
             for pageNumber in range(0, pageNumbers + 1):
                 url = f"{crawler.base_url}&page={pageNumber}"
                 results = crawler.crawl_from_url(url)

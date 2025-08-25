@@ -825,6 +825,7 @@ class DatabaseManager:
         return self.mongo_collection.find_one({'tid': tid})
 
     def save_sehuatang_detail_db(self, data):
+
         """保存数据到MongoDB"""
         if not self.mongo_client:
             app_logger.warning("MongoDB未连接，跳过数据保存")
