@@ -8,7 +8,7 @@ from flask import Flask, session, redirect, url_for, jsonify
 from flask_cors import CORS
 import sys
 import os
-from datetime import timedelta
+from datetime import timedelta, datetime
 from functools import wraps
 
 # 添加父目录到路径，以便导入项目模块
@@ -29,6 +29,9 @@ app = Flask(__name__,
 app.config['SECRET_KEY'] = 'your-secret-key-here-change-in-production'
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=24)
 
+# 静态文件缓存配置
+app.config['SEND_FILE_MAX_AGE_DEFAULT'] = timedelta(days=365)  # 静态文件缓存1年
+
 # 配置CORS - 允许所有来源访问
 CORS(app, resources={
     r"/*": {
@@ -37,6 +40,7 @@ CORS(app, resources={
         "allow_headers": ["Content-Type", "Authorization"]
     }
 })
+
 
 def login_required(f):
     """登录验证装饰器"""

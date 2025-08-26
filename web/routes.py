@@ -12,8 +12,9 @@ from subscription import trigger_subscription_check_async
 from image_proxy import proxy_image
 from web import app_logger
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 import multiprocessing
+from flask import session, redirect, url_for, jsonify, send_from_directory, make_response
 
 def register_routes(app, jellyfin_checker, crawler):
     """注册所有路由"""
@@ -1968,3 +1969,33 @@ def register_routes(app, jellyfin_checker, crawler):
                 'success': False,
                 'error': f'启动失败: {str(e)}'
             })
+
+
+    # 自定义静态文件处理，添加缓存头
+    @app.route('/static/<path:filename>')
+    def static_files(filename):
+        """自定义静态文件处理，添加缓存控制头"""
+        response = make_response(send_from_directory(app.static_folder, filename))
+        
+        # 根据文件类型设置不同的缓存策略
+        if filename.endswith(('.css', '.js')):
+            # CSS和JS文件缓存1年
+            response.headers['Cache-Control'] = 'public, max-age=31536000, immutable'
+            response.headers['Expires'] = (datetime.now() + timedelta(days=365)).strftime('%a, %d %b %Y %H:%M:%S GMT')
+        elif filename.endswith(('.png', '.jpg', '.jpeg', '.gif', '.ico', '.svg', '.webp')):
+            # 图片文件缓存30天
+            response.headers['Cache-Control'] = 'public, max-age=2592000'
+            response.headers['Expires'] = (datetime.now() + timedelta(days=30)).strftime('%a, %d %b %Y %H:%M:%S GMT')
+        elif filename.endswith(('.woff', '.woff2', '.ttf', '.eot')):
+            # 字体文件缓存1年
+            response.headers['Cache-Control'] = 'public, max-age=31536000, immutable'
+            response.headers['Expires'] = (datetime.now() + timedelta(days=365)).strftime('%a, %d %b %Y %H:%M:%S GMT')
+        else:
+            # 其他文件缓存1天
+            response.headers['Cache-Control'] = 'public, max-age=86400'
+            response.headers['Expires'] = (datetime.now() + timedelta(days=1)).strftime('%a, %d %b %Y %H:%M:%S GMT')
+        
+        # 添加ETag支持
+        response.headers['ETag'] = f'"{hash(filename + str(os.path.getmtime(os.path.join(app.static_folder, filename))))}"'
+        print(f"ETag: {response.headers['ETag']}")
+        return response

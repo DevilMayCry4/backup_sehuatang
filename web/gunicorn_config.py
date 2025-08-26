@@ -12,3 +12,15 @@ bind = "0.0.0.0:5000"
 # Worker数量
 workers = 4
 worker_class = "sync"
+
+# 静态文件缓存配置
+max_requests = 1000
+max_requests_jitter = 50
+
+# 启用预加载应用
+preload_app = True
+
+# 设置静态文件缓存
+static_map = {
+    '/static': '/server/static'
+}
