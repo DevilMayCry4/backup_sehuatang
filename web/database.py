@@ -545,13 +545,17 @@ class DatabaseManager:
             else:
                 final_query = {}
             
-            # 设置排序方式
+            # 设置排序方式 - 添加二级排序确保稳定性
             sort_field = sort_by if sort_by in ['release_date', 'title', 'code'] else 'release_date'
             sort_order = -1  # 降序排列
             
+            # 使用复合排序：主排序字段 + _id 作为二级排序确保稳定性
             movies = list(self.javbus_data_collection.find(
                 final_query
-            ).sort(sort_field, sort_order).skip((page-1)*per_page).limit(per_page))
+            ).sort([
+                (sort_field, sort_order),
+                ('_id', 1)  # 添加 _id 作为二级排序字段确保稳定性
+            ]).skip((page-1)*per_page).limit(per_page))
             
             # 转换 ObjectId 为字符串以支持 JSON 序列化
             for movie in movies:
