@@ -1970,6 +1970,271 @@ def register_routes(app, jellyfin_checker, crawler):
                 'error': f'启动失败: {str(e)}'
             })
 
+    # 爬虫配置相关路由
+    @app.route('/crawler-config')
+    @login_required
+    def crawler_config_page():
+        """爬虫配置页面"""
+        return render_template('crawler_config.html')
+    
+    @app.route('/api/crawler-config', methods=['GET'])
+    @api_login_required
+    def get_crawler_config():
+        """获取爬虫配置API"""
+        try:
+            crawler_type = request.args.get('type', 'jav')
+            
+            if crawler_type not in ['jav', 'sehuatang']:
+                return jsonify({
+                    'success': False,
+                    'error': '无效的爬虫类型'
+                })
+            
+            config = db_manager.get_crawler_config(crawler_type)
+            
+            return jsonify({
+                'success': True,
+                'config': config
+            })
+            
+        except Exception as e:
+            app_logger.error(f"获取爬虫配置错误: {e}")
+            return jsonify({
+                'success': False,
+                'error': '获取配置失败，请稍后重试'
+            })
+    
+    @app.route('/api/crawler-config', methods=['POST'])
+    @api_login_required
+    def save_crawler_config():
+        """保存爬虫配置API"""
+        try:
+            data = request.get_json()
+            crawler_type = data.get('type')
+            
+            if crawler_type not in ['jav', 'sehuatang']:
+                return jsonify({
+                    'success': False,
+                    'error': '无效的爬虫类型'
+                })
+            
+            # 验证配置数据
+            config_data = {
+                'schedule_time': data.get('schedule_time', '23:00'),
+                'max_pages': int(data.get('max_pages', 50)),
+                'interval_days': int(data.get('interval_days', 7)),
+                'enabled': bool(data.get('enabled', True))
+            }
+            
+            # 验证时间格式
+            try:
+                datetime.strptime(config_data['schedule_time'], '%H:%M')
+            except ValueError:
+                return jsonify({
+                    'success': False,
+                    'error': '时间格式无效，请使用 HH:MM 格式'
+                })
+            
+            # 验证页数和间隔天数
+            if config_data['max_pages'] < 1 or config_data['max_pages'] > 1000:
+                return jsonify({
+                    'success': False,
+                    'error': '最大页数必须在1-1000之间'
+                })
+            
+            if config_data['interval_days'] < 1 or config_data['interval_days'] > 365:
+                return jsonify({
+                    'success': False,
+                    'error': '间隔天数必须在1-365之间'
+                })
+            
+            # 保存配置
+            result = db_manager.save_crawler_config(crawler_type, config_data)
+            
+            if result:
+                return jsonify({
+                    'success': True,
+                    'message': f'{crawler_type.upper()}爬虫配置保存成功'
+                })
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': '保存配置失败'
+                })
+            
+        except ValueError as e:
+            return jsonify({
+                'success': False,
+                'error': '配置数据格式错误'
+            })
+        except Exception as e:
+            app_logger.error(f"保存爬虫配置错误: {e}")
+            return jsonify({
+                'success': False,
+                'error': '保存配置失败，请稍后重试'
+            })
+    
+    @app.route('/api/crawler-config/all', methods=['GET'])
+    @api_login_required
+    def get_all_crawler_configs():
+        """获取所有爬虫配置API"""
+        try:
+            configs = db_manager.get_all_crawler_configs()
+            
+            return jsonify({
+                'success': True,
+                'configs': configs
+            })
+            
+        except Exception as e:
+            app_logger.error(f"获取所有爬虫配置错误: {e}")
+            return jsonify({
+                'success': False,
+                'error': '获取配置失败，请稍后重试'
+            })
+    
+    @app.route('/api/crawler-config/toggle', methods=['POST'])
+    @api_login_required
+    def toggle_crawler_status():
+        """切换爬虫启用状态API"""
+        try:
+            data = request.get_json()
+            crawler_type = data.get('type')
+            enabled = bool(data.get('enabled', True))
+            
+            if crawler_type not in ['jav', 'sehuatang']:
+                return jsonify({
+                    'success': False,
+                    'error': '无效的爬虫类型'
+                })
+            
+            result = db_manager.toggle_crawler_status(crawler_type, enabled)
+            
+            if result:
+                status_text = '启用' if enabled else '禁用'
+                return jsonify({
+                    'success': True,
+                    'message': f'{crawler_type.upper()}爬虫已{status_text}'
+                })
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': '更新状态失败'
+                })
+            
+        except Exception as e:
+            app_logger.error(f"切换爬虫状态错误: {e}")
+            return jsonify({
+                'success': False,
+                'error': '更新状态失败，请稍后重试'
+            })
+    
+    @app.route('/api/crawler-config/run', methods=['POST'])
+    @api_login_required
+    def run_crawler_immediately():
+        """立即运行爬虫API"""
+        try:
+            data = request.get_json()
+            crawler_type = data.get('type')
+            
+            if crawler_type not in ['jav', 'sehuatang']:
+                return jsonify({
+                    'success': False,
+                    'error': '无效的爬虫类型'
+                })
+            
+            # 获取爬虫配置
+            config = db_manager.get_crawler_config(crawler_type)
+            
+            if not config['enabled']:
+                return jsonify({
+                    'success': False,
+                    'error': f'{crawler_type.upper()}爬虫已被禁用，请先启用后再运行'
+                })
+            
+            # 在后台进程中执行爬虫任务
+            def run_crawler():
+                try:
+                    # 在多进程中设置正确的Python路径
+                    import sys
+                    import os
+                    
+                    # 添加crawler目录到Python路径
+                    crawler_dir = os.path.join(os.path.dirname(__file__), 'crawler')
+                    if crawler_dir not in sys.path:
+                        sys.path.insert(0, crawler_dir)
+                    
+                    if crawler_type == 'jav':
+                        # 添加javbus目录到Python路径
+                        javbus_dir = os.path.join(crawler_dir, 'javbus')
+                        if javbus_dir not in sys.path:
+                            sys.path.insert(0, javbus_dir)
+                        
+                        # 导入并运行JAV爬虫
+                        import crawler.javbus.crawler as javbus_crawler
+                        javbus_crawler.process_home_page(max_pages=config['max_pages'])
+                        app_logger.info(f"JAV爬虫运行完成，爬取页数: {config['max_pages']}")
+                    
+                    elif crawler_type == 'sehuatang':
+                        # 导入并运行Sehuatang爬虫
+                        import selenium_crawler
+                        selenium_crawler.update_sehuatang(pageNumbers=config['max_pages'])
+                        app_logger.info(f"Sehuatang爬虫运行完成，爬取页数: {config['max_pages']}")
+                    
+                    # 更新最后运行时间
+                    db_manager.update_crawler_last_run_time(crawler_type)
+                    
+                except Exception as e:
+                    app_logger.error(f"{crawler_type.upper()}爬虫运行错误: {e}")
+            
+            process = multiprocessing.Process(target=run_crawler)
+            process.daemon = True
+            process.start()
+            
+            return jsonify({
+                'success': True,
+                'message': f'{crawler_type.upper()}爬虫已开始运行，请查看控制台日志了解进度'
+            })
+            
+        except Exception as e:
+            app_logger.error(f"启动爬虫错误: {e}")
+            return jsonify({
+                'success': False,
+                'error': f'启动失败: {str(e)}'
+            })
+    
+    @app.route('/api/crawler-config/reset', methods=['POST'])
+    @api_login_required
+    def reset_crawler_config():
+        """重置爬虫配置为默认值API"""
+        try:
+            data = request.get_json()
+            crawler_type = data.get('type')
+            
+            if crawler_type not in ['jav', 'sehuatang']:
+                return jsonify({
+                    'success': False,
+                    'error': '无效的爬虫类型'
+                })
+            
+            # 删除现有配置，让系统使用默认配置
+            db_manager.crawler_config_collection.delete_one({'type': crawler_type})
+            
+            # 获取默认配置
+            default_config = db_manager.get_crawler_config(crawler_type)
+            
+            return jsonify({
+                'success': True,
+                'message': f'{crawler_type.upper()}爬虫配置已重置为默认值',
+                'config': default_config
+            })
+            
+        except Exception as e:
+            app_logger.error(f"重置爬虫配置错误: {e}")
+            return jsonify({
+                'success': False,
+                'error': '重置配置失败，请稍后重试'
+            })
 
     # 自定义静态文件处理，添加缓存头
     @app.route('/static/<path:filename>')

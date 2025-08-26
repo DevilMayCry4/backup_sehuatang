@@ -39,6 +39,8 @@ class DatabaseManager:
         self.series_favorites_collection = None
         # 厂商收藏集合
         self.studio_favorites_collection = None
+        # 爬虫配置集合
+        self.crawler_config_collection = None
         
     def init_mongodb(self):
         """初始化MongoDB连接"""
@@ -75,7 +77,10 @@ class DatabaseManager:
             # 厂商收藏集合
             self.studio_favorites_collection = self.mongo_db['studio_favorites']
             
-            # 失败图片集合c
+            # 爬虫配置集合
+            self.crawler_config_collection = self.mongo_db['crawler_config']
+            
+            # 失败图片集合
             self.failed_images_collection = self.mongo_db['failed_images']
             
             # 创建默认管理员用户（如果不存在）
@@ -1771,6 +1776,145 @@ class DatabaseManager:
         except Exception as e:
             app_logger.error(f"获取用户收藏厂商失败: {e}")
             return {'studios': [], 'total': 0, 'page': page, 'per_page': per_page, 'total_pages': 0}
+    
+    # 爬虫配置相关方法
+    def get_crawler_config(self, crawler_type):
+        """获取指定类型的爬虫配置"""
+        try:
+            config = self.crawler_config_collection.find_one({'crawler_type': crawler_type})
+            if config:
+                return {
+                    'crawler_type': config.get('crawler_type'),
+                    'schedule_time': config.get('schedule_time', '23:00'),
+                    'max_pages': config.get('max_pages', 50),
+                    'crawl_interval_days': config.get('crawl_interval_days', 1),
+                    'is_enabled': config.get('is_enabled', True),
+                    'last_crawl_time': config.get('last_crawl_time'),
+                    'created_at': config.get('created_at'),
+                    'updated_at': config.get('updated_at')
+                }
+            else:
+                # 返回默认配置
+                return self._get_default_crawler_config(crawler_type)
+        except Exception as e:
+            app_logger.error(f"获取爬虫配置失败: {e}")
+            return self._get_default_crawler_config(crawler_type)
+    
+    def _get_default_crawler_config(self, crawler_type):
+        """获取默认爬虫配置"""
+        default_configs = {
+            'jav': {
+                'crawler_type': 'jav',
+                'schedule_time': '23:00',
+                'max_pages': 50,
+                'crawl_interval_days': 1,
+                'is_enabled': True,
+                'last_crawl_time': None,
+                'created_at': None,
+                'updated_at': None
+            },
+            'sehuatang': {
+                'crawler_type': 'sehuatang',
+                'schedule_time': '23:30',
+                'max_pages': 100,
+                'crawl_interval_days': 1,
+                'is_enabled': True,
+                'last_crawl_time': None,
+                'created_at': None,
+                'updated_at': None
+            }
+        }
+        return default_configs.get(crawler_type, default_configs['jav'])
+    
+    def save_crawler_config(self, crawler_type, config_data):
+        """保存或更新爬虫配置"""
+        try:
+            current_time = datetime.now()
+            
+            # 准备更新数据
+            update_data = {
+                'crawler_type': crawler_type,
+                'schedule_time': config_data.get('schedule_time', '23:00'),
+                'max_pages': int(config_data.get('max_pages', 50)),
+                'crawl_interval_days': int(config_data.get('crawl_interval_days', 1)),
+                'is_enabled': config_data.get('is_enabled', True),
+                'updated_at': current_time
+            }
+            
+            # 检查是否已存在配置
+            existing_config = self.crawler_config_collection.find_one({'crawler_type': crawler_type})
+            
+            if existing_config:
+                # 更新现有配置
+                result = self.crawler_config_collection.update_one(
+                    {'crawler_type': crawler_type},
+                    {'$set': update_data}
+                )
+                app_logger.info(f"更新{crawler_type}爬虫配置成功")
+                return result.modified_count > 0
+            else:
+                # 创建新配置
+                update_data['created_at'] = current_time
+                result = self.crawler_config_collection.insert_one(update_data)
+                app_logger.info(f"创建{crawler_type}爬虫配置成功")
+                return result.inserted_id is not None
+                
+        except Exception as e:
+            app_logger.error(f"保存爬虫配置失败: {e}")
+            return False
+    
+    def get_all_crawler_configs(self):
+        """获取所有爬虫配置"""
+        try:
+            configs = {}
+            crawler_types = ['jav', 'sehuatang']
+            
+            for crawler_type in crawler_types:
+                configs[crawler_type] = self.get_crawler_config(crawler_type)
+            
+            return configs
+        except Exception as e:
+            app_logger.error(f"获取所有爬虫配置失败: {e}")
+            return {}
+    
+    def update_crawler_last_run_time(self, crawler_type):
+        """更新爬虫最后运行时间"""
+        try:
+            current_time = datetime.now()
+            result = self.crawler_config_collection.update_one(
+                {'crawler_type': crawler_type},
+                {
+                    '$set': {
+                        'last_crawl_time': current_time,
+                        'updated_at': current_time
+                    }
+                },
+                upsert=True
+            )
+            return result.modified_count > 0 or result.upserted_id is not None
+        except Exception as e:
+            app_logger.error(f"更新爬虫最后运行时间失败: {e}")
+            return False
+    
+    def toggle_crawler_status(self, crawler_type, is_enabled):
+        """切换爬虫启用状态"""
+        try:
+            result = self.crawler_config_collection.update_one(
+                {'crawler_type': crawler_type},
+                {
+                    '$set': {
+                        'is_enabled': is_enabled,
+                        'updated_at': datetime.now()
+                    }
+                },
+                upsert=True
+            )
+            app_logger.info(f"{crawler_type}爬虫状态已{'启用' if is_enabled else '禁用'}")
+            return result.modified_count > 0 or result.upserted_id is not None
+        except Exception as e:
+            app_logger.error(f"切换爬虫状态失败: {e}")
+            return False
+
 # 创建全局数据库管理器实例
 db_manager = DatabaseManager()
 
