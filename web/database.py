@@ -358,23 +358,24 @@ class DatabaseManager:
             return False
     
     def get_paginated_actresses(self, page=1, per_page=20, cup_size_filter=None):
-        """获取分页演员数据"""
+        """获取分页演员数据，支持罩杯筛选"""
         try:
             if self.actresses_data_collection is None:
                 return None, 0
-                
-            # 构建查询条件
+            
             query = {}
             if cup_size_filter:
                 query['cup_size'] = cup_size_filter
-                
+            
             actresses = list(self.actresses_data_collection.find(query)
-                            .skip((page-1)*per_page)
-                            .limit(per_page))
+                           .sort([('name', 1), ('_id', 1)])
+                           .skip((page-1)*per_page)
+                           .limit(per_page))
+            
             total = self.actresses_data_collection.count_documents(query)
             return actresses, total
         except Exception as e:
-            app_logger.info(f"获取分页演员数据错误: {e}")
+            app_logger.error(f"获取分页演员数据错误: {e}")
             return None, 0
     
     def get_all_star(self):
@@ -398,43 +399,38 @@ class DatabaseManager:
             return None
     
     def search_actresses(self, search_keyword=None, page=1, per_page=20, cup_size_filter=None):
-        """搜索演员数据，支持按名称和代码搜索"""
+        """搜索演员，支持关键字搜索和罩杯筛选"""
         try:
             if self.actresses_data_collection is None:
                 return None, 0
-                
-            # 构建查询条件
-            query_conditions = []
             
-            # 如果有搜索关键字，添加搜索条件
+            query = {}
+            
+            # 构建查询条件
+            conditions = []
+            
             if search_keyword and search_keyword.strip():
                 search_regex = {'$regex': search_keyword.strip(), '$options': 'i'}
-                # 在 name 和 code 字段中搜索关键字
                 search_query = {
                     '$or': [
                         {'name': search_regex},
                         {'code': search_regex}
                     ]
                 }
-                query_conditions.append(search_query)
+                conditions.append(search_query)
             
-            # 添加罩杯筛选条件
             if cup_size_filter:
-                query_conditions.append({'cup_size': cup_size_filter})
+                conditions.append({'cup_size': cup_size_filter})
             
-            # 合并所有查询条件
-            if query_conditions:
-                if len(query_conditions) > 1:
-                    final_query = {'$and': query_conditions}
-                else:
-                    final_query = query_conditions[0]
-            else:
-                final_query = {}
-                
-            actresses = list(self.actresses_data_collection.find(final_query)
-                            .skip((page-1)*per_page)
-                            .limit(per_page))
-            total = self.actresses_data_collection.count_documents(final_query)
+            if conditions:
+                query = {'$and': conditions} if len(conditions) > 1 else conditions[0]
+            
+            actresses = list(self.actresses_data_collection.find(query)
+                           .sort([('name', 1), ('_id', 1)])
+                           .skip((page-1)*per_page)
+                           .limit(per_page))
+            
+            total = self.actresses_data_collection.count_documents(query)
             
             # 转换ObjectId为字符串
             for actress in actresses:
@@ -443,7 +439,7 @@ class DatabaseManager:
                     
             return actresses, total
         except Exception as e:
-            app_logger.info(f"搜索演员数据错误: {e}")
+            app_logger.error(f"搜索演员错误: {e}")
             return None, 0
     
     def add_retry_url(self, url, error_type, error_message,code):
@@ -608,12 +604,12 @@ class DatabaseManager:
                 
             movies = list(self.javbus_data_collection.find(
                 final_query
-            ).sort('release_date', -1).skip((page-1)*per_page).limit(per_page))
+            ).sort([('release_date', -1), ('_id', -1)]).skip((page-1)*per_page).limit(per_page))
             
             total = self.javbus_data_collection.count_documents(final_query)
             return movies, total
         except Exception as e:
-            app_logger.error(f"获取系列影片错误: {e}")
+            app_logger.info(f"获取系列影片错误: {e}")
             return None, 0
     
     def get_actress_movies(self, actress_name, page=1, per_page=20, search_keyword=None, is_single=None, is_subtitle=None):
@@ -656,7 +652,7 @@ class DatabaseManager:
                 
             movies = list(self.javbus_data_collection.find(
                 final_query
-            ).sort('release_date', -1).skip((page-1)*per_page).limit(per_page))
+            ).sort([('release_date', -1), ('_id', -1)]).skip((page-1)*per_page).limit(per_page))
             
             total = self.javbus_data_collection.count_documents(final_query)
             return movies, total
@@ -704,7 +700,7 @@ class DatabaseManager:
                 
             movies = list(self.javbus_data_collection.find(
                 final_query
-            ).sort('release_date', -1).skip((page-1)*per_page).limit(per_page))
+            ).sort([('release_date', -1), ('_id', -1)]).skip((page-1)*per_page).limit(per_page))
             
             total = self.javbus_data_collection.count_documents(final_query)
             return movies, total
@@ -1264,7 +1260,7 @@ class DatabaseManager:
             
             movies = list(self.javbus_data_collection.find(
                 final_query
-            ).sort(sort_field, sort_order).skip((page-1)*per_page).limit(per_page))
+            ).sort([(sort_field, sort_order), ('_id', sort_order)]).skip((page-1)*per_page).limit(per_page))
             
             # 转换 ObjectId 为字符串以支持 JSON 序列化
             for movie in movies:
@@ -1645,7 +1641,7 @@ class DatabaseManager:
             # 获取分页数据
             cursor = self.series_favorites_collection.find(
                 {'user_id': user_id}
-            ).sort('created_at', -1).skip(skip).limit(per_page)
+            ).sort([('created_at', -1), ('_id', -1)]).skip(skip).limit(per_page)
             
             series_list = list(cursor)
             
@@ -1754,7 +1750,7 @@ class DatabaseManager:
             # 获取分页数据
             cursor = self.studio_favorites_collection.find(
                 {'user_id': user_id}
-            ).sort('created_at', -1).skip(skip).limit(per_page)
+            ).sort([('created_at', -1), ('_id', -1)]).skip(skip).limit(per_page)
             
             studios_list = list(cursor)
             
