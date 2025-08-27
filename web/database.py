@@ -557,10 +557,7 @@ class DatabaseManager:
             ]).skip((page-1)*per_page).limit(per_page))
             
             # 转换 ObjectId 为字符串以支持 JSON 序列化
-            for movie in movies:
-                if '_id' in movie:
-                    movie['_id'] = str(movie['_id'])
-                    movie['is_exist'] = self.isMovieExist(movie)
+            self.deal_with_movies(movies)
             
             total = self.javbus_data_collection.count_documents(final_query)
             return movies, total
