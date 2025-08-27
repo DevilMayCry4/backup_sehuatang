@@ -17,7 +17,7 @@ class JellyfinConfig:
         print(self.config)
     
     def _load_config(self) -> Dict[str, Any]:
-        env_file = '/root/backup_sehuatang/copy.env'
+        env_file = '/server/backup_sehuatang/copy.env'
         if os.path.exists(env_file):
             with open(env_file, 'r', encoding='utf-8') as f:
                 for line in f:

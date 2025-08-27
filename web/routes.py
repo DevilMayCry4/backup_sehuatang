@@ -1065,6 +1065,30 @@ def register_routes(app, jellyfin_checker, crawler):
                 'error': f'获取备份记录失败: {str(e)}'
             })
     
+    @app.route('/api/crawler-status', methods=['GET'])
+    @api_login_required
+    def get_crawler_status():
+        """获取爬虫运行状态API"""
+        try:
+            # 获取爬虫状态信息
+            jav_status = db_manager.get_crawler_running_status('jav')
+            sehuatang_status = db_manager.get_crawler_running_status('sehuatang')
+            
+            return jsonify({
+                'success': True,
+                'status': {
+                    'jav': jav_status,
+                    'sehuatang': sehuatang_status
+                }
+            })
+            
+        except Exception as e:
+            app_logger.error(f"获取爬虫状态错误: {e}")
+            return jsonify({
+                'success': False,
+                'error': f'获取爬虫状态失败: {str(e)}'
+            })
+    
     @app.route('/series/<series_name>')
     @login_required
     def series_movies_page(series_name):

@@ -320,7 +320,6 @@ def parser_content(html):
     is_single = len(actor_matches) == 1 
     categories['is_single'] = is_single
     categories['is_subtitle'] = is_subtitle 
-    print(categories)
     return categories
 
 

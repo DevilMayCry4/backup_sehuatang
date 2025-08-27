@@ -373,10 +373,8 @@ class DatabaseManager:
                 query['cup_size'] = cup_size_filter
             
             actresses = list(self.actresses_data_collection.find(query)
-                           .sort([('name', 1), ('_id', 1)])
-                           .skip((page-1)*per_page)
-                           .limit(per_page))
-            
+                            .skip((page-1)*per_page)
+                            .limit(per_page))
             total = self.actresses_data_collection.count_documents(query)
             return actresses, total
         except Exception as e:
@@ -1914,6 +1912,38 @@ class DatabaseManager:
         except Exception as e:
             app_logger.error(f"切换爬虫状态失败: {e}")
             return False
+            
+    def get_crawler_running_status(self, crawler_type):
+        """获取爬虫运行状态
+        
+        Args:
+            crawler_type: 爬虫类型，'jav'或'sehuatang'
+            
+        Returns:
+            dict: 包含爬虫运行状态的字典
+        """
+        try:
+            # 获取爬虫配置
+            config = self.get_crawler_config(crawler_type)
+            
+            # 检查是否有正在运行的进程
+            # 这里简化处理，实际可能需要检查进程ID或其他标识
+            running = False
+            
+            return {
+                'running': running,
+                'enabled': config.get('is_enabled', False),
+                'last_run': config.get('last_crawl_time', ''),
+                'next_run': config.get('next_run', '')
+            }
+        except Exception as e:
+            app_logger.error(f"获取爬虫状态错误: {e}")
+            return {
+                'running': False,
+                'enabled': False,
+                'last_run': '',
+                'next_run': ''
+            }
 
 # 创建全局数据库管理器实例
 db_manager = DatabaseManager()

@@ -222,7 +222,7 @@ document.addEventListener('DOMContentLoaded', function() {
 // 加载所有爬虫配置
 async function loadConfigs() {
     try {
-        const response = await fetch('/api/crawler-configs');
+        const response = await fetch('/api/crawler-config');
         const data = await response.json();
         
         if (data.success) {

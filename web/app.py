@@ -24,7 +24,7 @@ from crawler.selenium_crawler import ForumSeleniumCrawler
   
 # 创建Flask应用
 app = Flask(__name__, 
-           static_folder=os.path.join("/server/", 'static'),  # 自定义文件夹名
+           static_folder='static',  # 使用相对路径，指向当前目录下的static文件夹
            static_url_path='/static')  # 自定义URL路径
 app.config['SECRET_KEY'] = 'your-secret-key-here-change-in-production'
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=24)

@@ -28,7 +28,7 @@ from selenium_base import BaseSeleniumController
 
 
 # 加载环境变量
-load_dotenv('/root/backup_sehuatang/copy.env')
+load_dotenv('/server/backup_sehuatang/copy.env')
  
 
 # 大模型API配置
@@ -838,7 +838,7 @@ def process_home_page(max_pages = 100):
             total_moviesCount += len(movies)
             for movie in movies: 
                 code = movie['code'] 
-                if code and db_manager.is_movie_crawed(code) == False:
+                if code:
                     try:
                         # 获取影片详细页面
                         movie_html =  controller.get_page_content(movie['url']) 
@@ -859,7 +859,7 @@ def process_home_page(max_pages = 100):
                         app_logger.error(f"✗ 处理影片时出错 {movie['url']}: {e}")
                         db_manager.add_retry_url(movie['url'], 'process_error', str(e),code)
                 else:
-                    app_logger.info(f"跳过已处理的影片: {movie['url']}")
+                    app_logger.info(f"没有对应的电影code {code}")
             
             # 获取下一页URL
             next_url =  get_next_page_url_actress(current_url, html_content)

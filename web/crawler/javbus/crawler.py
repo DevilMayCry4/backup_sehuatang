@@ -34,7 +34,7 @@ def download_actress_image(image_url, actress_code, actress_name):
             return None
             
         # 创建保存目录
-        save_dir = '/root/backup_sehuatang/images/actresses'
+        save_dir = '/server/backup_sehuatang/images/actresses'
         os.makedirs(save_dir, exist_ok=True)
         
         # 获取文件扩展名
