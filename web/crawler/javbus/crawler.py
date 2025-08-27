@@ -230,8 +230,8 @@ def process_single_url(url):
             app_logger.error(f"✗ 无法获取影片页面: {e}")
             return None
 
-def process_home_page():
-    controller.process_home_page()
+def process_home_page(max_pages = 100):
+    controller.process_home_page(max_pages = 100)
 
 if __name__ == '__main__':
     craw_top_star()

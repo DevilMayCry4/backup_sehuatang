@@ -54,6 +54,9 @@ def login_required(f):
             session.clear()
             return redirect(url_for('login_page'))
         
+        # 设置用户ID到session中，供后续使用
+        session['user_id'] = user_info.get('user_id') or str(user_info.get('_id'))
+        
         return f(*args, **kwargs)
     return decorated_function
 

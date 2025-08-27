@@ -274,11 +274,11 @@ class JavBusCrawler:
             print(f"本地文件电影数: {result['local_movies']}")
         if 'web_movies' in result:
             print(f"网络爬取电影数: {result['web_movies']}")
-    def search_movies(self, series_name):
+    def search_series_movies(self, series_code):
         """
         搜索指定系列的电影
         """
-        url = f"{self.base_url}/series/{series_name}"
+        url = f"{self.base_url}/series/{series_code}"
         reslut = self.crawl_from_url(url, max_pages=10)
         return reslut['movies'],reslut['title']
 

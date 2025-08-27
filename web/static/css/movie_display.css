@@ -89,6 +89,18 @@
     position: relative;
 }
 
+/* 卡片样式 */
+.exist-movie-card {
+    background: rgb(232, 228, 240);
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    cursor: pointer;
+    overflow: hidden;
+    border: 1px solid rgba(0,0,0,0.05);
+    position: relative;
+}
+
 .movie-card:hover {
     transform: translateY(-4px);
     box-shadow: 0 8px 24px rgba(0,0,0,0.15);
@@ -139,6 +151,8 @@
     border-radius: 4px 0 0 4px;
     background: linear-gradient(135deg, #8a2be2, #6a1b9a);
 }
+
+ 
 
 /* 分页样式 */
 .pagination-container {

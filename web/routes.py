@@ -2047,7 +2047,7 @@ def register_routes(app, jellyfin_checker, crawler):
                 'schedule_time': data.get('schedule_time', '23:00'),
                 'max_pages': int(data.get('max_pages', 50)),
                 'interval_days': int(data.get('interval_days', 7)),
-                'enabled': bool(data.get('enabled', True))
+                'is_enabled': bool(data.get('is_enabled', True))
             }
             
             # 验证时间格式
@@ -2169,8 +2169,8 @@ def register_routes(app, jellyfin_checker, crawler):
             
             # 获取爬虫配置
             config = db_manager.get_crawler_config(crawler_type)
-            
-            if not config['enabled']:
+            print(config)
+            if not config['is_enabled']:
                 return jsonify({
                     'success': False,
                     'error': f'{crawler_type.upper()}爬虫已被禁用，请先启用后再运行'

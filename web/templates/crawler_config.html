@@ -222,7 +222,7 @@ document.addEventListener('DOMContentLoaded', function() {
 // 加载所有爬虫配置
 async function loadConfigs() {
     try {
-        const response = await fetch('/api/crawler-config');
+        const response = await fetch('/api/crawler-config/all');
         const data = await response.json();
         
         if (data.success) {
@@ -259,10 +259,11 @@ async function saveConfig(crawlerType) {
             schedule_time: document.getElementById(crawlerType + 'ScheduleTime').value,
             max_pages: parseInt(document.getElementById(crawlerType + 'MaxPages').value),
             crawl_interval_days: parseInt(document.getElementById(crawlerType + 'CrawlInterval').value),
-            is_enabled: document.getElementById(crawlerType + 'Enabled').checked
+            is_enabled: document.getElementById(crawlerType + 'Enabled').checked,
+            type:crawlerType
         };
         
-        const response = await fetch(`/api/crawler-config/${crawlerType}`, {
+        const response = await fetch(`/api/crawler-config`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -287,8 +288,14 @@ async function saveConfig(crawlerType) {
 // 立即启动爬虫
 async function triggerCrawl(crawlerType) {
     try {
-        const response = await fetch(`/api/trigger-crawl/${crawlerType}`, {
-            method: 'POST'
+        const response = await fetch(`/api/crawler-config/run`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                type: crawlerType
+            })
         });
         
         const data = await response.json();

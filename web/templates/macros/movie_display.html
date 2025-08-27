@@ -2,7 +2,8 @@
 {% macro render_movie_grid(movies) %}
 <div class="movies-grid">
     {% for movie in movies %}
-    <div class="movie-card" onclick="window.location.href='/jav-movie-detail/{{ movie.code }}'">
+    
+    <div class="{% if movie.is_exist %}exist-movie-card{% else %}movie-card{% endif %}" onclick="window.location.href='/jav-movie-detail/{{ movie.code }}'">
         <!-- 单体书签 -->
         {% if movie.is_single %}
         <div class="bookmark bookmark-single">单体</div>
@@ -13,6 +14,7 @@
         <div class="bookmark bookmark-subtitle">字幕</div>
         {% endif %}
         
+       
         <a href="#" onclick="openImageModal('{{ get_movie_cover_url(movie) }}', '{{ movie.title }}'); event.stopPropagation(); return false;">
             <div class="movie-cover-container">
                 <img src="{{ get_movie_cover_url(movie) }}"

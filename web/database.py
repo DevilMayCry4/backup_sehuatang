@@ -560,6 +560,7 @@ class DatabaseManager:
             for movie in movies:
                 if '_id' in movie:
                     movie['_id'] = str(movie['_id'])
+                    movie['is_exist'] = self.isMovieExist(movie)
             
             total = self.javbus_data_collection.count_documents(final_query)
             return movies, total
@@ -604,11 +605,11 @@ class DatabaseManager:
                 final_query = {'$and': query_conditions}
             else:
                 final_query = base_query
-                
+            
             movies = list(self.javbus_data_collection.find(
                 final_query
             ).sort([('release_date', -1), ('_id', -1)]).skip((page-1)*per_page).limit(per_page))
-            
+            self.deal_with_movies(movies)
             total = self.javbus_data_collection.count_documents(final_query)
             return movies, total
         except Exception as e:
@@ -656,7 +657,7 @@ class DatabaseManager:
             movies = list(self.javbus_data_collection.find(
                 final_query
             ).sort([('release_date', -1), ('_id', -1)]).skip((page-1)*per_page).limit(per_page))
-            
+            self.deal_with_movies(movies)
             total = self.javbus_data_collection.count_documents(final_query)
             return movies, total
         except Exception as e:
@@ -704,7 +705,7 @@ class DatabaseManager:
             movies = list(self.javbus_data_collection.find(
                 final_query
             ).sort([('release_date', -1), ('_id', -1)]).skip((page-1)*per_page).limit(per_page))
-            
+            self.deal_with_movies(movies)
             total = self.javbus_data_collection.count_documents(final_query)
             return movies, total
         except Exception as e:
@@ -1264,12 +1265,7 @@ class DatabaseManager:
             movies = list(self.javbus_data_collection.find(
                 final_query
             ).sort([(sort_field, sort_order), ('_id', sort_order)]).skip((page-1)*per_page).limit(per_page))
-            
-            # 转换 ObjectId 为字符串以支持 JSON 序列化
-            for movie in movies:
-                if '_id' in movie:
-                    movie['_id'] = str(movie['_id'])
-             
+            self.deal_with_movies(movies)
             total = self.javbus_data_collection.count_documents(final_query)
             return movies, total
             
@@ -1940,10 +1936,23 @@ class DatabaseManager:
             app_logger.error(f"获取爬虫状态错误: {e}")
             return {
                 'running': False,
-                'enabled': False,
+                'is_enabled': False,
                 'last_run': '',
                 'next_run': ''
             }
+    def deal_with_movies(self,movies):
+        # 转换 ObjectId 为字符串以支持 JSON 序列化
+            for movie in movies:
+                if '_id' in movie:
+                    movie['_id'] = str(movie['_id'])
+                    movie['is_exist'] = self.isMovieExist(movie)
+
+    def isMovieExist(self,movie):
+        code = movie.get('code', '')  # 使用get方法替代函数调用语法
+        actress = self.parse_actress_to_array(movie)
+        folder = ",".join(map(str, actress))
+        path = os.path.join('/data',folder,code)
+        return os.path.exists(path)
 
 # 创建全局数据库管理器实例
 db_manager = DatabaseManager()
