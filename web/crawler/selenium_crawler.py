@@ -284,12 +284,11 @@ class ForumSeleniumCrawler(BaseSeleniumController):
                 print(f"\n第 {pageNumber} 页爬取完成，共获取 {len(results)} 条数据")
          app_logger.info(f"完成全部爬取")
     
-    def update_sehuatang(self):
+    def update_sehuatang(self, pageNumbers=50):
         headless = True
         crawler = ForumSeleniumCrawler(delay=3, headless=headless)  # 设置3秒延时
         
         try: 
-            pageNumbers = 50
             for pageNumber in range(0, pageNumbers + 1):
                 url = f"{crawler.base_url}&page={pageNumber}"
                 results = crawler.crawl_from_url(url)

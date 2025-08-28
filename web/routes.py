@@ -12,6 +12,7 @@ from subscription import trigger_subscription_check_async
 from image_proxy import proxy_image
 from web import app_logger
 import os
+import sys
 from datetime import datetime, timedelta
 import multiprocessing
 from flask import session, redirect, url_for, jsonify, send_from_directory, make_response
@@ -2180,9 +2181,7 @@ def register_routes(app, jellyfin_checker, crawler):
             def run_crawler():
                 try:
                     # 在多进程中设置正确的Python路径
-                    import sys
-                    import os
-                    
+              
                     # 添加crawler目录到Python路径
                     crawler_dir = os.path.join(os.path.dirname(__file__), 'crawler')
                     if crawler_dir not in sys.path:
@@ -2201,8 +2200,9 @@ def register_routes(app, jellyfin_checker, crawler):
                     
                     elif crawler_type == 'sehuatang':
                         # 导入并运行Sehuatang爬虫
-                        import selenium_crawler
-                        selenium_crawler.update_sehuatang(pageNumbers=config['max_pages'])
+                        from crawler.selenium_crawler import ForumSeleniumCrawler
+                        crawler = ForumSeleniumCrawler()
+                        crawler.update_sehuatang(pageNumbers=config['max_pages'])
                         app_logger.info(f"Sehuatang爬虫运行完成，爬取页数: {config['max_pages']}")
                     
                     # 更新最后运行时间
