@@ -12,6 +12,7 @@ import re
 import os
 import requests
 from database import db_manager
+import app_logger
 
 headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
@@ -119,10 +120,10 @@ def download_image(image_url, save_path, filename,code_name,remove=False):
                 db_manager.remove_failed_image(image_url)
 
 
-            print(f'文件已存在:{file_path}')
+            app_logger.info(f'文件已存在:{file_path}')
             return file_path
         else:
-            print(f'开始下载图片:{image_url} 路径:{file_path}')
+            app_logger.info(f'开始下载图片:{image_url} 路径:{file_path}')
         # 设置请求头
         
         
