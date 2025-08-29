@@ -911,11 +911,11 @@ class DatabaseManager:
         try:
             # 在processed_actresses集合中查找匹配的演员名称
             actress = self.actresses_data_collection.find_one(
-                {'actress_name': {'$regex': f'^{actress_name}$', '$options': 'i'}}
+                {'name': {'$regex': f'^{actress_name}$', '$options': 'i'}}
             )
             
             if actress:
-                return actress.get('actress_code')
+                return actress.get('code')
             else:
                 app_logger.info(f"未找到演员 {actress_name} 的code")
                 return None
