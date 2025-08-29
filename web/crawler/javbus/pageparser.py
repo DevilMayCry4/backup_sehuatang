@@ -8,11 +8,9 @@ import os
 import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urlparse
-import re
-import os
-import requests
 from database import db_manager
 import app_logger
+import app
 
 headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
@@ -305,7 +303,7 @@ def parser_content(html):
         # 下载封面图片
         if bigimage_url and categories.get('識別碼'):
             code_name = categories['識別碼']
-            save_dir = os.path.join('/server/static/images', 'covers', code_name)
+            save_dir = os.path.join(app.app.static_folder,'images', 'covers', code_name)
             cover_filename = f"{code_name}_cover.jpg"
             try:
                 download_image(bigimage_url, save_dir, cover_filename, code_name)

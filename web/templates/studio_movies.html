@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "macros/movie_display.html" import render_movie_grid, render_pagination, get_movie_cover_url %}
+{% from "macros/movie_display.html" import render_movie_grid, render_pagination, get_movie_cover_url, render_image_modal %}
 
 {% block title %}制作商: {{ studio_name }}{% endblock %}
 
@@ -141,14 +141,8 @@
     }) }}
 </div>
 
-<!-- 图片放大模态框 -->
-<div id="imageModal" class="image-modal" onclick="closeImageModal()">
-    <div class="image-modal-content">
-        <span class="image-modal-close" onclick="closeImageModal()">&times;</span>
-        <img id="modalImage" class="modal-image" src="" alt="">
-        <div id="modalCaption" class="image-modal-caption"></div>
-    </div>
-</div>
+<!-- 使用宏渲染图片模态框 -->
+{{ render_image_modal() }}
 
 <style>
 .search-filters {
@@ -173,108 +167,13 @@
     margin-bottom: 0.5rem;
     display: block;
 }
-
-.image-modal {
-    display: none;
-    position: fixed;
-    z-index: 9999;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.9);
-}
-
-.image-modal-content {
-    position: relative;
-    margin: auto;
-    padding: 20px;
-    width: 90%;
-    max-width: 800px;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-}
-
-.modal-image {
-    max-width: 100%;
-    max-height: 80vh;
-    object-fit: contain;
-    border-radius: 8px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-}
-
-.image-modal-caption {
-    color: white;
-    text-align: center;
-    margin-top: 20px;
-    font-size: 1.2rem;
-}
-
-.image-modal-close {
-    position: absolute;
-    top: 20px;
-    right: 30px;
-    color: white;
-    font-size: 40px;
-    font-weight: bold;
-    cursor: pointer;
-    z-index: 10000;
-    opacity: 0.7;
-    transition: opacity 0.3s ease;
-}
-
-.image-modal-close:hover {
-    opacity: 1;
-    transform: scale(1.1);
-}
-
-@media (max-width: 768px) {
-    .image-modal-content {
-        padding: 10px;
-    }
-    
-    .modal-image {
-        max-height: 70vh;
-    }
-    
-    .image-modal-close {
-        top: 10px;
-        right: 20px;
-        font-size: 30px;
-    }
-}
 </style>
 
 <script>
-function openImageModal(src, caption) {
-    document.getElementById('imageModal').style.display = 'block';
-    document.getElementById('modalImage').src = src;
-    document.getElementById('modalCaption').textContent = caption;
-}
-
-function closeImageModal() {
-    document.getElementById('imageModal').style.display = 'none';
-}
-
-document.getElementById('imageModal').addEventListener('click', function(e) {
-    if (e.target === this) {
-        closeImageModal();
-    }
-});
-
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') {
-        closeImageModal();
-    }
-});
-
 // 厂商收藏功能
 let isStudioFavorited = false;
 const studioName = '{{ studio_name }}';
-const firstMovieCover = '{{ get_movie_cover_url(movies[0]) if movies else "" }}';
+const firstMovieCover = '{{ get_movie_cover_url(movies[0]) if movies else 
 
 // 页面加载时检查收藏状态
 document.addEventListener('DOMContentLoaded', function() {

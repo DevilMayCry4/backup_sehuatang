@@ -863,6 +863,9 @@ def register_routes(app, jellyfin_checker, crawler):
     @api_login_required
     def retry_failed_images():
         """重试失败图片API"""
+
+      
+
         try:
             import threading
             

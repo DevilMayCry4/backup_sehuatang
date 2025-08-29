@@ -9,7 +9,7 @@
 
 {% block content %}
 <!-- 导入电影展示宏 -->
-{% from "macros/movie_display.html" import render_movie_grid, render_pagination, get_movie_cover_url %}
+{% from "macros/movie_display.html" import render_movie_grid, render_pagination, get_movie_cover_url,render_image_modal %}
 
 <!-- 移除内联样式，使用外部CSS文件 -->
 <div class="container mt-4">
@@ -135,7 +135,7 @@
 </div>
 
  
-
+{{ render_image_modal() }}
  
 {% endblock %}
 
