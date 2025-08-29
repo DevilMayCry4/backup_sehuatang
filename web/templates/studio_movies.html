@@ -173,7 +173,7 @@
 // 厂商收藏功能
 let isStudioFavorited = false;
 const studioName = '{{ studio_name }}';
-const firstMovieCover = '{{ get_movie_cover_url(movies[0]) if movies else 
+const firstMovieCover = '{{ get_movie_cover_url(movies[0]) if movies else "" }}';
 
 // 页面加载时检查收藏状态
 document.addEventListener('DOMContentLoaded', function() {

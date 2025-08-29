@@ -127,20 +127,14 @@ function jumpToPage() {
         return; // 当前页不需要跳转
     }
     
-    // 构建跳转URL
-    {% if url_params.actress_movies %}
-    const url = "{{ url_for('actress_movies', code=url_params.code, page=1, search=url_params.search, is_single=url_params.is_single, is_subtitle=url_params.is_subtitle) }}".replace('page=1', 'page=' + targetPage);
-    {% elif url_params.series_movies_page %}
-    const url = "{{ url_for('series_movies_page', series_name=url_params.series_name, page=1, search=url_params.search, is_single=url_params.is_single, is_subtitle=url_params.is_subtitle) }}".replace('page=1', 'page=' + targetPage);
-    {% elif url_params.studio_movies_page %}
-    const url = "{{ url_for('studio_movies_page', studio_name=url_params.studio_name, page=1, search=url_params.search, is_single=url_params.is_single, is_subtitle=url_params.is_subtitle) }}".replace('page=1', 'page=' + targetPage);
-    {% elif url_params.genres_search_results %}
-    const url = "{{ url_for('genres_search_results', page=1, genres=url_params.genres, search=url_params.search, is_single=url_params.is_single, is_subtitle=url_params.is_subtitle, sort_by=url_params.sort_by) }}".replace('page=1', 'page=' + targetPage);
-    {% else %}
-    const url = "{{ url_for('movies_page', page=1, search=url_params.search, is_single=url_params.is_single, is_subtitle=url_params.is_subtitle, sort=url_params.sort_by) }}".replace('page=1', 'page=' + targetPage);
-    {% endif %}
+    // 获取当前URL的查询参数
+    const urlParams = new URLSearchParams(window.location.search);
+    // 更新页码参数
+    urlParams.set('page', targetPage);
     
-    window.location.href = url;
+    // 构建新的URL
+    const newUrl = window.location.pathname + '?' + urlParams.toString();
+    window.location.href = newUrl;
 }
 
 // 支持回车键跳转
