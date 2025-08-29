@@ -127,46 +127,16 @@
         url_for=url_for, 
         url_params={
             'search': search_keyword,
-            'is_single': is_single_filter,
-            'is_subtitle': is_subtitle_filter,
-            'sort_by': sort_by
+            'is_single': is_single,
+            'is_subtitle': is_subtitle,
+            'sort': sort_by
         }
     ) }}
 </div>
 
-<!-- 图片放大模态框 -->
-<div id="imageModal" class="image-modal" onclick="closeImageModal()">
-    <div class="image-modal-content">
-        <span class="image-modal-close" onclick="closeImageModal()">&times;</span>
-        <img id="modalImage" class="modal-image" src="" alt="">
-        <div id="modalTitle" class="modal-title"></div>
-    </div>
-</div>
+ 
 
-<script>
-// 图片放大模态框功能
-function openImageModal(imageSrc, title) {
-    document.getElementById('modalImage').src = imageSrc;
-    document.getElementById('modalTitle').textContent = title;
-    document.getElementById('imageModal').style.display = 'flex';
-}
-
-function closeImageModal() {
-    document.getElementById('imageModal').style.display = 'none';
-}
-
-// 点击模态框内容区域不关闭模态框
-document.querySelector('.image-modal-content').addEventListener('click', function(event) {
-    event.stopPropagation();
-});
-
-// 按ESC键关闭模态框
-document.addEventListener('keydown', function(event) {
-    if (event.key === 'Escape') {
-        closeImageModal();
-    }
-});
-</script>
+ 
 {% endblock %}
 
 {% block scripts %}
