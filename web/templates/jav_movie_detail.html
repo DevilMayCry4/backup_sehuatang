@@ -109,6 +109,8 @@
                 </div>
             </div>
             {% endif %}
+
+             
             
             {% if movie.genres %}
             <div class="row mb-2">
@@ -143,6 +145,30 @@
             </div>
         </div>
         {% endif %}
+   
+        {% if movie.sehuatang_url %}
+        <div class="info-card p-3">
+            <h5 class="mb-3">色花堂磁力链接</h5>
+            <div class="magnet-container mb-3 p-3 border rounded">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div class="d-flex align-items-center">
+                        <h6 class="mb-0 me-2" style="word-break: break-all; line-height: 1.2; max-height: 2.4em; overflow: hidden;">{{'色花堂'}}</h6>
+                        <!-- 字幕和高清图标 -->
+                        <span class="badge bg-success me-1" title="包含字幕">
+                            <i class="fas fa-closed-captioning"></i> 字幕
+                        </span>
+                        <span class="badge bg-info me-1" title="高清画质">
+                            <i class="fas fa-video"></i> 高清
+                        </span>
+                    </div>
+                    <button class="btn btn-sm btn-outline-primary" onclick="copyToClipboard('{{ movie.sehuatang_url }}')">复制</button>
+                </div> 
+                <div class="text-break small bg-light p-2 rounded" style="word-break: break-all; font-family: monospace;">
+                    {{ movie.sehuatang_url }}
+                </div>
+            </div>
+        </div>
+        {%endif%}
 
         <!-- 磁力链接 -->
         {% if movie.magnet_links %}

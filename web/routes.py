@@ -736,6 +736,10 @@ def register_routes(app, jellyfin_checker, crawler):
                                      error_message='影片不存在'), 404
             magnet_links = db_manager.parser_magnet_links_to_array(movie)
             movie['magnet_links'] = magnet_links
+            code = movie['code']
+            magnet_link = db_manager.find_magnet_link(code)
+            if magnet_link != None:
+                    movie['sehuatang_url'] = magnet_link
             parse_actress_to_array = db_manager.parse_actress_to_array(movie)
             movie['actresses'] = parse_actress_to_array
             return render_template('jav_movie_detail.html',  

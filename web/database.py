@@ -176,7 +176,7 @@ class DatabaseManager:
             'magnet_link': {'$exists': True, '$ne': ''}
         })
         
-        return magnet_doc.get('magnet_link', '') if magnet_doc else None
+        return magnet_doc.get('magnet_link') if magnet_doc else None
     
     def update_subscription_status(self, subscription_id, new_status):
         """更新订阅状态"""
