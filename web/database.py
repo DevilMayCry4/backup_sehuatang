@@ -905,12 +905,12 @@ class DatabaseManager:
     
     def get_actress_code_by_name(self, actress_name):
         """根据演员名称查询演员code"""
-        if self.processed_actresses_collection is None:
+        if self.actresses_data_collection is None:
             return None
         
         try:
             # 在processed_actresses集合中查找匹配的演员名称
-            actress = self.processed_actresses_collection.find_one(
+            actress = self.actresses_data_collection.find_one(
                 {'actress_name': {'$regex': f'^{actress_name}$', '$options': 'i'}}
             )
             
