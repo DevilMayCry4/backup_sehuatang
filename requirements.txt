@@ -19,3 +19,20 @@ python-crontab>=2.6.0
 
 # Web服务器
 gunicorn==20.1.0
+
+# 音频处理相关
+ffmpeg-python==0.2.0
+pydub==0.25.1
+
+# 语音识别相关
+SpeechRecognition==3.10.4
+openai-whisper==20231117
+torch>=1.9.0
+torchaudio>=0.9.0
+
+# 翻译相关
+googletrans==3.1.0a0
+translators==5.8.9
+
+# 文件处理
+werkzeug==2.3.7

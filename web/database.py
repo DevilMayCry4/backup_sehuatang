@@ -83,6 +83,12 @@ class DatabaseManager:
             # 失败图片集合
             self.failed_images_collection = self.mongo_db['failed_images']
             
+            # 音频处理任务集合
+            self.audio_tasks_collection = self.mongo_db['audio_tasks']
+            
+            # 字幕文件集合
+            self.subtitles_collection = self.mongo_db['subtitles']
+            
             # 创建默认管理员用户（如果不存在）
             self._create_default_admin()
             
@@ -1907,36 +1913,160 @@ class DatabaseManager:
             return False
             
     def get_crawler_running_status(self, crawler_type):
-        """获取爬虫运行状态
-        
-        Args:
-            crawler_type: 爬虫类型，'jav'或'sehuatang'
-            
-        Returns:
-            dict: 包含爬虫运行状态的字典
-        """
+        """获取爬虫运行状态"""
         try:
-            # 获取爬虫配置
             config = self.get_crawler_config(crawler_type)
-            
-            # 检查是否有正在运行的进程
-            # 这里简化处理，实际可能需要检查进程ID或其他标识
-            running = False
-            
-            return {
-                'running': running,
-                'enabled': config.get('is_enabled', False),
-                'last_run': config.get('last_crawl_time', ''),
-                'next_run': config.get('next_run', '')
-            }
+            return config.get('is_running', False)
         except Exception as e:
-            app_logger.error(f"获取爬虫状态错误: {e}")
-            return {
-                'running': False,
-                'is_enabled': False,
-                'last_run': '',
-                'next_run': ''
+            app_logger.error(f"获取爬虫运行状态失败: {e}")
+            return False
+    
+    # 音频处理相关方法
+    def create_audio_task(self, video_file_path, task_type='extract_and_transcribe'):
+        """创建音频处理任务"""
+        try:
+            task_data = {
+                'video_file_path': video_file_path,
+                'task_type': task_type,
+                'status': 'pending',  # pending, processing, completed, failed
+                'created_at': datetime.now(),
+                'updated_at': datetime.now(),
+                'progress': 0,
+                'error_message': None,
+                'audio_file_path': None,
+                'japanese_text': None,
+                'chinese_text': None,
+                'srt_file_path': None
             }
+            
+            result = self.audio_tasks_collection.insert_one(task_data)
+            app_logger.info(f"音频处理任务创建成功: {result.inserted_id}")
+            return str(result.inserted_id)
+            
+        except Exception as e:
+            app_logger.error(f"创建音频处理任务失败: {e}")
+            return None
+    
+    def update_audio_task_status(self, task_id, status, progress=None, error_message=None, **kwargs):
+        """更新音频处理任务状态"""
+        try:
+            update_data = {
+                'status': status,
+                'updated_at': datetime.now()
+            }
+            
+            if progress is not None:
+                update_data['progress'] = progress
+            if error_message is not None:
+                update_data['error_message'] = error_message
+            
+            # 添加其他字段
+            for key, value in kwargs.items():
+                if key in ['audio_file_path', 'japanese_text', 'chinese_text', 'srt_file_path']:
+                    update_data[key] = value
+            
+            result = self.audio_tasks_collection.update_one(
+                {'_id': ObjectId(task_id)},
+                {'$set': update_data}
+            )
+            
+            return result.modified_count > 0
+            
+        except Exception as e:
+            app_logger.error(f"更新音频处理任务状态失败: {e}")
+            return False
+    
+    def get_audio_task(self, task_id):
+        """获取音频处理任务信息"""
+        try:
+            task = self.audio_tasks_collection.find_one({'_id': ObjectId(task_id)})
+            if task:
+                task['_id'] = str(task['_id'])
+            return task
+            
+        except Exception as e:
+            app_logger.error(f"获取音频处理任务失败: {e}")
+            return None
+    
+    def get_audio_tasks(self, status=None, page=1, per_page=20):
+        """获取音频处理任务列表"""
+        try:
+            query = {}
+            if status:
+                query['status'] = status
+            
+            skip = (page - 1) * per_page
+            
+            tasks = list(self.audio_tasks_collection.find(query)
+                        .sort('created_at', -1)
+                        .skip(skip)
+                        .limit(per_page))
+            
+            total = self.audio_tasks_collection.count_documents(query)
+            
+            # 转换ObjectId为字符串
+            for task in tasks:
+                task['_id'] = str(task['_id'])
+            
+            return {
+                'tasks': tasks,
+                'total': total,
+                'page': page,
+                'per_page': per_page,
+                'total_pages': (total + per_page - 1) // per_page
+            }
+            
+        except Exception as e:
+            app_logger.error(f"获取音频处理任务列表失败: {e}")
+            return {'tasks': [], 'total': 0, 'page': page, 'per_page': per_page, 'total_pages': 0}
+    
+    def save_subtitle_file(self, task_id, japanese_srt_path, chinese_srt_path, japanese_text, chinese_text):
+        """保存字幕文件信息"""
+        try:
+            subtitle_data = {
+                'task_id': task_id,
+                'japanese_srt_path': japanese_srt_path,
+                'chinese_srt_path': chinese_srt_path,
+                'japanese_text': japanese_text,
+                'chinese_text': chinese_text,
+                'created_at': datetime.now()
+            }
+            
+            result = self.subtitles_collection.insert_one(subtitle_data)
+            app_logger.info(f"字幕文件信息保存成功: {result.inserted_id}")
+            return str(result.inserted_id)
+            
+        except Exception as e:
+            app_logger.error(f"保存字幕文件信息失败: {e}")
+            return None
+    
+    def get_subtitle_by_task_id(self, task_id):
+        """根据任务ID获取字幕信息"""
+        try:
+            subtitle = self.subtitles_collection.find_one({'task_id': task_id})
+            if subtitle:
+                subtitle['_id'] = str(subtitle['_id'])
+            return subtitle
+            
+        except Exception as e:
+            app_logger.error(f"获取字幕信息失败: {e}")
+            return None
+    
+    def delete_audio_task(self, task_id):
+        """删除音频处理任务"""
+        try:
+            # 删除任务记录
+            task_result = self.audio_tasks_collection.delete_one({'_id': ObjectId(task_id)})
+            
+            # 删除相关字幕记录
+            subtitle_result = self.subtitles_collection.delete_many({'task_id': task_id})
+            
+            app_logger.info(f"删除音频处理任务成功: {task_id}")
+            return task_result.deleted_count > 0
+            
+        except Exception as e:
+            app_logger.error(f"删除音频处理任务失败: {e}")
+            return False
     def deal_with_movies(self,movies):
         # 转换 ObjectId 为字符串以支持 JSON 序列化
             for movie in movies:

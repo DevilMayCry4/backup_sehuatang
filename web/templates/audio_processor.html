@@ -1,0 +1,369 @@
+{% extends "base.html" %}
+
+{% block title %}音频处理 - 视频转字幕{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <h2><i class="bi bi-file-earmark-music"></i> 视频音频处理</h2>
+            <p class="text-muted">从指定路径选择视频文件，自动提取音频并生成日文和中文字幕</p>
+        </div>
+    </div>
+    
+    <!-- 文件选择区域 -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="bi bi-folder"></i> 选择视频文件</h5>
+                    <small class="text-muted">路径: /data/JULIA/AVOP-246</small>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <button type="button" class="btn btn-outline-primary" id="refreshBtn" onclick="loadVideoFiles()">
+                            <i class="bi bi-arrow-clockwise"></i> 刷新文件列表
+                        </button>
+                    </div>
+                    <form id="processForm">
+                        <div class="mb-3">
+                            <label for="videoSelect" class="form-label">选择视频文件</label>
+                            <select class="form-select" id="videoSelect" name="video_file" required>
+                                <option value="">请先加载文件列表...</option>
+                            </select>
+                            <div class="form-text">支持格式：MP4, AVI, MOV, MKV, WMV, FLV</div>
+                        </div>
+                        <button type="submit" class="btn btn-primary" id="processBtn" disabled>
+                            <i class="bi bi-gear"></i> 开始处理
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 处理进度 -->
+    <div class="row mb-4" id="progressSection" style="display: none;">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="bi bi-gear"></i> 处理进度</h5>
+                </div>
+                <div class="card-body">
+                    <div class="progress mb-3">
+                        <div class="progress-bar" role="progressbar" style="width: 0%" id="progressBar">0%</div>
+                    </div>
+                    <p id="statusText">准备中...</p>
+                    <div id="taskId" style="display: none;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 结果展示 -->
+    <div class="row mb-4" id="resultSection" style="display: none;">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="bi bi-check-circle"></i> 处理结果</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>日文文本：</h6>
+                            <div id="japaneseText" class="border p-3 mb-3" style="max-height: 200px; overflow-y: auto;"></div>
+                            <button class="btn btn-outline-primary" id="downloadJapanese">
+                                <i class="bi bi-download"></i> 下载日文字幕
+                            </button>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>中文翻译：</h6>
+                            <div id="chineseText" class="border p-3 mb-3" style="max-height: 200px; overflow-y: auto;"></div>
+                            <button class="btn btn-outline-success" id="downloadChinese">
+                                <i class="bi bi-download"></i> 下载中文字幕
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 任务历史 -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="bi bi-clock-history"></i> 处理历史</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>任务ID</th>
+                                    <th>视频文件</th>
+                                    <th>状态</th>
+                                    <th>进度</th>
+                                    <th>创建时间</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="taskHistory">
+                                <!-- 动态加载 -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentTaskId = null;
+let progressInterval = null;
+const VIDEO_PATH = '/data/JULIA/AVOP-246';
+
+// 加载视频文件列表
+function loadVideoFiles() {
+    const refreshBtn = document.getElementById('refreshBtn');
+    const videoSelect = document.getElementById('videoSelect');
+    const processBtn = document.getElementById('processBtn');
+    
+    refreshBtn.disabled = true;
+    refreshBtn.innerHTML = '<i class="bi bi-arrow-clockwise"></i> 加载中...';
+    
+    fetch('/api/audio/list-videos', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ path: VIDEO_PATH })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            alert('加载文件列表失败: ' + data.error);
+            videoSelect.innerHTML = '<option value="">加载失败</option>';
+            return;
+        }
+        
+        // 清空并填充选项
+        videoSelect.innerHTML = '<option value="">请选择视频文件...</option>';
+        
+        if (data.files && data.files.length > 0) {
+            data.files.forEach(file => {
+                const option = document.createElement('option');
+                option.value = file.path;
+                option.textContent = file.name + ' (' + formatFileSize(file.size) + ')';
+                videoSelect.appendChild(option);
+            });
+            processBtn.disabled = false;
+        } else {
+            videoSelect.innerHTML = '<option value="">未找到视频文件</option>';
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('加载文件列表失败');
+        videoSelect.innerHTML = '<option value="">加载失败</option>';
+    })
+    .finally(() => {
+        refreshBtn.disabled = false;
+        refreshBtn.innerHTML = '<i class="bi bi-arrow-clockwise"></i> 刷新文件列表';
+    });
+}
+
+// 格式化文件大小
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+// 处理表单提交
+document.getElementById('processForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const videoSelect = document.getElementById('videoSelect');
+    const selectedFile = videoSelect.value;
+    
+    if (!selectedFile) {
+        alert('请选择视频文件');
+        return;
+    }
+    
+    // 显示进度区域
+    document.getElementById('progressSection').style.display = 'block';
+    document.getElementById('resultSection').style.display = 'none';
+    document.getElementById('processBtn').disabled = true;
+    
+    fetch('/api/audio/process', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ video_path: selectedFile })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            alert('处理失败: ' + data.error);
+            document.getElementById('processBtn').disabled = false;
+            return;
+        }
+        
+        currentTaskId = data.task_id;
+        document.getElementById('taskId').textContent = currentTaskId;
+        
+        // 开始轮询任务状态
+        startProgressPolling();
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('处理失败');
+        document.getElementById('processBtn').disabled = false;
+    });
+});
+
+// 开始轮询进度
+function startProgressPolling() {
+    progressInterval = setInterval(checkTaskStatus, 2000);
+}
+
+// 检查任务状态
+function checkTaskStatus() {
+    if (!currentTaskId) return;
+    
+    fetch(`/api/audio/task/${currentTaskId}`)
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            console.error('获取任务状态失败:', data.error);
+            return;
+        }
+        
+        // 更新进度条
+        const progress = data.progress || 0;
+        document.getElementById('progressBar').style.width = progress + '%';
+        document.getElementById('progressBar').textContent = progress + '%';
+        
+        // 更新状态文本
+        let statusText = '';
+        switch(data.status) {
+            case 'pending':
+                statusText = '等待处理...';
+                break;
+            case 'processing':
+                statusText = '正在处理...';
+                break;
+            case 'completed':
+                statusText = '处理完成！';
+                showResults(data);
+                stopProgressPolling();
+                break;
+            case 'failed':
+                statusText = '处理失败: ' + (data.error_message || '未知错误');
+                stopProgressPolling();
+                break;
+        }
+        document.getElementById('statusText').textContent = statusText;
+    })
+    .catch(error => {
+        console.error('Error:', error);
+    });
+}
+
+// 停止轮询
+function stopProgressPolling() {
+    if (progressInterval) {
+        clearInterval(progressInterval);
+        progressInterval = null;
+    }
+    document.getElementById('processBtn').disabled = false;
+}
+
+// 显示结果
+function showResults(taskData) {
+    document.getElementById('resultSection').style.display = 'block';
+    
+    // 显示文本内容
+    document.getElementById('japaneseText').textContent = taskData.japanese_text || '无内容';
+    document.getElementById('chineseText').textContent = taskData.chinese_text || '无内容';
+    
+    // 设置下载按钮
+    document.getElementById('downloadJapanese').onclick = function() {
+        window.open(`/api/audio/download/${currentTaskId}/japanese`);
+    };
+    
+    document.getElementById('downloadChinese').onclick = function() {
+        window.open(`/api/audio/download/${currentTaskId}/chinese`);
+    };
+    
+    // 刷新任务历史
+    loadTaskHistory();
+}
+
+// 加载任务历史
+function loadTaskHistory() {
+    fetch('/api/audio/tasks')
+    .then(response => response.json())
+    .then(data => {
+        const tbody = document.getElementById('taskHistory');
+        tbody.innerHTML = '';
+        
+        data.tasks.forEach(task => {
+            const row = document.createElement('tr');
+            
+            const statusBadge = getStatusBadge(task.status);
+            const fileName = task.video_file_path.split('/').pop();
+            const createTime = new Date(task.created_at).toLocaleString();
+            
+            row.innerHTML = `
+                <td>${task._id.substring(0, 8)}...</td>
+                <td>${fileName}</td>
+                <td>${statusBadge}</td>
+                <td>${task.progress || 0}%</td>
+                <td>${createTime}</td>
+                <td>
+                    ${task.status === 'completed' ? `
+                        <button class="btn btn-sm btn-outline-primary" onclick="downloadSubtitle('${task._id}', 'japanese')">日文</button>
+                        <button class="btn btn-sm btn-outline-success" onclick="downloadSubtitle('${task._id}', 'chinese')">中文</button>
+                    ` : ''}
+                </td>
+            `;
+            
+            tbody.appendChild(row);
+        });
+    })
+    .catch(error => {
+        console.error('Error:', error);
+    });
+}
+
+// 获取状态徽章
+function getStatusBadge(status) {
+    const badges = {
+        'pending': '<span class="badge bg-secondary">等待中</span>',
+        'processing': '<span class="badge bg-primary">处理中</span>',
+        'completed': '<span class="badge bg-success">已完成</span>',
+        'failed': '<span class="badge bg-danger">失败</span>'
+    };
+    return badges[status] || '<span class="badge bg-secondary">未知</span>';
+}
+
+// 下载字幕
+function downloadSubtitle(taskId, type) {
+    window.open(`/api/audio/download/${taskId}/${type}`);
+}
+
+// 页面加载时获取任务历史和文件列表
+document.addEventListener('DOMContentLoaded', function() {
+    loadTaskHistory();
+    loadVideoFiles();
+});
+</script>
+{% endblock %}

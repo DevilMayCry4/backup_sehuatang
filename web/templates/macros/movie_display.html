@@ -5,7 +5,7 @@
     
     <div class="{% if movie.is_exist %}exist-movie-card{% else %}movie-card{% endif %}" onclick="window.location.href='/jav-movie-detail/{{ movie.code }}'">
         <!-- 单体书签 -->
-        {% if movie.is_single %}
+        {% if movie.is_single  %}
         <div class="bookmark bookmark-single">单体</div>
         {% endif %}
         

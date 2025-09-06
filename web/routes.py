@@ -538,6 +538,7 @@ def register_routes(app, jellyfin_checker, crawler):
     def crawl_all_star():
         """更新全部演员电影API"""
         
+        
         try:
             import crawler.javbus.crawler as javbus_crawler
             # 在后台进程中执行爬虫任务
@@ -2267,6 +2268,245 @@ def register_routes(app, jellyfin_checker, crawler):
                 'error': '重置配置失败，请稍后重试'
             })
 
+    @app.route('/api/audio/list-videos', methods=['POST'])
+    def list_videos_in_path():
+        """获取指定路径下的视频文件列表"""
+        try:
+            data = request.get_json()
+            if not data or 'path' not in data:
+                return jsonify({'error': '请提供路径参数'}), 400
+            
+            target_path = data['path']
+            
+            # 验证路径是否存在
+            if not os.path.exists(target_path):
+                return jsonify({'error': '指定路径不存在'}), 404
+            
+            if not os.path.isdir(target_path):
+                return jsonify({'error': '指定路径不是目录'}), 400
+            
+            # 支持的视频文件扩展名
+            video_extensions = {'.mp4', '.avi', '.mov', '.mkv', '.wmv', '.flv', '.m4v', '.3gp', '.webm'}
+            
+            video_files = []
+            try:
+                for filename in os.listdir(target_path):
+                    file_path = os.path.join(target_path, filename)
+                    
+                    # 检查是否为文件且为视频格式
+                    if os.path.isfile(file_path):
+                        file_ext = os.path.splitext(filename)[1].lower()
+                        if file_ext in video_extensions:
+                            try:
+                                file_size = os.path.getsize(file_path)
+                                video_files.append({
+                                    'name': filename,
+                                    'path': file_path,
+                                    'size': file_size,
+                                    'extension': file_ext
+                                })
+                            except OSError:
+                                # 跳过无法访问的文件
+                                continue
+                
+                # 按文件名排序
+                video_files.sort(key=lambda x: x['name'])
+                
+                return jsonify({
+                    'success': True,
+                    'files': video_files,
+                    'count': len(video_files),
+                    'path': target_path
+                })
+                
+            except PermissionError:
+                return jsonify({'error': '没有权限访问指定路径'}), 403
+            except Exception as e:
+                app_logger.error(f"读取目录失败: {e}")
+                return jsonify({'error': '读取目录失败'}), 500
+            
+        except Exception as e:
+            app_logger.error(f"获取视频文件列表失败: {e}")
+            return jsonify({'error': '获取文件列表失败'}), 500
+
+    @app.route('/api/audio/process', methods=['POST'])
+    def process_video_from_path():
+        """处理指定路径的视频文件"""
+        try:
+            data = request.get_json()
+            if not data or 'video_path' not in data:
+                return jsonify({'error': '请提供视频文件路径'}), 400
+            
+            video_path = data['video_path']
+            
+            # 验证文件是否存在
+            if not os.path.exists(video_path):
+                return jsonify({'error': '视频文件不存在'}), 404
+            
+            if not os.path.isfile(video_path):
+                return jsonify({'error': '指定路径不是文件'}), 400
+            
+            # 检查文件类型
+            allowed_extensions = {'.mp4', '.avi', '.mov', '.mkv', '.wmv', '.flv', '.m4v', '.3gp', '.webm'}
+            file_ext = os.path.splitext(video_path)[1].lower()
+            if file_ext not in allowed_extensions:
+                return jsonify({'error': '不支持的视频文件格式'}), 400
+            
+            # 检查文件是否可读
+            try:
+                with open(video_path, 'rb') as f:
+                    f.read(1)
+            except PermissionError:
+                return jsonify({'error': '没有权限访问该文件'}), 403
+            except Exception as e:
+                return jsonify({'error': '文件无法读取'}), 400
+            
+            # 创建音频处理任务
+            task_id = db_manager.create_audio_task(video_path)
+            if not task_id:
+                return jsonify({'error': '创建处理任务失败'}), 500
+            
+            # 异步处理（这里简化为同步，实际应该使用Celery等任务队列）
+            from audio_processor import AudioProcessor
+            processor = AudioProcessor()
+            
+            # 在后台线程中处理
+            import threading
+            def process_in_background():
+                try:
+                    processor.process_video_to_subtitles(video_path, task_id)
+                except Exception as e:
+                    app_logger.error(f"视频处理失败: {e}")
+                    # 更新任务状态为失败
+                    db_manager.update_audio_task_status(task_id, 'failed', error_message=str(e))
+            
+            thread = threading.Thread(target=process_in_background)
+            thread.daemon = True
+            thread.start()
+            
+            return jsonify({
+                'success': True,
+                'message': '视频处理任务已开始',
+                'task_id': task_id,
+                'video_path': video_path
+            })
+            
+        except Exception as e:
+            app_logger.error(f"处理视频文件失败: {e}")
+            return jsonify({'error': '处理失败'}), 500
+
+    @app.route('/api/audio/upload', methods=['POST'])
+    def upload_video_for_processing():
+        """上传视频文件进行音频处理（保留原有接口以兼容）"""
+        try:
+            if 'video_file' not in request.files:
+                return jsonify({'error': '没有上传文件'}), 400
+            
+            file = request.files['video_file']
+            if file.filename == '':
+                return jsonify({'error': '没有选择文件'}), 400
+            
+            # 检查文件类型
+            allowed_extensions = {'.mp4', '.avi', '.mov', '.mkv', '.wmv', '.flv'}
+            file_ext = os.path.splitext(file.filename)[1].lower()
+            if file_ext not in allowed_extensions:
+                return jsonify({'error': '不支持的文件格式'}), 400
+            
+            # 保存上传的文件
+            upload_dir = os.path.join(os.path.dirname(__file__), 'uploads')
+            os.makedirs(upload_dir, exist_ok=True)
+            
+            filename = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{file.filename}"
+            file_path = os.path.join(upload_dir, filename)
+            file.save(file_path)
+            
+            # 创建音频处理任务
+            task_id = db_manager.create_audio_task(file_path)
+            if not task_id:
+                return jsonify({'error': '创建处理任务失败'}), 500
+            
+            # 异步处理（这里简化为同步，实际应该使用Celery等任务队列）
+            from audio_processor import AudioProcessor
+            processor = AudioProcessor()
+            
+            # 在后台线程中处理
+            import threading
+            def process_in_background():
+                processor.process_video_to_subtitles(file_path, task_id)
+            
+            thread = threading.Thread(target=process_in_background)
+            thread.daemon = True
+            thread.start()
+            
+            return jsonify({
+                'message': '文件上传成功，开始处理',
+                'task_id': task_id
+            })
+            
+        except Exception as e:
+            app_logger.error(f"上传视频文件失败: {e}")
+            return jsonify({'error': '上传失败'}), 500
+
+    @app.route('/api/audio/task/<task_id>', methods=['GET'])
+    def get_audio_task_status(task_id):
+        """获取音频处理任务状态"""
+        try:
+            task = db_manager.get_audio_task(task_id)
+            if not task:
+                return jsonify({'error': '任务不存在'}), 404
+            
+            return jsonify(task)
+            
+        except Exception as e:
+            app_logger.error(f"获取任务状态失败: {e}")
+            return jsonify({'error': '获取任务状态失败'}), 500
+
+    @app.route('/api/audio/tasks', methods=['GET'])
+    def get_audio_tasks():
+        """获取音频处理任务列表"""
+        try:
+            page = int(request.args.get('page', 1))
+            per_page = int(request.args.get('per_page', 20))
+            status = request.args.get('status')
+            
+            result = db_manager.get_audio_tasks(status, page, per_page)
+            return jsonify(result)
+            
+        except Exception as e:
+            app_logger.error(f"获取任务列表失败: {e}")
+            return jsonify({'error': '获取任务列表失败'}), 500
+
+    @app.route('/api/audio/download/<task_id>/<subtitle_type>', methods=['GET'])
+    def download_subtitle_file(task_id, subtitle_type):
+        """下载字幕文件"""
+        try:
+            subtitle = db_manager.get_subtitle_by_task_id(task_id)
+            if not subtitle:
+                return jsonify({'error': '字幕文件不存在'}), 404
+            
+            if subtitle_type == 'japanese':
+                file_path = subtitle['japanese_srt_path']
+                filename = f"japanese_subtitle_{task_id}.srt"
+            elif subtitle_type == 'chinese':
+                file_path = subtitle['chinese_srt_path']
+                filename = f"chinese_subtitle_{task_id}.srt"
+            else:
+                return jsonify({'error': '无效的字幕类型'}), 400
+            
+            if not os.path.exists(file_path):
+                return jsonify({'error': '字幕文件不存在'}), 404
+            
+            return send_file(file_path, as_attachment=True, download_name=filename)
+            
+        except Exception as e:
+            app_logger.error(f"下载字幕文件失败: {e}")
+            return jsonify({'error': '下载失败'}), 500
+
+    @app.route('/audio_processor')
+    def audio_processor_page():
+        """音频处理页面"""
+        return render_template('audio_processor.html')
+    
     # 自定义静态文件处理，添加缓存头
     @app.route('/static/<path:filename>')
     def static_files(filename):
