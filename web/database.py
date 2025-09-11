@@ -2073,6 +2073,16 @@ class DatabaseManager:
                 if '_id' in movie:
                     movie['_id'] = str(movie['_id'])
                     movie['is_exist'] = self.isMovieExist(movie)
+                    movie['is_subtitle'] = self.has_subttile(movie)
+    
+    def has_subttile(self,movie):
+        is_subtitle = movie['is_subtitle']
+        if is_subtitle == False:
+            code = movie['code']
+            magnet_link = db_manager.find_magnet_link(code)
+            if magnet_link != None:
+               is_subtitle = True
+        return is_subtitle
 
     def isMovieExist(self,movie):
         code = movie.get('code', '')  # 使用get方法替代函数调用语法
