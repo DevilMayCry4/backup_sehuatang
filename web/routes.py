@@ -537,8 +537,6 @@ def register_routes(app, jellyfin_checker, crawler):
     @app.route('/api/crawl-all-star', methods=['POST'])
     def crawl_all_star():
         """更新全部演员电影API"""
-        
-        
         try:
             import crawler.javbus.crawler as javbus_crawler
             # 在后台进程中执行爬虫任务
@@ -1162,6 +1160,7 @@ def register_routes(app, jellyfin_checker, crawler):
             search_keyword = request.args.get('search', '').strip()
             is_single_filter = request.args.get('is_single', '')
             is_subtitle_filter = request.args.get('is_subtitle', '')
+            is_sehuatang_magnet_filter = request.args.get('is_sehuatang_magnet', '')
             sort_by = request.args.get('sort', 'release_date')
             
             # 转换筛选参数
@@ -1176,6 +1175,12 @@ def register_routes(app, jellyfin_checker, crawler):
                 is_subtitle = True
             elif is_subtitle_filter == 'false':
                 is_subtitle = False
+                
+            is_sehuatang_magnet = None
+            if is_sehuatang_magnet_filter == 'true':
+                is_sehuatang_magnet = True
+            elif is_sehuatang_magnet_filter == 'false':
+                is_sehuatang_magnet = False
             
             # 获取电影数据
             movies, total = db_manager.get_all_movies(
@@ -1184,6 +1189,7 @@ def register_routes(app, jellyfin_checker, crawler):
                 search_keyword=search_keyword if search_keyword else None,
                 is_single=is_single,
                 is_subtitle=is_subtitle,
+                is_sehuatang_magnet=is_sehuatang_magnet,
                 sort_by=sort_by
             )
             
@@ -1199,6 +1205,7 @@ def register_routes(app, jellyfin_checker, crawler):
                                 search_keyword=search_keyword,
                                 is_single_filter=is_single_filter,
                                 is_subtitle_filter=is_subtitle_filter,
+                                is_sehuatang_magnet_filter=is_sehuatang_magnet_filter,
                                 sort_by=sort_by)
                                 
         except Exception as e:

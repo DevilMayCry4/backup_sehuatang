@@ -259,8 +259,8 @@ class DatabaseManager:
             
             # 更新磁力链接
             result = self.javbus_data_collection.update_one(
-                {'URL': {'$regex': f'^{url}$', '$options': 'i'}},  # 不区分大小写匹配
-                {'$set': {'磁力链接': dict_jav.get('磁力链接', '')}}
+                {'url': {'$regex': f'^{url}$', '$options': 'i'}},  # 不区分大小写匹配
+                {'$set': {'magnet_links': dict_jav.get('磁力链接', '')}}
             )
             
             if result.modified_count > 0:
@@ -282,7 +282,7 @@ class DatabaseManager:
             
             # 不区分大小写查询
             result = self.javbus_data_collection.find_one(
-                {'URL': {'$regex': f'^{url}$', '$options': 'i'}},
+                {'url': {'$regex': f'^{url}$', '$options': 'i'}},
                 {'_id': 1}  # 只返回 _id 字段以提高性能
             )
             
@@ -513,7 +513,7 @@ class DatabaseManager:
             app_logger.error("更新重试状态失败: {url}, 错误: {e}")
             return False
             
-    def get_all_movies(self, page=1, per_page=20, search_keyword=None, is_single=None, is_subtitle=None, sort_by='release_date'):
+    def get_all_movies(self, page=1, per_page=20, search_keyword=None, is_single=None, is_subtitle=None, is_sehuatang_magnet=None, sort_by='release_date'):
         """获取所有影片(分页)，支持关键字搜索和筛选"""
         try:
             if self.javbus_data_collection is None:
@@ -543,6 +543,22 @@ class DatabaseManager:
             # 添加is_subtitle筛选条件
             if is_subtitle is not None:
                 query_conditions.append({'is_subtitle': is_subtitle})
+                
+            
+            
+            # 合并所有查询条件
+            if query_conditions:
+                final_query = {'$and': query_conditions}
+            else:
+                final_query = {}
+            
+            # 设置排序方式 - 添加二级排序确保稳定性
+            sort_field = sort_by if sort_by in ['release_date', 'title', 'code'] else 'release_date'
+            sort_order = -1  # 降序排列
+            
+            # 添加is_sehuatang_magnet筛选条件
+            if is_sehuatang_magnet is not None:
+                query_conditions.append({'is_sehua_magnet': is_sehuatang_magnet})
             
             # 合并所有查询条件
             if query_conditions:
@@ -564,7 +580,7 @@ class DatabaseManager:
             
             # 转换 ObjectId 为字符串以支持 JSON 序列化
             self.deal_with_movies(movies)
-            
+
             total = self.javbus_data_collection.count_documents(final_query)
             return movies, total
         except Exception as e:
@@ -842,6 +858,13 @@ class DatabaseManager:
             # 添加时间戳
             data['crawl_time'] = datetime.now()  
             # 检查是否已存在
+            titleArray =  data[title].split(' ')
+            if titleArray:
+                    movie_code = data[title].split(' ')[0]
+                    db_manager.javbus_data_collection.update_one(
+                            {"code": movie_code},
+                            {"$set": {"is_sehua_magnet": True}}
+                        )
             existing = self.mongo_collection.find_one({'tid': data['tid']})
             if existing:
                 # 更新现有记录
@@ -854,6 +877,7 @@ class DatabaseManager:
             else:
                 # 插入新记录
                 self.mongo_collection.insert_one(data)
+                
                 app_logger.info(f"保存到MongoDB: {data['title']}")
             return True
         except Exception as e:
@@ -1893,6 +1917,79 @@ class DatabaseManager:
             app_logger.error(f"更新爬虫最后运行时间失败: {e}")
             return False
     
+    def dealwithallMovei(self):
+        """遍历mongo_collection，查找包含javbus_data_collection中电影code的记录，
+        并更新对应电影的is_sehua_magnet字段为True"""
+        try:
+            if self.mongo_collection is None or self.javbus_data_collection is None:
+                app_logger.error("MongoDB集合未初始化")
+                return False
+                
+            # 获取所有sehuatang记录
+            sehuatang_records = list(self.mongo_collection.find(
+                {}, 
+                {"title": 1, "movie_code": 1}
+            ))
+            
+            app_logger.info(f"找到{len(sehuatang_records)}条色花堂记录")
+            
+            # 获取所有javbus电影记录
+            javbus_movies = list(self.javbus_data_collection.find(
+                {}, 
+                {"code": 1, "title": 1}
+            ))
+            
+            app_logger.info(f"找到{len(javbus_movies)}条JavBus电影记录")
+            
+            # 创建电影代码到ID的映射，便于快速查找
+            movie_code_to_id = {}
+            for movie in javbus_movies:
+                code = movie.get("code", "").upper()
+                if code:
+                    movie_code_to_id[code] = movie["_id"]
+                    # 处理没有连字符的情况
+                    movie_code_to_id[code.replace("-", "")] = movie["_id"]
+            
+            # 遍历sehuatang记录，更新javbus电影的is_sehua_magnet字段
+            update_count = 0
+            for record in sehuatang_records:
+                title = record.get("title", "")
+                movie_code = record.get("movie_code", "")
+                
+                # 尝试从title中提取电影代码
+                if not movie_code and title:
+                    # 简单的正则匹配，可以根据实际情况调整
+                    import re
+                    match = re.search(r'[A-Za-z]+-\d+|[A-Za-z]+\d+', title)
+                    if match:
+                        movie_code = match.group(0).upper()
+                app_logger.info(movie_code)
+                if movie_code:
+                    # 标准化电影代码
+                    movie_code = movie_code.upper()
+                    movie_code_no_dash = movie_code.replace("-", "")
+                    
+                    # 查找匹配的电影ID
+                    movie_id = movie_code_to_id.get(movie_code) or movie_code_to_id.get(movie_code_no_dash)
+                    
+                    if movie_id:
+                        # 更新电影记录
+                        app_logger.info(movie_id)
+                        result = self.javbus_data_collection.update_one(
+                            {"_id": movie_id},
+                            {"$set": {"is_sehua_magnet": True}}
+                        )
+                        
+                        if result.modified_count > 0:
+                            update_count += 1
+            
+            app_logger.info(f"成功更新{update_count}部电影的is_sehua_magnet字段")
+            return True
+            
+        except Exception as e:
+            app_logger.error(f"处理电影数据时出错: {e}")
+            return False
+
     def toggle_crawler_status(self, crawler_type, is_enabled):
         """切换爬虫启用状态"""
         try:
@@ -2074,6 +2171,7 @@ class DatabaseManager:
                     movie['_id'] = str(movie['_id'])
                     movie['is_exist'] = self.isMovieExist(movie)
                     movie['is_subtitle'] = self.has_subttile(movie)
+                    movie['is_sehuatang_magnet'] = db_manager.find_magnet_link(movie['code']) != None
     
     def has_subttile(self,movie):
         is_subtitle = movie['is_subtitle']

@@ -45,7 +45,7 @@
                     <button class="btn btn-primary me-2" type="submit">
                         <i class="bi bi-search"></i> 搜索
                     </button>
-                    {% if search_keyword or is_single_filter or is_subtitle_filter %}
+                    {% if search_keyword or is_single_filter or is_subtitle_filter or is_sehuatang_magnet_filter %}
                     <a href="{{ url_for('movies_page') }}" 
                        class="btn btn-outline-secondary">
                         <i class="bi bi-x-circle"></i> 清除
@@ -91,11 +91,30 @@
                     </div>
                 </div>
             </div>
+            
+            <div class="row mt-3">
+                <!-- 色花堂链接筛选 -->
+                <div class="col-md-6 filter-group">
+                    <label class="filter-label">色花堂链接筛选</label>
+                    <div class="btn-group w-100" role="group">
+                        <input type="radio" class="btn-check" name="is_sehuatang_magnet" value="" id="sehuatang_all" 
+                               {% if not is_sehuatang_magnet_filter %}checked{% endif %}>
+                        <label class="btn btn-outline-secondary" for="sehuatang_all">全部</label>
+                        
+                        <input type="radio" class="btn-check" name="is_sehuatang_magnet" value="true" id="sehuatang_yes" 
+                               {% if is_sehuatang_magnet_filter == 'true' %}checked{% endif %}>
+                        <label class="btn btn-outline-info" for="sehuatang_yes">有色花堂链接</label>
+                        
+                        <input type="radio" class="btn-check" name="is_sehuatang_magnet" value="false" id="sehuatang_no" 
+                               {% if is_sehuatang_magnet_filter == 'false' %}checked{% endif %}>
+                        <label class="btn btn-outline-secondary" for="sehuatang_no">无色花堂链接</label>
+                    </div>
+                </div>
         </form>
     </div>
     
     <!-- 筛选结果提示 -->
-    {% if search_keyword or is_single_filter or is_subtitle_filter %}
+    {% if search_keyword or is_single_filter or is_subtitle_filter or is_sehuatang_magnet_filter %}
     <div class="alert alert-info mb-3">
         <i class="bi bi-info-circle"></i> 
         筛选条件：
@@ -111,6 +130,11 @@
             {% if search_keyword or is_single_filter %}，{% endif %}有字幕
         {% elif is_subtitle_filter == 'false' %}
             {% if search_keyword or is_single_filter %}，{% endif %}无字幕
+        {% endif %}
+        {% if is_sehuatang_magnet_filter == 'true' %}
+            {% if search_keyword or is_single_filter or is_subtitle_filter %}，{% endif %}有色花堂链接
+        {% elif is_sehuatang_magnet_filter == 'false' %}
+            {% if search_keyword or is_single_filter or is_subtitle_filter %}，{% endif %}无色花堂链接
         {% endif %}
         ，共找到 {{ total }} 部电影
     </div>
@@ -129,6 +153,7 @@
             'search': search_keyword,
             'is_single': is_single_filter,
             'is_subtitle': is_subtitle_filter,
+            'is_sehuatang_magnet': is_sehuatang_magnet_filter,
             'sort': sort_by
         }
     ) }}

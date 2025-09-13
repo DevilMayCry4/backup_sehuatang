@@ -226,6 +226,7 @@ class ForumSeleniumCrawler(BaseSeleniumController):
             }
             # 保存到MongoDB
             db_manager.save_sehuatang_detail_db(data)
+            
             return data
         
         return None
