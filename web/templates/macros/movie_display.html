@@ -44,15 +44,15 @@
             {% if page > 1 %}
             <li class="page-item">
                 {% if url_params.actress_movies %}
-                <a class="page-link" href="{{ url_for('actress_movies', code=url_params.code, page=page-1, search=url_params.search, is_single=url_params.is_single, is_subtitle=url_params.is_subtitle) }}">上一页</a>
+                <a class="page-link" href="{{ url_for('actress_movies', code=url_params.code, page=page-1, search=url_params.search, is_single=url_params.is_single, is_subtitle=url_params.is_subtitle, is_sehuatang_magnet=url_params.is_sehuatang_magnet) }}">上一页</a>
                 {% elif url_params.series_movies_page %}
-                <a class="page-link" href="{{ url_for('series_movies_page', series_name=url_params.series_name, page=page-1, search=url_params.search, is_single=url_params.is_single, is_subtitle=url_params.is_subtitle) }}">上一页</a>
+                <a class="page-link" href="{{ url_for('series_movies_page', series_name=url_params.series_name, page=page-1, search=url_params.search, is_single=url_params.is_single, is_subtitle=url_params.is_subtitle, is_sehuatang_magnet=url_params.is_sehuatang_magnet) }}">上一页</a>
                 {% elif url_params.studio_movies_page %}
-                <a class="page-link" href="{{ url_for('studio_movies_page', studio_name=url_params.studio_name, page=page-1, search=url_params.search, is_single=url_params.is_single, is_subtitle=url_params.is_subtitle) }}">上一页</a>
+                <a class="page-link" href="{{ url_for('studio_movies_page', studio_name=url_params.studio_name, page=page-1, search=url_params.search, is_single=url_params.is_single, is_subtitle=url_params.is_subtitle, is_sehuatang_magnet=url_params.is_sehuatang_magnet) }}">上一页</a>
                 {% elif url_params.genres_search_results %}
-                <a class="page-link" href="{{ url_for('genres_search_results', page=page-1, genres=url_params.genres, search=url_params.search, is_single=url_params.is_single, is_subtitle=url_params.is_subtitle, sort_by=url_params.sort_by) }}">上一页</a>
+                <a class="page-link" href="{{ url_for('genres_search_results', page=page-1, genres=url_params.genres, search=url_params.search, is_single=url_params.is_single, is_subtitle=url_params.is_subtitle, is_sehuatang_magnet=url_params.is_sehuatang_magnet, sort_by=url_params.sort_by) }}">上一页</a>
                 {% else %}
-                <a class="page-link" href="{{ url_for('movies_page', page=page-1, search=url_params.search, is_single=url_params.is_single, is_subtitle=url_params.is_subtitle, sort=url_params.sort_by) }}">上一页</a>
+                <a class="page-link" href="{{ url_for('movies_page', page=page-1, search=url_params.search, is_single=url_params.is_single, is_subtitle=url_params.is_subtitle, is_sehuatang_magnet=url_params.is_sehuatang_magnet, sort=url_params.sort_by) }}">上一页</a>
                 {% endif %}
             </li>
             {% endif %}
@@ -70,15 +70,15 @@
                 <span class="page-link">{{ p }}</span>
                 {% else %}
                     {% if url_params.actress_movies %}
-                    <a class="page-link" href="{{ url_for('actress_movies', code=url_params.code, page=p, search=url_params.search, is_single=url_params.is_single, is_subtitle=url_params.is_subtitle) }}">{{ p }}</a>
+                    <a class="page-link" href="{{ url_for('actress_movies', code=url_params.code, page=p, search=url_params.search, is_single=url_params.is_single, is_subtitle=url_params.is_subtitle, is_sehuatang_magnet=url_params.is_sehuatang_magnet) }}">{{ p }}</a>
                     {% elif url_params.series_movies_page %}
-                    <a class="page-link" href="{{ url_for('series_movies_page', series_name=url_params.series_name, page=p, search=url_params.search, is_single=url_params.is_single, is_subtitle=url_params.is_subtitle) }}">{{ p }}</a>
+                    <a class="page-link" href="{{ url_for('series_movies_page', series_name=url_params.series_name, page=p, search=url_params.search, is_single=url_params.is_single, is_subtitle=url_params.is_subtitle, is_sehuatang_magnet=url_params.is_sehuatang_magnet) }}">{{ p }}</a>
                     {% elif url_params.studio_movies_page %}
-                    <a class="page-link" href="{{ url_for('studio_movies_page', studio_name=url_params.studio_name, page=p, search=url_params.search, is_single=url_params.is_single, is_subtitle=url_params.is_subtitle) }}">{{ p }}</a>
+                    <a class="page-link" href="{{ url_for('studio_movies_page', studio_name=url_params.studio_name, page=p, search=url_params.search, is_single=url_params.is_single, is_subtitle=url_params.is_subtitle, is_sehuatang_magnet=url_params.is_sehuatang_magnet) }}">{{ p }}</a>
                     {% elif url_params.genres_search_results %}
-                    <a class="page-link" href="{{ url_for('genres_search_results', page=p, genres=url_params.genres, search=url_params.search, is_single=url_params.is_single, is_subtitle=url_params.is_subtitle, sort_by=url_params.sort_by) }}">{{ p }}</a>
+                    <a class="page-link" href="{{ url_for('genres_search_results', page=p, genres=url_params.genres, search=url_params.search, is_single=url_params.is_single, is_subtitle=url_params.is_subtitle, is_sehuatang_magnet=url_params.is_sehuatang_magnet, sort_by=url_params.sort_by) }}">{{ p }}</a>
                     {% else %}
-                    <a class="page-link" href="{{ url_for('movies_page', page=p, search=url_params.search, is_single=url_params.is_single, is_subtitle=url_params.is_subtitle, sort=url_params.sort_by) }}">{{ p }}</a>
+                    <a class="page-link" href="{{ url_for('movies_page', page=p, search=url_params.search, is_single=url_params.is_single, is_subtitle=url_params.is_subtitle, is_sehuatang_magnet=url_params.is_sehuatang_magnet, sort=url_params.sort_by) }}">{{ p }}</a>
                     {% endif %}
                 {% endif %}
             </li>
@@ -87,15 +87,15 @@
             {% if page < total_pages %}
             <li class="page-item">
                 {% if url_params.actress_movies %}
-                <a class="page-link" href="{{ url_for('actress_movies', code=url_params.code, page=page+1, search=url_params.search, is_single=url_params.is_single, is_subtitle=url_params.is_subtitle) }}">下一页</a>
+                <a class="page-link" href="{{ url_for('actress_movies', code=url_params.code, page=page+1, search=url_params.search, is_single=url_params.is_single, is_subtitle=url_params.is_subtitle, is_sehuatang_magnet=url_params.is_sehuatang_magnet) }}">下一页</a>
                 {% elif url_params.series_movies_page %}
-                <a class="page-link" href="{{ url_for('series_movies_page', series_name=url_params.series_name, page=page+1, search=url_params.search, is_single=url_params.is_single, is_subtitle=url_params.is_subtitle) }}">下一页</a>
+                <a class="page-link" href="{{ url_for('series_movies_page', series_name=url_params.series_name, page=page+1, search=url_params.search, is_single=url_params.is_single, is_subtitle=url_params.is_subtitle, is_sehuatang_magnet=url_params.is_sehuatang_magnet) }}">下一页</a>
                 {% elif url_params.studio_movies_page %}
-                <a class="page-link" href="{{ url_for('studio_movies_page', studio_name=url_params.studio_name, page=page+1, search=url_params.search, is_single=url_params.is_single, is_subtitle=url_params.is_subtitle) }}">下一页</a>
+                <a class="page-link" href="{{ url_for('studio_movies_page', studio_name=url_params.studio_name, page=page+1, search=url_params.search, is_single=url_params.is_single, is_subtitle=url_params.is_subtitle, is_sehuatang_magnet=url_params.is_sehuatang_magnet) }}">下一页</a>
                 {% elif url_params.genres_search_results %}
-                <a class="page-link" href="{{ url_for('genres_search_results', page=page+1, genres=url_params.genres, search=url_params.search, is_single=url_params.is_single, is_subtitle=url_params.is_subtitle, sort_by=url_params.sort_by) }}">下一页</a>
+                <a class="page-link" href="{{ url_for('genres_search_results', page=page+1, genres=url_params.genres, search=url_params.search, is_single=url_params.is_single, is_subtitle=url_params.is_subtitle, is_sehuatang_magnet=url_params.is_sehuatang_magnet, sort_by=url_params.sort_by) }}">下一页</a>
                 {% else %}
-                <a class="page-link" href="{{ url_for('movies_page', page=page+1, search=url_params.search, is_single=url_params.is_single, is_subtitle=url_params.is_subtitle, sort=url_params.sort_by) }}">下一页</a>
+                <a class="page-link" href="{{ url_for('movies_page', page=page+1, search=url_params.search, is_single=url_params.is_single, is_subtitle=url_params.is_subtitle, is_sehuatang_magnet=url_params.is_sehuatang_magnet, sort=url_params.sort_by) }}">下一页</a>
                 {% endif %}
             </li>
             {% endif %}
