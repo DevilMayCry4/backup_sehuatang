@@ -690,6 +690,7 @@ def register_routes(app, jellyfin_checker, crawler):
         search_keyword = request.args.get('search', '', type=str)
         is_single_param = request.args.get('is_single', None)
         is_subtitle_param = request.args.get('is_subtitle', None)
+        is_sehuatang_magnet_param = request.args.get('is_sehuatang_magnet', None)
         per_page = 20
         
         # 处理筛选参数
@@ -704,12 +705,18 @@ def register_routes(app, jellyfin_checker, crawler):
             is_subtitle = True
         elif is_subtitle_param == 'false':
             is_subtitle = False
+            
+        is_sehuatang_magnet = None
+        if is_sehuatang_magnet_param == 'true':
+            is_sehuatang_magnet = True
+        elif is_sehuatang_magnet_param == 'false':
+            is_sehuatang_magnet = None
         
         # 获取演员信息
         actress = db_manager.actresses_data_collection.find_one({'code': code})
         # 获取该演员的所有影片(分页)，支持搜索和筛选
         movies, total = db_manager.get_actress_movies(
-            actress['name'], page, per_page, search_keyword, is_single, is_subtitle
+            actress['name'], page, per_page, search_keyword, is_single, is_subtitle, is_sehuatang_magnet
         )
         if not movies:
             movies = []
@@ -722,7 +729,8 @@ def register_routes(app, jellyfin_checker, crawler):
                              total=total,
                              search_keyword=search_keyword,
                              is_single_filter=is_single_param,
-                             is_subtitle_filter=is_subtitle_param)
+                             is_subtitle_filter=is_subtitle_param,
+                             is_sehuatang_magnet_filter=is_sehuatang_magnet_param)
     
     @app.route('/jav-movie-detail/<movie_code>')
     def actress_movie_detail( movie_code):

@@ -557,7 +557,7 @@ class DatabaseManager:
             sort_order = -1  # 降序排列
             
             # 添加is_sehuatang_magnet筛选条件
-            if is_sehuatang_magnet is not None:
+            if is_sehuatang_magnet is not None and is_sehuatang_magnet:
                 query_conditions.append({'is_sehua_magnet': is_sehuatang_magnet})
             
             # 合并所有查询条件
@@ -635,7 +635,7 @@ class DatabaseManager:
             app_logger.info(f"获取系列影片错误: {e}")
             return None, 0
     
-    def get_actress_movies(self, actress_name, page=1, per_page=20, search_keyword=None, is_single=None, is_subtitle=None):
+    def get_actress_movies(self, actress_name, page=1, per_page=20, search_keyword=None, is_single=None, is_subtitle=None, is_sehuatang_magnet=None):
         """获取指定演员的所有影片(分页)，按发布日期最新排序，支持关键字搜索和筛选"""
         try:
             if self.javbus_data_collection is None:
@@ -666,6 +666,10 @@ class DatabaseManager:
             # 添加is_subtitle筛选条件
             if is_subtitle is not None:
                 query_conditions.append({'is_subtitle': is_subtitle})
+            
+            # 添加is_sehuatang_magnet筛选条件
+            if is_sehuatang_magnet is not None and is_sehuatang_magnet:
+                query_conditions.append({'is_sehua_magnet': is_sehuatang_magnet})
             
             # 合并所有查询条件
             if len(query_conditions) > 1:
@@ -1274,7 +1278,7 @@ class DatabaseManager:
                 query_conditions.append({'is_subtitle': is_subtitle})
             
             # 添加is_sehuatang_magnet筛选条件
-            if is_sehuatang_magnet is not None:
+            if is_sehuatang_magnet is not None and is_sehuatang_magnet:
                 query_conditions.append({'is_sehua_magnet': is_sehuatang_magnet})
             
             # 合并所有查询条件
