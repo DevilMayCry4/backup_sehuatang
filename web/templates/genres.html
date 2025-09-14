@@ -215,6 +215,23 @@
                 </div>
             </div>
         </div>
+        
+        <div class="row mt-3">
+            <!-- 色花堂链接筛选 -->
+            <div class="col-md-6 filter-group">
+                <label class="filter-label">色花堂链接筛选</label>
+                <div class="btn-group w-100" role="group">
+                    <input type="radio" class="btn-check" name="is_sehuatang_magnet" value="" id="sehuatang_all" checked>
+                    <label class="btn btn-outline-secondary" for="sehuatang_all">全部</label>
+                    
+                    <input type="radio" class="btn-check" name="is_sehuatang_magnet" value="true" id="sehuatang_yes">
+                    <label class="btn btn-outline-info" for="sehuatang_yes">有色花堂链接</label>
+                    
+                    <input type="radio" class="btn-check" name="is_sehuatang_magnet" value="false" id="sehuatang_no">
+                    <label class="btn btn-outline-secondary" for="sehuatang_no">无色花堂链接</label>
+                </div>
+            </div>
+        </div>
     </div>
     
     <!-- 搜索结果区域 -->
@@ -273,27 +290,30 @@ function updateSelectedCount() {
 
 // 执行搜索 - 跳转到全新页面
 function performSearch(page = 1) {
+    // 获取搜索关键词
     const searchKeyword = document.getElementById('searchKeyword').value.trim();
-    const genreNames = selectedGenres.map(genre => genre.name);
-    
-    // 如果没有选择分类且没有搜索关键词，显示提示
-    if (genreNames.length === 0 && !searchKeyword) {
-        showInitialTip();
-        return;
-    }
     
     // 获取筛选条件
     const isSingle = document.querySelector('input[name="is_single"]:checked').value;
     const isSubtitle = document.querySelector('input[name="is_subtitle"]:checked').value;
+    const isSehuatangMagnet = document.querySelector('input[name="is_sehuatang_magnet"]:checked').value;
     const sortBy = document.getElementById('sortBy').value;
+    
+    // 如果没有选择分类且没有输入关键词，显示提示并返回
+    if (selectedGenres.length === 0 && !searchKeyword) {
+        showInitialTip();
+        return;
+    }
     
     // 构建URL参数
     const params = new URLSearchParams();
     
     // 添加分类参数
-    genreNames.forEach(name => {
-        params.append('genres', name);
-    });
+    if (selectedGenres.length > 0) {
+        selectedGenres.forEach(genre => {
+            params.append('genre_codes', genre.code);
+        });
+    }
     
     // 添加其他参数
     if (searchKeyword) {
@@ -304,6 +324,9 @@ function performSearch(page = 1) {
     }
     if (isSubtitle) {
         params.append('is_subtitle', isSubtitle);
+    }
+    if (isSehuatangMagnet) {
+        params.append('is_sehuatang_magnet', isSehuatangMagnet);
     }
     if (sortBy !== 'release_date') {
         params.append('sort_by', sortBy);
@@ -336,6 +359,7 @@ function clearSearch() {
     // 重置筛选条件
     document.getElementById('single_all').checked = true;
     document.getElementById('subtitle_all').checked = true;
+    document.getElementById('sehuatang_all').checked = true;
     document.getElementById('sortBy').value = 'release_date';
     
     // 清除分类选择

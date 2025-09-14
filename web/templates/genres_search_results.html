@@ -41,6 +41,11 @@
         {% elif is_subtitle_filter == 'false' %}
             ，字幕：无
         {% endif %}
+        {% if is_sehuatang_magnet_filter == 'true' %}
+            ，色花堂链接：有
+        {% elif is_sehuatang_magnet_filter == 'false' %}
+            ，色花堂链接：无
+        {% endif %}
         <br>
         <strong>共找到 {{ pagination.total }} 部影片</strong>
     </div>
@@ -57,6 +62,7 @@
                 'search': search_keyword,
                 'is_single': is_single_filter,
                 'is_subtitle': is_subtitle_filter,
+                'is_sehuatang_magnet': is_sehuatang_magnet_filter,
                 'sort_by': sort_by
             }) }}
         {% endif %}

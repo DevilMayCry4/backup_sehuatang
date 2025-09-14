@@ -858,13 +858,7 @@ class DatabaseManager:
             # 添加时间戳
             data['crawl_time'] = datetime.now()  
             # 检查是否已存在
-            titleArray =  data[title].split(' ')
-            if titleArray:
-                    movie_code = data[title].split(' ')[0]
-                    db_manager.javbus_data_collection.update_one(
-                            {"code": movie_code},
-                            {"$set": {"is_sehua_magnet": True}}
-                        )
+            db_manager.markMovieHasSehuatangMagnet(data['title'])
             existing = self.mongo_collection.find_one({'tid': data['tid']})
             if existing:
                 # 更新现有记录
@@ -1241,7 +1235,7 @@ class DatabaseManager:
             app_logger.error(f"获取类别信息失败: {e}")
             return None
     
-    def search_movies_by_genres(self, names=None, page=1, per_page=20, search_keyword=None, is_single=None, is_subtitle=None, sort_by='release_date'):
+    def search_movies_by_genres(self, names=None, page=1, per_page=20, search_keyword=None, is_single=None, is_subtitle=None, is_sehuatang_magnet=None, sort_by='release_date'):
         """根据分类代码搜索影片，支持多选分类、关键字、单体、字幕筛选"""
         try:
             if self.javbus_data_collection is None:
@@ -1278,6 +1272,10 @@ class DatabaseManager:
             # 添加is_subtitle筛选条件
             if is_subtitle is not None:
                 query_conditions.append({'is_subtitle': is_subtitle})
+            
+            # 添加is_sehuatang_magnet筛选条件
+            if is_sehuatang_magnet is not None:
+                query_conditions.append({'is_sehua_magnet': is_sehuatang_magnet})
             
             # 合并所有查询条件
             if query_conditions:
@@ -2188,6 +2186,16 @@ class DatabaseManager:
         folder = ",".join(map(str, actress))
         path = os.path.join('/data',folder,code)
         return os.path.exists(path)
+
+    def markMovieHasSehuatangMagnet(self,title):
+        titleArray =  title.split(' ')
+        if titleArray:
+            movie_code = title.split(' ')[0]
+            db_manager.javbus_data_collection.update_one(
+                    {"code": movie_code.upper()},
+                    {"$set": {"is_sehua_magnet": True}}
+                )
+
 
 # 创建全局数据库管理器实例
 db_manager = DatabaseManager()

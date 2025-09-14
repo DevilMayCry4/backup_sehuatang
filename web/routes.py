@@ -1292,6 +1292,7 @@ def register_routes(app, jellyfin_checker, crawler):
             search_keyword = request.args.get('search', '').strip()
             is_single_filter = request.args.get('is_single', '')
             is_subtitle_filter = request.args.get('is_subtitle', '')
+            is_sehuatang_magnet_filter = request.args.get('is_sehuatang_magnet', '')
             sort_by = request.args.get('sort_by', 'release_date')
             
             # 转换筛选参数
@@ -1307,6 +1308,12 @@ def register_routes(app, jellyfin_checker, crawler):
             elif is_subtitle_filter == 'false':
                 is_subtitle = False
             
+            is_sehuatang_magnet = None
+            if is_sehuatang_magnet_filter == 'true':
+                is_sehuatang_magnet = True
+            elif is_sehuatang_magnet_filter == 'false':
+                is_sehuatang_magnet = None
+            
             # 搜索影片
             movies, total = db_manager.search_movies_by_genres(
                 names=genre_names if genre_names else None,
@@ -1315,6 +1322,7 @@ def register_routes(app, jellyfin_checker, crawler):
                 search_keyword=search_keyword if search_keyword else None,
                 is_single=is_single,
                 is_subtitle=is_subtitle,
+                is_sehuatang_magnet=is_sehuatang_magnet,
                 sort_by=sort_by
             )
             
@@ -1343,84 +1351,84 @@ def register_routes(app, jellyfin_checker, crawler):
                                 search_keyword=search_keyword,
                                 is_single_filter=is_single_filter,
                                 is_subtitle_filter=is_subtitle_filter,
+                                is_sehuatang_magnet_filter=is_sehuatang_magnet_filter,
                                 sort_by=sort_by)
                                 
         except Exception as e:
             app_logger.error(f"分类搜索结果页面错误: {e}")
             return render_template('error.html', error_message="加载搜索结果失败")
     
-    @app.route('/api/genres/search', methods=['POST'])
-    @api_login_required
-    def search_movies_by_genres_api():
-        """根据分类搜索影片API"""
-        try:
-            data = request.get_json()
+    # @app.route('/api/genres/search', methods=['POST'])
+    # @api_login_required
+    # def search_movies_by_genres_api():
+    #     """根据分类搜索影片API"""
+    #     try:
+    #         data = request.get_json()
             
-            # 获取搜索参数
-            genre_names = data.get('genre_names', [])  # 选中的分类名称列表
-            search_keyword = data.get('search_keyword', '').strip()
-            is_single_filter = data.get('is_single', '')
-            is_subtitle_filter = data.get('is_subtitle', '')
-            page = int(data.get('page', 1))
-            per_page = int(data.get('per_page', 20))
-            sort_by = data.get('sort_by', 'release_date')
+    #         # 获取搜索参数
+    #         genre_names = data.get('genre_names', [])  # 选中的分类名称列表
+    #         search_keyword = data.get('search_keyword', '').strip()
+    #         is_single_filter = data.get('is_single', '')
+    #         is_subtitle_filter = data.get('is_subtitle', '')
+    #         page = int(data.get('page', 1))
+    #         per_page = int(data.get('per_page', 20))
+    #         sort_by = data.get('sort_by', 'release_date')
             
-            # 转换筛选参数
-            is_single = None
-            if is_single_filter == 'true':
-                is_single = True
-            elif is_single_filter == 'false':
-                is_single = False
+    #         # 转换筛选参数
+    #         is_single = None
+    #         if is_single_filter == 'true':
+    #             is_single = True
+    #         elif is_single_filter == 'false':
+    #             is_single = False
                 
-            is_subtitle = None
-            if is_subtitle_filter == 'true':
-                is_subtitle = True
-            elif is_subtitle_filter == 'false':
-                is_subtitle = False
+    #         is_subtitle = None
+    #         if is_subtitle_filter == 'true':
+    #             is_subtitle = True
+    #         elif is_subtitle_filter == 'false':
+    #             is_subtitle = False
             
-            print(genre_names)
             
-            # 搜索影片
-            movies, total = db_manager.search_movies_by_genres(
-                names=genre_names if genre_names else None,
-                page=page,
-                per_page=per_page,
-                search_keyword=search_keyword if search_keyword else None,
-                is_single=is_single,
-                is_subtitle=is_subtitle,
-                sort_by=sort_by
-            )
+    #         # 搜索影片
+    #         movies, total = db_manager.search_movies_by_genres(
+    #             names=genre_names if genre_names else None,
+    #             page=page,
+    #             per_page=per_page,
+    #             search_keyword=search_keyword if search_keyword else None,
+    #             is_single=is_single,
+    #             is_subtitle=is_subtitle,
+    #             sort_by=sort_by
+    #         )
 
-            print(movies)
+    #         print(movies)
 
-            if movies is None:
-                movies = []
-                total = 0
+    #         if movies is None:
+    #             movies = []
+    #             total = 0
             
-            # 计算分页信息
-            total_pages = (total + per_page - 1) // per_page
+    #         # 计算分页信息
+    #         total_pages = (total + per_page - 1) // per_page
             
-            return jsonify({
-                'success': True,
-                'movies': movies,
-                'pagination': {
-                    'page': page,
-                    'per_page': per_page,
-                    'total': total,
-                    'pages': total_pages,
-                    'has_prev': page > 1,
-                    'has_next': page < total_pages,
-                    'prev_num': page - 1 if page > 1 else None,
-                    'next_num': page + 1 if page < total_pages else None
-                }
-            })
+    #         return jsonify({
+    #             'success': True,
+    #             'movies': movies,
+    #             'pagination': {
+    #                 'page': page,
+    #                 'per_page': per_page,
+    #                 'total': total,
+    #                 'pages': total_pages,
+    #                 'has_prev': page > 1,
+    #                 'has_next': page < total_pages,
+    #                 'prev_num': page - 1 if page > 1 else None,
+    #                 'next_num': page + 1 if page < total_pages else None
+    #             }
+    #         })
             
-        except Exception as e:
-            app_logger.error(f"分类搜索影片API错误: {e}")
-            return jsonify({
-                'success': False,
-                'error': '搜索失败，请稍后重试'
-            })
+    #     except Exception as e:
+    #         app_logger.error(f"分类搜索影片API错误: {e}")
+    #         return jsonify({
+    #             'success': False,
+    #             'error': '搜索失败，请稍后重试'
+    #         })
     
     @app.route('/api/genres/categories')
     @api_login_required
