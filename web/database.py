@@ -1286,7 +1286,6 @@ class DatabaseManager:
             # 设置排序方式
             sort_field = sort_by if sort_by in ['release_date', 'title', 'code'] else 'release_date'
             sort_order = -1  # 降序排列
-            
             movies = list(self.javbus_data_collection.find(
                 final_query
             ).sort([(sort_field, sort_order), ('_id', sort_order)]).skip((page-1)*per_page).limit(per_page))

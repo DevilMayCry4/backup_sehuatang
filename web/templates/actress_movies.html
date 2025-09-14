@@ -55,11 +55,26 @@
                     <label class="btn btn-outline-danger" for="subtitle_no">无字幕</label>
                 </div>
                 
+                <!-- 色花堂链接筛选 -->
+                <div class="btn-group" role="group" aria-label="色花堂链接筛选">
+                    <input type="radio" class="btn-check" name="is_sehuatang_magnet" value="" id="sehuatang_all" 
+                           {% if not is_sehuatang_magnet_filter %}checked{% endif %}>
+                    <label class="btn btn-outline-secondary" for="sehuatang_all">全部</label>
+                    
+                    <input type="radio" class="btn-check" name="is_sehuatang_magnet" value="true" id="sehuatang_yes" 
+                           {% if is_sehuatang_magnet_filter == 'true' %}checked{% endif %}>
+                    <label class="btn btn-outline-info" for="sehuatang_yes">有色花堂链接</label>
+                    
+                    <input type="radio" class="btn-check" name="is_sehuatang_magnet" value="false" id="sehuatang_no" 
+                           {% if is_sehuatang_magnet_filter == 'false' %}checked{% endif %}>
+                    <label class="btn btn-outline-secondary" for="sehuatang_no">无色花堂链接</label>
+                </div>
+                
                 <!-- 搜索和清除按钮 -->
                 <button class="btn btn-primary" type="submit">
                     <i class="bi bi-search"></i> 搜索
                 </button>
-                {% if search_keyword or is_single_filter or is_subtitle_filter %}
+                {% if search_keyword or is_single_filter or is_subtitle_filter or is_sehuatang_magnet_filter %}
                 <a href="{{ url_for('actress_movies', code=actress.code) }}" 
                    class="btn btn-outline-secondary">
                     <i class="bi bi-x-circle"></i> 清除
@@ -70,7 +85,7 @@
     </div>
     
     <!-- 筛选结果提示 -->
-    {% if search_keyword or is_single_filter or is_subtitle_filter %}
+    {% if search_keyword or is_single_filter or is_subtitle_filter or is_sehuatang_magnet_filter %}
     <div class="alert alert-info mb-3">
         <i class="bi bi-info-circle"></i> 
         筛选条件：
@@ -87,6 +102,11 @@
         {% elif is_subtitle_filter == 'false' %}
             {% if search_keyword or is_single_filter %}，{% endif %}无字幕
         {% endif %}
+        {% if is_sehuatang_magnet_filter == 'true' %}
+            {% if search_keyword or is_single_filter or is_subtitle_filter %}，{% endif %}有色花堂链接
+        {% elif is_sehuatang_magnet_filter == 'false' %}
+            {% if search_keyword or is_single_filter or is_subtitle_filter %}，{% endif %}无色花堂链接
+        {% endif %}
         ，共找到 {{ total }} 部电影
     </div>
     {% endif %}
@@ -100,7 +120,8 @@
         'code': actress.code,
         'search': search_keyword,
         'is_single': is_single_filter,
-        'is_subtitle': is_subtitle_filter
+        'is_subtitle': is_subtitle_filter,
+        'is_sehuatang_magnet': is_sehuatang_magnet_filter
     }) }}
 </div>
 

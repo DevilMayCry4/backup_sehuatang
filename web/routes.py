@@ -1289,6 +1289,7 @@ def register_routes(app, jellyfin_checker, crawler):
             page = int(request.args.get('page', 1))
             per_page = 20
             genre_names = request.args.getlist('genres')  # 支持多个分类
+            print(genre_names)
             search_keyword = request.args.get('search', '').strip()
             is_single_filter = request.args.get('is_single', '')
             is_subtitle_filter = request.args.get('is_subtitle', '')
