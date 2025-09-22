@@ -15,7 +15,7 @@ import os
 import sys
 from datetime import datetime, timedelta
 import multiprocessing
-from flask import session, redirect, url_for, jsonify, send_from_directory, make_response
+from flask import send_file
 
 def register_routes(app, jellyfin_checker, crawler):
     """注册所有路由"""
@@ -737,18 +737,10 @@ def register_routes(app, jellyfin_checker, crawler):
         """演员影片详情页面"""
         try:
             # 获取影片详情
-            movie = db_manager.javbus_data_collection.find_one({'code': movie_code})
+            movie = db_manager.getMovieByCode(movie_code)
             if not movie:
                 return render_template('error.html', 
                                      error_message='影片不存在'), 404
-            magnet_links = db_manager.parser_magnet_links_to_array(movie)
-            movie['magnet_links'] = magnet_links
-            code = movie['code']
-            magnet_link = db_manager.find_magnet_link(code)
-            if magnet_link != None:
-                    movie['sehuatang_url'] = magnet_link
-            parse_actress_to_array = db_manager.parse_actress_to_array(movie)
-            movie['actresses'] = parse_actress_to_array
             return render_template('jav_movie_detail.html',  
                                  movie=movie,
                                  db_manager=db_manager)
@@ -2530,6 +2522,194 @@ def register_routes(app, jellyfin_checker, crawler):
     def audio_processor_page():
         """音频处理页面"""
         return render_template('audio_processor.html')
+    
+    @app.route('/api/video/search-115', methods=['POST'])
+    @api_login_required
+    def search_115_video():
+        """搜索115平台上的视频文件"""
+        try:
+            from yun115_client import Yun115Client
+            from config import config as app_config
+            
+            data = request.get_json()
+            movie_code = data.get('movie_code', '').strip()
+            
+            if not movie_code:
+                return jsonify({
+                    'success': False,
+                    'error': '请提供电影编号'
+                })
+            
+            # 初始化115客户端
+            yun115_config = app_config.get_yun115_config()
+            if not yun115_config.get('access_token'):
+                return jsonify({
+                    'success': False,
+                    'error': '115开发平台未配置或未授权'
+                })
+            
+            client = Yun115Client(yun115_config)
+            
+            # 搜索视频文件
+            files = client.search_movie_files(movie_code)
+            
+            if not files:
+                return jsonify({
+                    'success': False,
+                    'error': f'未找到电影 {movie_code} 的视频文件'
+                })
+            
+            # 选择最佳质量的文件
+            best_file = client.get_best_quality_file(files)
+            
+            if best_file:
+                # 保存文件信息到数据库
+                db_manager.save_115_file_info(movie_code, best_file)
+                
+                return jsonify({
+                    'success': True,
+                    'data': {
+                        'file_info': best_file,
+                        'total_files': len(files)
+                    }
+                })
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': '无法获取文件信息'
+                })
+                
+        except Exception as e:
+            app_logger.error(f"搜索115视频失败: {e}")
+            return jsonify({
+                'success': False,
+                'error': f'搜索失败: {str(e)}'
+            })
+    
+    @app.route('/api/video/play-url/<movie_code>')
+    @api_login_required
+    def get_play_url(movie_code):
+        """获取视频播放地址"""
+        try:
+            from yun115_client import Yun115Client
+            from config import config as app_config
+            
+            # 先从数据库获取文件信息
+            file_info_list = db_manager.get_115_file_info(movie_code)
+            
+            if not file_info_list:
+                # 如果数据库中没有，尝试搜索
+                yun115_config = app_config.get_yun115_config()
+                if not yun115_config.get('access_token'):
+                    return jsonify({
+                        'success': False,
+                        'error': '115开发平台未配置或未授权'
+                    })
+                
+                client = Yun115Client(yun115_config)
+                files = client.search_movie_files(movie_code)
+                
+                if files:
+                    best_file = client.get_best_quality_file(files)
+                    if best_file:
+                        db_manager.save_115_file_info(movie_code, best_file)
+                        file_info_list = [best_file]
+            
+            if not file_info_list:
+                return jsonify({
+                    'success': False,
+                    'error': f'未找到电影 {movie_code} 的视频文件'
+                })
+            
+            # 使用第一个文件（通常是最佳质量的）
+            file_info = file_info_list[0]
+            file_id = file_info.get('file_id')
+            
+            if not file_id:
+                return jsonify({
+                    'success': False,
+                    'error': '文件ID无效'
+                })
+            
+            # 获取播放地址
+            yun115_config = app_config.get_yun115_config()
+            client = Yun115Client(yun115_config)
+            play_url = client.get_play_url(file_id)
+            
+            if play_url:
+                # 更新数据库中的播放地址
+                db_manager.update_115_play_url(movie_code, file_id, play_url)
+                
+                return jsonify({
+                    'success': True,
+                    'data': {
+                        'play_url': play_url,
+                        'file_info': file_info
+                    }
+                })
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': '无法获取播放地址'
+                })
+                
+        except Exception as e:
+            app_logger.error(f"获取播放地址失败: {e}")
+            return jsonify({
+                'success': False,
+                'error': f'获取播放地址失败: {str(e)}'
+            })
+    
+    @app.route('/api/video/115-files/<movie_code>')
+    @api_login_required
+    def get_115_files(movie_code):
+        """获取电影的115文件列表"""
+        try:
+            files = db_manager.get_115_file_info(movie_code)
+            
+            return jsonify({
+                'success': True,
+                'data': {
+                    'files': files,
+                    'total': len(files)
+                }
+            })
+            
+        except Exception as e:
+            app_logger.error(f"获取115文件列表失败: {e}")
+            return jsonify({
+                'success': False,
+                'error': f'获取文件列表失败: {str(e)}'
+            })
+    
+    @app.route('/api/video/refresh-115-token', methods=['POST'])
+    @api_login_required
+    def refresh_115_token():
+        """刷新115访问令牌"""
+        try:
+            from yun115_client import Yun115Client
+            from config import config as app_config
+            
+            yun115_config = app_config.get_yun115_config()
+            client = Yun115Client(yun115_config)
+            
+            if client.refresh_access_token():
+                return jsonify({
+                    'success': True,
+                    'message': '令牌刷新成功'
+                })
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': '令牌刷新失败'
+                })
+                
+        except Exception as e:
+            app_logger.error(f"刷新115令牌失败: {e}")
+            return jsonify({
+                'success': False,
+                'error': f'刷新令牌失败: {str(e)}'
+            })
     
     # 自定义静态文件处理，添加缓存头
     @app.route('/static/<path:filename>')

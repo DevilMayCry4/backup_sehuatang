@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>电影管理</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/bootstrap-icons.css') }}" rel="stylesheet">
     <style>
         .movie-card {
             transition: transform 0.2s;
@@ -198,7 +198,7 @@
         {% block content %}{% endblock %}
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script> -->
     <script>
         // 检查用户认证状态
         async function checkAuth() {
@@ -395,6 +395,175 @@
                 console.error('修改密码失败:', error);
                 alert('修改密码失败，请稍后重试');
             }
+        }
+        
+        // 115视频播放功能
+        async function playVideo(movieCode) {
+            try {
+                
+                const response = await fetch(`/api/video/play-url/${movieCode}`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    const playUrl = result.data.play_url;
+                    const fileInfo = result.data.file_info;
+                    
+                    // 显示视频播放器
+                    showVideoPlayer(playUrl, movieCode, fileInfo);
+                } else {
+                    // 如果没有找到文件，尝试搜索
+                    console.log('获取播放地址失败: ' + result.error);
+                }
+            } catch (error) {
+                hideLoadingModal();
+                console.error('播放视频失败:', error);
+                alert('播放视频失败，请稍后重试');
+            }
+        }
+        
+        async function searchAndPlayVideo(movieCode) {
+            try {
+                showLoadingModal('正在搜索视频文件...');
+                
+                const response = await fetch('/api/video/search-115', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        movie_code: movieCode
+                    })
+                });
+                
+                const result = await response.json();
+                hideLoadingModal();
+                
+                if (result.success) {
+                    const fileInfo = result.data.file_info;
+                    alert(`找到 ${result.data.total_files} 个文件，正在播放最佳质量版本`);
+                    
+                    // 重新获取播放地址
+                    await playVideo(movieCode);
+                } else {
+                    alert('搜索失败: ' + result.error);
+                }
+            } catch (error) {
+                hideLoadingModal();
+                console.error('搜索视频失败:', error);
+                alert('搜索视频失败，请稍后重试');
+            }
+        }
+        
+        function showVideoPlayer(playUrl, movieCode, fileInfo) {
+            // 创建视频播放器模态框
+            const modalHtml = `
+                <div class="modal fade" id="videoPlayerModal" tabindex="-1" aria-labelledby="videoPlayerModalLabel" aria-hidden="true">
+                    <div class="modal-dialog modal-xl">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="videoPlayerModalLabel">
+                                    播放: ${movieCode}
+                                    <small class="text-muted">(${fileInfo.file_name})</small>
+                                </h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body p-0">
+                                <video id="videoPlayer" class="w-100" controls autoplay>
+                                    <source src="${playUrl}" type="video/mp4">
+                                    您的浏览器不支持视频播放。
+                                </video>
+                            </div>
+                            <div class="modal-footer">
+                                <div class="d-flex justify-content-between w-100">
+                                    <div>
+                                        <small class="text-muted">
+                                            文件大小: ${formatFileSize(fileInfo.file_size)}
+                                        </small>
+                                    </div>
+                                    <div>
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                                        <button type="button" class="btn btn-primary" onclick="openInNewTab('${playUrl}')">
+                                            <i class="bi bi-box-arrow-up-right"></i> 新窗口播放
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // 移除已存在的模态框
+            const existingModal = document.getElementById('videoPlayerModal');
+            if (existingModal) {
+                existingModal.remove();
+            }
+            
+            // 添加新的模态框
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            
+            // 显示模态框
+            const modal = new bootstrap.Modal(document.getElementById('videoPlayerModal'));
+            modal.show();
+            
+            // 模态框关闭时暂停视频
+            document.getElementById('videoPlayerModal').addEventListener('hidden.bs.modal', function () {
+                const video = document.getElementById('videoPlayer');
+                if (video) {
+                    video.pause();
+                }
+                // 移除模态框元素
+                this.remove();
+            });
+        }
+        
+        function showLoadingModal(message) {
+            const loadingHtml = `
+                <div class="modal fade" id="loadingModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content">
+                            <div class="modal-body text-center py-4">
+                                <div class="spinner-border text-primary mb-3" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <p class="mb-0">${message}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // 移除已存在的加载模态框
+            const existingModal = document.getElementById('loadingModal');
+            if (existingModal) {
+                existingModal.remove();
+            }
+            
+            document.body.insertAdjacentHTML('beforeend', loadingHtml);
+            const modal = new bootstrap.Modal(document.getElementById('loadingModal'));
+            modal.show();
+        }
+        
+        function hideLoadingModal() {
+            const modal = document.getElementById('loadingModal');
+            if (modal) {
+                const bsModal = bootstrap.Modal.getInstance(modal);
+                if (bsModal) {
+                    bsModal.hide();
+                }
+                setTimeout(() => modal.remove(), 300);
+            }
+        }
+        
+        function formatFileSize(bytes) {
+            if (!bytes) return '未知';
+            const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(1024));
+            return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
+        }
+        
+        function openInNewTab(url) {
+            window.open(url, '_blank');
         }
         
     </script>

@@ -160,7 +160,7 @@ def start_scheduler(jellyfin_checker, jav_crawler, sehuatang_crawler):
     def run_jav_crawler():
         if jav_config.get('is_enabled', True):
             print(f"根据配置启动JAV爬虫，最大页数：{jav_config.get('max_pages', 50)}")
-            jav_crawler.update_javbus(max_pages=jav_config.get('max_pages', 50))
+            jav_crawler.process_home_page(max_pages=jav_config.get('max_pages', 50))
             # 更新爬虫最后运行时间
             db_manager.update_crawler_last_run_time('jav')
         else:

@@ -51,10 +51,19 @@ class Config:
             "email_config": {
                 "smtp_server": os.getenv("SMTP_SERVER", "smtp.gmail.com"),
                 "smtp_port": int(os.getenv("SMTP_PORT", "587")),
-                "sender_email": os.getenv("SENDER_EMAIL", ""),
-                "sender_password": os.getenv("SENDER_PASSWORD", ""),
-                "recipient_emails": os.getenv("RECIPIENT_EMAILS", "").split(",") if os.getenv("RECIPIENT_EMAILS") else [],
-                "enable_email": os.getenv("ENABLE_EMAIL", "false").lower() == "true"
+                "email": os.getenv("EMAIL", ""),
+                "password": os.getenv("EMAIL_PASSWORD", ""),
+                "to_email": os.getenv("TO_EMAIL", "")
+            },
+            
+            # 115开发平台配置
+            "yun115_config": {
+                "app_id": os.getenv("YUN115_APP_ID", ""),
+                "app_secret": os.getenv("YUN115_APP_SECRET", ""),
+                "api_base_url": os.getenv("YUN115_API_BASE_URL", "https://webapi.115.com"),
+                "redirect_uri": os.getenv("YUN115_REDIRECT_URI", ""),
+                "access_token": os.getenv("YUN115_ACCESS_TOKEN", ""),
+                "refresh_token": os.getenv("YUN115_REFRESH_TOKEN", "")
             }
         }
     
@@ -83,6 +92,17 @@ class Config:
             "max_retries":self.config["max_retries"],
             "page_load_timeout":self.config["page_load_timeout"],
             "implicit_wait":self.config["implicit_wait"],
+        }
+    
+    def get_yun115_config(self) -> Dict[str, str]:
+        """获取115开发平台配置"""
+        return {
+            "app_id": self.config["yun115_config"]["app_id"],
+            "app_secret": self.config["yun115_config"]["app_secret"],
+            "api_base_url": self.config["yun115_config"]["api_base_url"],
+            "redirect_uri": self.config["yun115_config"]["redirect_uri"],
+            "access_token": self.config["yun115_config"]["access_token"],
+            "refresh_token": self.config["yun115_config"]["refresh_token"]
         }
     
     def get(self, key: str, default: Any = None) -> Any:

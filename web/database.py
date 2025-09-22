@@ -41,6 +41,10 @@ class DatabaseManager:
         self.studio_favorites_collection = None
         # 爬虫配置集合
         self.crawler_config_collection = None
+        # 115文件信息集合
+        self.yun115_files_collection = None
+        # 115云下载任务集合
+        self.yun115_download_tasks_collection = None
         
     def init_mongodb(self):
         """初始化MongoDB连接"""
@@ -79,6 +83,12 @@ class DatabaseManager:
             
             # 爬虫配置集合
             self.crawler_config_collection = self.mongo_db['crawler_config']
+            
+            # 115文件信息集合
+            self.yun115_files_collection = self.mongo_db['yun115_files']
+            
+            # 115云下载任务集合
+            self.yun115_download_tasks_collection = self.mongo_db['yun115_download_tasks']
             
             # 失败图片集合
             self.failed_images_collection = self.mongo_db['failed_images']
@@ -2165,6 +2175,364 @@ class DatabaseManager:
         except Exception as e:
             app_logger.error(f"删除音频处理任务失败: {e}")
             return False
+    
+    def save_115_file_info(self, movie_code, file_info):
+        """
+        保存115文件信息到数据库
+        
+        Args:
+            movie_code: 电影编号
+            file_info: 115文件信息
+        """
+        try:
+            # 创建115文件信息集合（如果不存在）
+            if not hasattr(self, 'yun115_files_collection'):
+                self.yun115_files_collection = self.mongo_db['yun115_files']
+            
+            # 构建文档
+            doc = {
+                'movie_code': movie_code,
+                'file_id': file_info.get('file_id'),
+                'file_name': file_info.get('file_name'),
+                'file_size': file_info.get('file_size'),
+                'file_type': file_info.get('file_type'),
+                'download_url': file_info.get('download_url'),
+                'play_url': file_info.get('play_url'),
+                'created_at': datetime.now(),
+                'updated_at': datetime.now()
+            }
+            
+            # 使用upsert更新或插入
+            self.yun115_files_collection.update_one(
+                {'movie_code': movie_code, 'file_id': file_info.get('file_id')},
+                {'$set': doc},
+                upsert=True
+            )
+            
+            app_logger.info(f"保存115文件信息成功: {movie_code}")
+            return True
+            
+        except Exception as e:
+            app_logger.error(f"保存115文件信息失败: {e}")
+            return False
+    
+    def get_115_file_info(self, movie_code):
+        """
+        获取电影的115文件信息
+        
+        Args:
+            movie_code: 电影编号
+            
+        Returns:
+            115文件信息列表
+        """
+        try:
+            if not hasattr(self, 'yun115_files_collection'):
+                self.yun115_files_collection = self.mongo_db['yun115_files']
+            
+            files = list(self.yun115_files_collection.find(
+                {'movie_code': movie_code},
+                {'_id': 0}
+            ).sort('file_size', -1))  # 按文件大小降序排列
+            
+            return files
+            
+        except Exception as e:
+            app_logger.error(f"获取115文件信息失败: {e}")
+            return []
+    
+    def update_115_play_url(self, movie_code, file_id, play_url):
+        """
+        更新115文件的播放地址
+        
+        Args:
+            movie_code: 电影编号
+            file_id: 文件ID
+            play_url: 播放地址
+        """
+        try:
+            if not hasattr(self, 'yun115_files_collection'):
+                self.yun115_files_collection = self.mongo_db['yun115_files']
+            
+            result = self.yun115_files_collection.update_one(
+                {'movie_code': movie_code, 'file_id': file_id},
+                {
+                    '$set': {
+                        'play_url': play_url,
+                        'updated_at': datetime.now()
+                    }
+                }
+            )
+            
+            if result.modified_count > 0:
+                app_logger.info(f"更新115播放地址成功: {movie_code}")
+                return True
+            else:
+                app_logger.warning(f"未找到要更新的115文件: {movie_code}")
+                return False
+                
+        except Exception as e:
+            app_logger.error(f"更新115播放地址失败: {e}")
+            return False
+    
+    def delete_115_file_info(self, movie_code, file_id=None):
+        """
+        删除115文件信息
+        
+        Args:
+            movie_code: 电影编号
+            file_id: 文件ID，如果为None则删除该电影的所有文件信息
+        """
+        try:
+            if not hasattr(self, 'yun115_files_collection'):
+                self.yun115_files_collection = self.mongo_db['yun115_files']
+            
+            if file_id:
+                # 删除特定文件
+                query = {'movie_code': movie_code, 'file_id': file_id}
+            else:
+                # 删除该电影的所有文件
+                query = {'movie_code': movie_code}
+            
+            result = self.yun115_files_collection.delete_many(query)
+            
+            app_logger.info(f"删除115文件信息成功: {movie_code}, 删除数量: {result.deleted_count}")
+            return result.deleted_count > 0
+            
+        except Exception as e:
+            app_logger.error(f"删除115文件信息失败: {e}")
+            return False
+    
+    def get_movies_with_115_files(self, page=1, per_page=20):
+        """
+        获取有115文件的电影列表
+        
+        Args:
+            page: 页码
+            per_page: 每页数量
+            
+        Returns:
+            电影列表和总数
+        """
+        try:
+            if not hasattr(self, 'yun115_files_collection'):
+                self.yun115_files_collection = self.mongo_db['yun115_files']
+            
+            # 获取有115文件的电影编号
+            movie_codes = self.yun115_files_collection.distinct('movie_code')
+            
+            # 分页
+            skip = (page - 1) * per_page
+            paginated_codes = movie_codes[skip:skip + per_page]
+            
+            # 获取电影详细信息
+            movies = []
+            for code in paginated_codes:
+                movie = self.javbus_data_collection.find_one({'code': code})
+                if movie:
+                    # 添加115文件信息
+                    movie['yun115_files'] = self.get_115_file_info(code)
+                    movies.append(movie)
+            
+            return {
+                'movies': movies,
+                'total': len(movie_codes),
+                'page': page,
+                'per_page': per_page,
+                'total_pages': (len(movie_codes) + per_page - 1) // per_page
+            }
+            
+        except Exception as e:
+            app_logger.error(f"获取有115文件的电影列表失败: {e}")
+            return {
+                'movies': [],
+                'total': 0,
+                'page': page,
+                'per_page': per_page,
+                'total_pages': 0
+            }
+    
+    def save_115_download_task(self, task_info):
+        """
+        保存115云下载任务信息到数据库
+        
+        Args:
+            task_info: 任务信息字典
+        """
+        try:
+            # 创建115云下载任务集合（如果不存在）
+            if not hasattr(self, 'yun115_download_tasks_collection'):
+                self.yun115_download_tasks_collection = self.mongo_db['yun115_download_tasks']
+            
+            # 构建文档
+            doc = {
+                'task_hash': task_info.get('hash'),
+                'task_name': task_info.get('name'),
+                'download_url': task_info.get('url'),
+                'save_path': task_info.get('save_path', ''),
+                'status': task_info.get('status', 'pending'),
+                'progress': task_info.get('progress', 0),
+                'file_size': task_info.get('file_size', 0),
+                'downloaded_size': task_info.get('downloaded_size', 0),
+                'movie_code': task_info.get('movie_code'),  # 关联的电影编号
+                'created_at': datetime.now(),
+                'updated_at': datetime.now()
+            }
+            
+            # 使用upsert更新或插入
+            self.yun115_download_tasks_collection.update_one(
+                {'task_hash': task_info.get('hash')},
+                {'$set': doc},
+                upsert=True
+            )
+            
+            app_logger.info(f"保存115云下载任务成功: {task_info.get('name')}")
+            return True
+            
+        except Exception as e:
+            app_logger.error(f"保存115云下载任务失败: {e}")
+            return False
+    
+    def get_115_download_tasks(self, movie_code=None, status=None, page=1, per_page=20):
+        """
+        获取115云下载任务列表
+        
+        Args:
+            movie_code: 电影编号筛选
+            status: 状态筛选
+            page: 页码
+            per_page: 每页数量
+            
+        Returns:
+            任务列表和分页信息
+        """
+        try:
+            if not hasattr(self, 'yun115_download_tasks_collection'):
+                self.yun115_download_tasks_collection = self.mongo_db['yun115_download_tasks']
+            
+            # 构建查询条件
+            query = {}
+            if movie_code:
+                query['movie_code'] = movie_code
+            if status:
+                query['status'] = status
+            
+            # 计算总数
+            total = self.yun115_download_tasks_collection.count_documents(query)
+            
+            # 分页查询
+            skip = (page - 1) * per_page
+            tasks = list(self.yun115_download_tasks_collection.find(
+                query,
+                {'_id': 0}
+            ).sort('created_at', -1).skip(skip).limit(per_page))
+            
+            return {
+                'tasks': tasks,
+                'total': total,
+                'page': page,
+                'per_page': per_page,
+                'total_pages': (total + per_page - 1) // per_page
+            }
+            
+        except Exception as e:
+            app_logger.error(f"获取115云下载任务列表失败: {e}")
+            return {
+                'tasks': [],
+                'total': 0,
+                'page': page,
+                'per_page': per_page,
+                'total_pages': 0
+            }
+    
+    def update_115_download_task_status(self, task_hash, status, progress=None, downloaded_size=None):
+        """
+        更新115云下载任务状态
+        
+        Args:
+            task_hash: 任务hash值
+            status: 新状态
+            progress: 进度百分比
+            downloaded_size: 已下载大小
+        """
+        try:
+            if not hasattr(self, 'yun115_download_tasks_collection'):
+                self.yun115_download_tasks_collection = self.mongo_db['yun115_download_tasks']
+            
+            update_data = {
+                'status': status,
+                'updated_at': datetime.now()
+            }
+            
+            if progress is not None:
+                update_data['progress'] = progress
+            if downloaded_size is not None:
+                update_data['downloaded_size'] = downloaded_size
+            
+            result = self.yun115_download_tasks_collection.update_one(
+                {'task_hash': task_hash},
+                {'$set': update_data}
+            )
+            
+            if result.modified_count > 0:
+                app_logger.info(f"更新115云下载任务状态成功: {task_hash}")
+                return True
+            else:
+                app_logger.warning(f"未找到要更新的115云下载任务: {task_hash}")
+                return False
+                
+        except Exception as e:
+            app_logger.error(f"更新115云下载任务状态失败: {e}")
+            return False
+    
+    def delete_115_download_task(self, task_hash):
+        """
+        删除115云下载任务记录
+        
+        Args:
+            task_hash: 任务hash值
+        """
+        try:
+            if not hasattr(self, 'yun115_download_tasks_collection'):
+                self.yun115_download_tasks_collection = self.mongo_db['yun115_download_tasks']
+            
+            result = self.yun115_download_tasks_collection.delete_one({'task_hash': task_hash})
+            
+            if result.deleted_count > 0:
+                app_logger.info(f"删除115云下载任务成功: {task_hash}")
+                return True
+            else:
+                app_logger.warning(f"未找到要删除的115云下载任务: {task_hash}")
+                return False
+                
+        except Exception as e:
+            app_logger.error(f"删除115云下载任务失败: {e}")
+            return False
+    
+    def get_115_download_task_by_hash(self, task_hash):
+        """
+        根据hash值获取115云下载任务
+        
+        Args:
+            task_hash: 任务hash值
+            
+        Returns:
+            任务信息
+        """
+        try:
+            if not hasattr(self, 'yun115_download_tasks_collection'):
+                self.yun115_download_tasks_collection = self.mongo_db['yun115_download_tasks']
+            
+            task = self.yun115_download_tasks_collection.find_one(
+                {'task_hash': task_hash},
+                {'_id': 0}
+            )
+            
+            return task
+            
+        except Exception as e:
+            app_logger.error(f"获取115云下载任务失败: {e}")
+            return None
     def deal_with_movies(self,movies):
         # 转换 ObjectId 为字符串以支持 JSON 序列化
             for movie in movies:
@@ -2198,6 +2566,19 @@ class DatabaseManager:
                     {"code": movie_code.upper()},
                     {"$set": {"is_sehua_magnet": True}}
                 )
+    def getMovieByCode(self,code):
+            movie = db_manager.javbus_data_collection.find_one({'code': code})
+            if not movie:
+                return None
+            magnet_links = self.parser_magnet_links_to_array(movie)
+            movie['magnet_links'] = magnet_links
+            magnet_link = db_manager.find_magnet_link(code)
+            movie['is_exist'] = db_manager.isMovieExist(movie)
+            if magnet_link != None:
+                    movie['sehuatang_url'] = magnet_link
+            parse_actress_to_array = db_manager.parse_actress_to_array(movie)
+            movie['actresses'] = parse_actress_to_array
+            return movie
 
 
 # 创建全局数据库管理器实例
