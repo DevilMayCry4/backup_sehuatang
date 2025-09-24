@@ -35,12 +35,44 @@
     font-size: 1.1rem;
     border-bottom: 2px solid #007bff;
     padding-bottom: 0.5rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    transition: all 0.3s ease;
+    user-select: none;
+}
+
+.category-title:hover {
+    color: #007bff;
+}
+
+.collapse-icon {
+    margin-right: 0.5rem;
+    transition: transform 0.3s ease;
+    font-size: 0.9rem;
+}
+
+.category-title.collapsed .collapse-icon {
+    transform: rotate(-90deg);
 }
 
 .genre-tags {
     display: flex;
     flex-wrap: wrap;
     gap: 0.5rem;
+    transition: all 0.3s ease;
+    overflow: hidden;
+}
+
+.genre-tags.collapsed {
+    max-height: 0;
+    margin-bottom: 0;
+    opacity: 0;
+}
+
+.genre-tags:not(.collapsed) {
+    max-height: 1000px;
+    opacity: 1;
 }
 
 .genre-tag {
@@ -130,8 +162,11 @@
         <div id="genresContainer">
             {% for category, genres in genres_by_category.items() %}
             <div class="category-section">
-                <div class="category-title">{{ category }}</div>
-                <div class="genre-tags">
+                <div class="category-title collapsible" data-category="{{ category }}">
+                    <i class="bi bi-chevron-down collapse-icon"></i>
+                    {{ category }}
+                </div>
+                <div class="genre-tags" id="category-{{ category }}">
                     {% for genre in genres %}
                     <span class="genre-tag" data-code="{{ genre.code }}" data-name="{{ genre.name }}">
                         {{ genre.name }}
@@ -371,12 +406,58 @@ function clearSearch() {
     showInitialTip();
 }
 
+// 切换分类折叠状态
+function toggleCategoryCollapse(categoryTitle) {
+    const category = categoryTitle.dataset.category;
+    const genreTags = document.getElementById(`category-${category}`);
+    
+    categoryTitle.classList.toggle('collapsed');
+    genreTags.classList.toggle('collapsed');
+    
+    // 保存折叠状态到localStorage
+    const collapsedCategories = JSON.parse(localStorage.getItem('collapsedCategories') || '[]');
+    if (categoryTitle.classList.contains('collapsed')) {
+        if (!collapsedCategories.includes(category)) {
+            collapsedCategories.push(category);
+        }
+    } else {
+        const index = collapsedCategories.indexOf(category);
+        if (index > -1) {
+            collapsedCategories.splice(index, 1);
+        }
+    }
+    localStorage.setItem('collapsedCategories', JSON.stringify(collapsedCategories));
+}
+
+// 初始化折叠状态
+function initializeCategoryCollapse() {
+    const collapsedCategories = JSON.parse(localStorage.getItem('collapsedCategories') || '[]');
+    
+    collapsedCategories.forEach(category => {
+        const categoryTitle = document.querySelector(`[data-category="${category}"]`);
+        const genreTags = document.getElementById(`category-${category}`);
+        
+        if (categoryTitle && genreTags) {
+            categoryTitle.classList.add('collapsed');
+            genreTags.classList.add('collapsed');
+        }
+    });
+}
+
 // 页面加载完成后绑定事件
 document.addEventListener('DOMContentLoaded', function() {
+    // 初始化折叠状态
+    initializeCategoryCollapse();
+    
     // 使用事件委托绑定分类标签点击事件
     document.getElementById('genresContainer').addEventListener('click', function(e) {
         if (e.target.classList.contains('genre-tag')) {
             toggleGenreSelection(e.target);
+        }
+        // 绑定分类标题点击事件
+        if (e.target.classList.contains('category-title') || e.target.closest('.category-title')) {
+            const categoryTitle = e.target.classList.contains('category-title') ? e.target : e.target.closest('.category-title');
+            toggleCategoryCollapse(categoryTitle);
         }
     });
     
