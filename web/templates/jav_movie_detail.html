@@ -6,6 +6,10 @@
     <title>影片</title>
     <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
     <link href="{{ url_for('static', filename='css/bootstrap-icons.css') }}" rel="stylesheet">
+     <link href="{{ url_for('static', filename='css/video-js.css') }}" rel="stylesheet"> 
+    <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/hls.js@latest') }}"></script>
+    <script src="{{ url_for('static', filename='js/video.min.js') }}"></script>
     <style>
         body {
             background-color: #f8f9fa;
@@ -93,7 +97,7 @@
             <!-- 播放按钮 - 悬浮在封面图上 -->
             {% if movie.is_exist %}
             <div class="position-absolute top-50 start-50 translate-middle">
-                <button class="btn btn-light btn-lg shadow-lg play-button" onclick="playMovie115('{{ movie.code }}')" 
+                <button class="btn btn-light btn-lg shadow-lg play-button" onclick="playJellyfinVideo('{{ itemId }}')" 
                         style="border-radius: 50px; padding: 12px 30px; background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); border: 2px solid rgba(255,255,255,0.8); transition: all 0.3s ease-in-out;">
                     <i class="bi bi-play-fill text-primary" style="font-size: 1.5rem; transition: all 0.3s ease-in-out;"></i>
                     <span class="ms-2 text-dark fw-bold" style="transition: all 0.3s ease-in-out;">播放影片</span>
@@ -448,32 +452,92 @@
             }, duration);
         }
         
-        function playMovie115(movieCode) {
+        function playJellyfinVideo(itemId) {
             // 显示加载提示
-            showToast('正在获取播放地址...', 'info');
+            showToast('正在准备播放页面...', 'info');
             
-            // 调用之前实现的playVideo函数（在base.html中定义）
-            if (typeof playVideo === 'function') {
-                playVideo(movieCode);
-            } else {
-                // 如果playVideo函数不存在，直接实现播放逻辑
-                fetch(`/api/video/play-url/${movieCode}`)
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success && data.play_url) {
-                            // 创建视频播放器模态框
-                            createVideoModal(data.play_url, movieCode);
-                        } else {
-                            // 如果没有找到播放地址，尝试搜索115文件
-                            searchAndPlay115Files(movieCode);
-                        }
-                    })
-                    .catch(error => {
-                        console.error('获取播放地址失败:', error);
-                        // 尝试搜索115文件
-                        searchAndPlay115Files(movieCode);
-                    });
+            const serverUrl = "https://wudd.fun:8096";
+            const apiKey = "8fe868dfd0064c32bc3e0bba6c554d2d";
+            const deviceId = 'web-client';
+            
+            // 构建Jellyfin直接播放URL (使用标准API)
+            const playbackUrl = `${serverUrl}/Videos/${itemId}/main.m3u8` + 
+                `?api_key=${apiKey}` + 
+                `&DeviceId=${deviceId}` +
+                `&PlaySessionId=${Date.now()}` +
+                `&VideoCodec=h264,hevc,vp9` +
+                `&AudioCodec=aac,mp3,opus,flac` +
+                `&VideoBitrate=20000000` +
+                `&AudioBitrate=192000` +
+                `&MaxAudioChannels=6` +
+                `&MaxFramerate=60` +
+                `&MaxWidth=1920` +
+                `&MaxHeight=1080` +
+                `&EnableDirectPlay=true` +
+                `&EnableDirectStream=true` +
+                `&SubtitleMethod=Embed`;
+            
+            // 构建播放页面URL并跳转
+            const playerPageUrl = `/player?` + 
+                `url=${encodeURIComponent(playbackUrl)}` +
+                `&title=${encodeURIComponent('{{ movie.code }}')}` +
+                `&poster=${encodeURIComponent('{{ url_for('static', filename='images/covers/' + movie.code + '/' + movie.code + '_cover.jpg') }}')}`;            
+            
+            // 在新标签页中打开播放页面
+            window.open(playerPageUrl, '_blank');
+        }
+        
+        function fallbackToApiPlayback(itemId) {
+            // 使用后端API获取播放URL
+            fetch(`/api/jellyfin/play-url/${itemId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.play_url) {
+                        // 创建视频播放器模态框
+                        createVideoModal(data.play_url, '{{ movie.code }}');
+                    } else {
+                        // 如果获取播放地址失败
+                        showToast('获取Jellyfin播放地址失败: ' + (data.error || '未知错误'), 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('获取Jellyfin播放地址失败:', error);
+                    showToast('获取Jellyfin播放地址失败: 网络错误', 'error');
+                });
+        }
+
+        function playMovie115(movieCode) {
+            if (jellyfin_result && jellyfin_result.success) {
+                // 如果Jellyfin中存在影片，直接播放
+                playVideo(jellyfin_result.item_id);
+                return;
             }
+
+            // 显示加载提示
+            // showToast('正在获取播放地址...', 'info');
+            
+            // // 调用之前实现的playVideo函数（在base.html中定义）
+            // if (typeof playVideo === 'function') {
+            //     playVideo(movieCode);
+            // } else {
+            //     // 如果playVideo函数不存在，直接实现播放逻辑
+            //     fetch(`/api/video/play-url/${movieCode}`)
+            //         .then(response => response.json())
+            //         .then(data => {
+            //             if (data.success && data.play_url) {
+            //                 // 创建视频播放器模态框
+            //                 createVideoModal(data.play_url, movieCode);
+            //             } else {
+            //                 // 如果没有找到播放地址，尝试搜索115文件
+            //                 searchAndPlay115Files(movieCode);
+            //             }
+            //         })
+            //         .catch(error => {
+            //             console.error('获取播放地址失败:', error);
+            //             // 尝试搜索115文件
+            //             searchAndPlay115Files(movieCode);
+            //         });
+            // }
         }
         
         function searchAndPlay115Files(movieCode) {
@@ -558,11 +622,29 @@
                             </div>
                             <div class="modal-body p-0">
                                 <div class="ratio ratio-16x9">
-                                    <video controls autoplay class="w-100">
+                                    <video 
+                                        id="videoPlayer" 
+                                        controls 
+                                        autoplay 
+                                        class="w-100" 
+                                        crossorigin="anonymous"
+                                        controlsList="nodownload" 
+                                        playsinline
+                                        preload="auto"
+                                    >
                                         <source src="${playUrl}" type="video/mp4">
                                         您的浏览器不支持视频播放。
                                     </video>
                                 </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" id="fullscreenBtn" class="btn btn-primary">
+                                    <i class="bi bi-fullscreen"></i> 全屏
+                                </button>
+                                <button type="button" id="playbackSpeedBtn" class="btn btn-secondary">
+                                    1.0x
+                                </button>
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
                             </div>
                         </div>
                     </div>
@@ -573,15 +655,81 @@
             document.body.insertAdjacentHTML('beforeend', modalHtml);
             
             // 显示模态框
-            const modal = new bootstrap.Modal(document.getElementById('videoModal'));
-            modal.show();
+            const videoModal = new bootstrap.Modal(document.getElementById('videoModal'));
+            videoModal.show();
             
-            // 模态框关闭时清理
-            document.getElementById('videoModal').addEventListener('hidden.bs.modal', function () {
-                this.remove();
+            // 获取视频元素
+            const videoPlayer = document.getElementById('videoPlayer');
+            
+            // 全屏按钮功能
+            const fullscreenBtn = document.getElementById('fullscreenBtn');
+            fullscreenBtn.addEventListener('click', () => {
+                if (videoPlayer.requestFullscreen) {
+                    videoPlayer.requestFullscreen();
+                } else if (videoPlayer.webkitRequestFullscreen) {
+                    videoPlayer.webkitRequestFullscreen();
+                } else if (videoPlayer.msRequestFullscreen) {
+                    videoPlayer.msRequestFullscreen();
+                }
             });
             
-            showToast('开始播放视频', 'success');
+            // 播放速度控制
+            const playbackSpeedBtn = document.getElementById('playbackSpeedBtn');
+            const speeds = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
+            let currentSpeedIndex = 2; // 默认1.0x
+            
+            playbackSpeedBtn.addEventListener('click', () => {
+                currentSpeedIndex = (currentSpeedIndex + 1) % speeds.length;
+                const newSpeed = speeds[currentSpeedIndex];
+                videoPlayer.playbackRate = newSpeed;
+                playbackSpeedBtn.textContent = `${newSpeed}x`;
+            });
+            
+            // 模态框关闭时停止视频播放
+            document.getElementById('videoModal').addEventListener('hidden.bs.modal', function () {
+                videoPlayer.pause();
+                videoPlayer.src = '';
+                videoPlayer.load();
+            });
+            
+            // 添加键盘快捷键
+            document.addEventListener('keydown', handleKeyPress);
+            
+            function handleKeyPress(e) {
+                if (!document.getElementById('videoModal')) return;
+                
+                switch(e.key) {
+                    case ' ':
+                        // 空格键暂停/播放
+                        if (videoPlayer.paused) {
+                            videoPlayer.play();
+                        } else {
+                            videoPlayer.pause();
+                        }
+                        e.preventDefault();
+                        break;
+                    case 'ArrowRight':
+                        // 右箭头前进10秒
+                        videoPlayer.currentTime += 10;
+                        e.preventDefault();
+                        break;
+                    case 'ArrowLeft':
+                        // 左箭头后退10秒
+                        videoPlayer.currentTime -= 10;
+                        e.preventDefault();
+                        break;
+                    case 'f':
+                        // f键全屏
+                        fullscreenBtn.click();
+                        e.preventDefault();
+                        break;
+                }
+            }
+            
+            // 模态框关闭时移除键盘事件监听
+            document.getElementById('videoModal').addEventListener('hidden.bs.modal', function () {
+                document.removeEventListener('keydown', handleKeyPress);
+            });
         }
 
         function playMovie115(movieCode) {
@@ -694,11 +842,28 @@
                             </div>
                             <div class="modal-body p-0">
                                 <div class="ratio ratio-16x9">
-                                    <video controls autoplay class="w-100">
-                                        <source src="${playUrl}" type="video/mp4">
-                                        您的浏览器不支持视频播放。
+                                    <video 
+                                        id="videoPlayer" 
+                                        controls 
+                                        autoplay 
+                                        class="w-100" 
+                                        crossorigin="anonymous"
+                                        controlsList="nodownload" 
+                                        playsinline
+                                        preload="auto"
+                                    >
+                                    
                                     </video>
                                 </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" id="fullscreenBtn" class="btn btn-primary">
+                                    <i class="bi bi-fullscreen"></i> 全屏
+                                </button>
+                                <button type="button" id="playbackSpeedBtn" class="btn btn-secondary">
+                                    1.0x
+                                </button>
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
                             </div>
                         </div>
                     </div>
@@ -709,15 +874,66 @@
             document.body.insertAdjacentHTML('beforeend', modalHtml);
             
             // 显示模态框
-            const modal = new bootstrap.Modal(document.getElementById('videoModal'));
-            modal.show();
+            const videoModal = new bootstrap.Modal(document.getElementById('videoModal'));
+            videoModal.show();
             
-            // 模态框关闭时清理
-            document.getElementById('videoModal').addEventListener('hidden.bs.modal', function () {
-                this.remove();
-            });
+            // 获取视频元素
+            const videoPlayer = document.getElementById('videoPlayer');
             
-            showToast('开始播放视频', 'success');
+            // 使用 hls.js 播放视频
+            if (Hls.isSupported()) {
+                const hls = new Hls({
+                    maxBufferLength: 30,
+                    maxMaxBufferLength: 60,
+                    maxBufferSize: 60 * 1000 * 1000, // 60MB
+                    maxBufferHole: 0.5,
+                    lowLatencyMode: false,
+                    debug: false
+                });
+                hls.loadSource(playUrl);
+                hls.attachMedia(videoPlayer);
+                hls.on(Hls.Events.MANIFEST_PARSED, function() {
+                    videoPlayer.play();
+                });
+                
+                // 错误处理
+                hls.on(Hls.Events.ERROR, function(event, data) {
+                    if (data.fatal) {
+                        switch(data.type) {
+                            case Hls.ErrorTypes.NETWORK_ERROR:
+                                console.error('HLS 网络错误', data);
+                                showToast('视频加载失败: 网络错误', 'error');
+                                hls.startLoad(); // 尝试恢复
+                                break;
+                            case Hls.ErrorTypes.MEDIA_ERROR:
+                                console.error('HLS 媒体错误', data);
+                                showToast('视频播放错误: 媒体错误', 'error');
+                                hls.recoverMediaError(); // 尝试恢复
+                                break;
+                            default:
+                                console.error('HLS 致命错误', data);
+                                showToast('视频播放错误: 无法恢复', 'error');
+                                hls.destroy();
+                                break;
+                        }
+                    }
+                });
+                
+                // 模态框关闭时销毁 hls 实例
+                document.getElementById('videoModal').addEventListener('hidden.bs.modal', function () {
+                    hls.destroy();
+                });
+            } else if (videoPlayer.canPlayType('application/vnd.apple.mpegurl')) {
+                // 对于 Safari 等原生支持 HLS 的浏览器
+                videoPlayer.src = playUrl;
+                videoPlayer.addEventListener('loadedmetadata', function() {
+                    videoPlayer.play();
+                });
+            } else {
+                // 不支持 HLS，尝试直接播放
+                showToast('您的浏览器不支持 HLS 播放，尝试直接播放', 'warning');
+                videoPlayer.src = playUrl;
+            }
         }
 
         function playMovie115(movieCode) {
@@ -830,11 +1046,33 @@
                             </div>
                             <div class="modal-body p-0">
                                 <div class="ratio ratio-16x9">
-                                    <video controls autoplay class="w-100">
-                                        <source src="${playUrl}" type="video/mp4">
-                                        您的浏览器不支持视频播放。
+                                    <video 
+                                        id="videoPlayer" 
+                                        class="video-js vjs-default-skin vjs-big-play-button vjs-fluid"
+                                        controls 
+                                        preload="auto"
+                                        data-setup='{
+                                            "fluid": true,
+                                            "playbackRates": [0.5, 0.75, 1, 1.25, 1.5, 2],
+                                            "controlBar": {
+                                                "children": [
+                                                    "playToggle",
+                                                    "currentTimeDisplay",
+                                                    "timeDivider",
+                                                    "durationDisplay",
+                                                    "progressControl",
+                                                    "volumePanel",
+                                                    "playbackRateMenuButton",
+                                                    "fullscreenToggle"
+                                                ]
+                                            }
+                                        }'
+                                    >
                                     </video>
                                 </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
                             </div>
                         </div>
                     </div>
@@ -845,12 +1083,22 @@
             document.body.insertAdjacentHTML('beforeend', modalHtml);
             
             // 显示模态框
-            const modal = new bootstrap.Modal(document.getElementById('videoModal'));
-            modal.show();
+            const videoModal = new bootstrap.Modal(document.getElementById('videoModal'));
+            videoModal.show();
             
-            // 模态框关闭时清理
+            // 初始化 Video.js 播放器
+            const player = videojs('videoPlayer', {
+                sources: [{
+                    src: playUrl,
+                    type: 'video/mp4'
+                }]
+            });
+            
+            // 模态框关闭时销毁播放器
             document.getElementById('videoModal').addEventListener('hidden.bs.modal', function () {
-                this.remove();
+                if (player) {
+                    player.dispose();
+                }
             });
             
             showToast('开始播放视频', 'success');

@@ -58,7 +58,7 @@ class JellyfinMovieChecker:
         
         # 生成设备ID (基于用户名的哈希)
         self.device_id = hashlib.md5(f"{self.username}_{uuid.getnode()}".encode()).hexdigest()
-        self.device_name = "Python Movie Checker"
+        self.device_name = "web-client"
         
         self.access_token = None
         self.user_id = None

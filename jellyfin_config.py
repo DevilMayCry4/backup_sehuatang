@@ -9,8 +9,6 @@ from typing import Dict, Any
 
 class JellyfinConfig:
     """Jellyfin配置管理"""
-
-
    
     def __init__(self):
         self.config = self._load_config()
@@ -31,6 +29,9 @@ class JellyfinConfig:
         return {
             # Jellyfin服务器配置
             "server_url": os.getenv("JELLYFIN_SERVER_URL", "http://localhost:8096"),
+            "api_key": os.getenv("JELLYFIN_API_KEY", ""),
+            
+            # 保留这些配置用于向后兼容
             "username": os.getenv("JELLYFIN_USERNAME", ""),
             "password": os.getenv("JELLYFIN_PASSWORD", ""),
             
@@ -49,11 +50,15 @@ class JellyfinConfig:
     
     def validate(self) -> bool:
         """验证配置"""
-        required_fields = ["server_url", "username", "password"]
-        for field in required_fields:
-            if not self.config.get(field):
-                print(f"❌ 缺少必需的配置: {field}")
-                return False
+        # 检查是否有API Key或用户名密码
+        if not self.config.get("api_key") and not (self.config.get("username") and self.config.get("password")):
+            print("❌ 缺少必需的配置: 需要提供API Key或用户名密码")
+            return False
+        
+        if not self.config.get("server_url"):
+            print("❌ 缺少必需的配置: server_url")
+            return False
+            
         return True
 
 # 全局配置实例

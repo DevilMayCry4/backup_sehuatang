@@ -7,7 +7,7 @@
 from flask import render_template, request, jsonify, session, redirect, url_for
 from urllib.parse import quote
 from database import db_manager
-from movie_search import process_movie_search_results
+from movie_search import process_movie_search_results, find_movie_in_jellyfin_itemId
 from subscription import trigger_subscription_check_async
 from image_proxy import proxy_image
 from web import app_logger
@@ -738,12 +738,15 @@ def register_routes(app, jellyfin_checker, crawler):
         try:
             # 获取影片详情
             movie = db_manager.getMovieByCode(movie_code)
+            # 从Jellyfin检查影片是否存在
+            itemId = find_movie_in_jellyfin_itemId(movie_code, movie['title'], jellyfin_checker)
+            print(itemId)
             if not movie:
                 return render_template('error.html', 
                                      error_message='影片不存在'), 404
             return render_template('jav_movie_detail.html',  
                                  movie=movie,
-                                 db_manager=db_manager)
+                                 db_manager=db_manager,itemId=itemId)
             
         except Exception as e:
             print(f"获取演员影片详情错误: {e}")
@@ -2739,3 +2742,20 @@ def register_routes(app, jellyfin_checker, crawler):
         response.headers['ETag'] = f'"{hash(filename + str(os.path.getmtime(os.path.join(app.static_folder, filename))))}"'
         print(f"ETag: {response.headers['ETag']}")
         return response
+
+    @app.route('/player')
+    @login_required
+    def player():
+        """视频播放页面"""
+        # 获取URL参数
+        url = request.args.get('url', '')
+        title = request.args.get('title', '未知视频')
+        poster = request.args.get('poster', '')
+        
+        if not url:
+            return '缺少视频源URL', 400
+            
+        return render_template('player.html', 
+                             url=url,
+                             title=title,
+                             poster=poster)

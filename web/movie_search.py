@@ -5,7 +5,6 @@
 """
 
 import re
-import requests
 from urllib.parse import quote
 from database import db_manager
 
@@ -66,6 +65,22 @@ def query_magnet_link(movie_code, title):
     except Exception as e:
         print(f"查询MongoDB出错: {e}")
         return None, False
+
+def find_movie_in_jellyfin_itemId(code,title,jellyfin_checker):
+    try: 
+        # 先用movie_code搜索
+        jellyfin_result = jellyfin_checker.check_movie_exists(code)
+        if jellyfin_result.get('exists', False) == False:
+            jellyfin_result = jellyfin_checker.check_movie_exists(title)
+        if jellyfin_result.get('exists', False) == True:
+            print(jellyfin_result)
+            return  jellyfin_result['movies'][0]['id']
+        return None
+    except Exception as e:
+        print(f"查询Jellyfin出错: {e}")
+        return None
+           
+              
 
 def process_movie_search_results(movies, jellyfin_checker):
     """处理电影搜索结果"""
