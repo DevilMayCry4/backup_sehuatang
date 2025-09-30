@@ -478,14 +478,43 @@
                 `&SubtitleMethod=Embed`;
             
             // 构建播放页面URL并跳转
-            const playerPageUrl = `/player?` + 
-                `url=${encodeURIComponent(playbackUrl)}` +
-                `&title=${encodeURIComponent('{{ movie.code }}')}` +
-                `&poster=${encodeURIComponent('{{ url_for('static', filename='images/covers/' + movie.code + '/' + movie.code + '_cover.jpg') }}')}`;            
+            // const playerPageUrl = `/player?` + 
+            //     `url=${encodeURIComponent(playbackUrl)}` +
+            //     `&title=${encodeURIComponent('{{ movie.code }}')}` +
+            //     `&poster=${encodeURIComponent('{{ url_for('static', filename='images/covers/' + movie.code + '/' + movie.code + '_cover.jpg') }}')}`;            
             
             // 在新标签页中打开播放页面
-            window.open(playerPageUrl, '_blank');
+            
+            // window.open(playerPageUrl, '_blank');
+            callNative('playVideo', playbackUrl, (response) => {
+                if (response.success) {
+                    showToast('成功打开播放页面！', 'success');
+                } else {
+                    showToast('打开播放页面失败: ' + (response.error || '未知错误'), 'error');
+                }
+            });
         }
+
+        function callNative(method, pageUrl, callback) {
+  // 生成唯一回调ID
+  const callbackId = 'cb_' + (new Date().getTime());
+  
+  // 存储回调函数
+  window[callbackId] = callback;
+  
+  // 构造URL Scheme
+  const url = `openJav=${pageUrl}`;
+  
+  // 通过iframe触发URL
+  const iframe = document.createElement('iframe');
+  iframe.style.display = 'none';
+  iframe.src = url;
+  document.body.appendChild(iframe);
+  setTimeout(() => {
+    document.body.removeChild(iframe);
+  }, 100);
+}
+
         
         function fallbackToApiPlayback(itemId) {
             // 使用后端API获取播放URL
