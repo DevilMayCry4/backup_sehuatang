@@ -137,7 +137,9 @@
                         <button type="button" class="btn btn-primary" id="updateJavHomeBtnMobile">
                             <i class="bi bi-house"></i> 更新JAV首页
                         </button>
-                        
+                        <button type="button" class="btn btn-primary" id="syncJellfinBtnMobile">
+                            <i class="bi bi-house"></i> 同步Jellfin
+                        </button>
                     </div>
                 </div>
                 
@@ -176,6 +178,11 @@
                     <div class="col-md-3">
                         <button type="button" class="btn btn-primary" id="updateJavHomeBtn">
                             <i class="bi bi-house"></i> 更新JAV首页
+                        </button>
+                    </div>
+                    <div class="col-md-3">
+                        <button type="button" class="btn btn-primary" id="syncJellfinBtn">
+                            <i class="bi bi-arrow-repeat"></i> 同步Jellfin
                         </button>
                     </div>
                 </div>
@@ -337,6 +344,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const updateJavHomeBtnMobile = document.getElementById('updateJavHomeBtnMobile');
     const crawlerStatus = document.getElementById('crawlerStatus');
     const crawlerStatusText = document.getElementById('crawlerStatusText');
+    const syncJellfinBtn = document.getElementById('syncJellfinBtn');
+    const syncJellfinBtnMobile = document.getElementById('syncJellfinBtnMobile');
     
     let currentMovies = []; // 存储当前搜索结果
     
@@ -441,6 +450,24 @@ document.addEventListener('DOMContentLoaded', function() {
     if (updateJavHomeBtnMobile) {
         updateJavHomeBtnMobile.addEventListener('click', function() {
             updateJavHome();
+        });
+    }
+
+    if (syncJellfinBtn) {
+        syncJellfinBtn.addEventListener('click', function() {
+            syncJellfin();
+        });
+    }
+
+    if (syncJellfinBtnMobile) {
+        syncJellfinBtnMobile.addEventListener('click', function() {
+            syncJellfin();
+        });
+    }
+    
+    if (syncJellfinBtnMobile) {
+        syncJellfinBtnMobile.addEventListener('click', function() {
+            syncJellfin();
         });
     }
     
@@ -1106,6 +1133,8 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 
+    
+    
     // 更新论坛电影按钮事件监听器
     if (updateSehuatangBtn) {
         updateSehuatangBtn.addEventListener('click', function() {
@@ -1186,6 +1215,39 @@ document.addEventListener('DOMContentLoaded', function() {
             crawlerStatus.classList.add('d-none');
             if (updateJavHomeBtn) updateJavHomeBtn.disabled = false;
             if (updateJavHomeBtnMobile) updateJavHomeBtnMobile.disabled = false;
+        }
+    }
+    
+    // 同步Jellfin功能函数
+    async function syncJellfin() {
+        if (!confirm('确定要开始同步Jellfin数据吗？这可能需要一些时间。')) return;
+        
+        // 显示加载状态
+        crawlerStatus.classList.remove('d-none');
+        crawlerStatusText.textContent = '正在同步Jellfin数据...';
+        if (syncJellfinBtn) syncJellfinBtn.disabled = true;
+        
+        try {
+            const response = await fetch('/api/sync-jellfin', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                showToast(data.message, 'success');
+            } else {
+                showToast(data.error || '同步失败', 'error');
+            }
+        } catch (err) {
+            console.error('同步Jellfin错误:', err);
+            showToast('网络错误，请稍后重试', 'error');
+        } finally {
+            crawlerStatus.classList.add('d-none');
+            if (syncJellfinBtn) syncJellfinBtn.disabled = false;
         }
     }
 

@@ -738,15 +738,12 @@ def register_routes(app, jellyfin_checker, crawler):
         try:
             # 获取影片详情
             movie = db_manager.getMovieByCode(movie_code)
-            # 从Jellyfin检查影片是否存在
-            itemId = find_movie_in_jellyfin_itemId(movie_code, movie['title'], jellyfin_checker)
-            print(itemId)
             if not movie:
                 return render_template('error.html', 
                                      error_message='影片不存在'), 404
             return render_template('jav_movie_detail.html',  
                                  movie=movie,
-                                 db_manager=db_manager,itemId=itemId)
+                                 db_manager=db_manager,itemId=movie.get('presentation_key', None))
             
         except Exception as e:
             print(f"获取演员影片详情错误: {e}")
@@ -2759,3 +2756,92 @@ def register_routes(app, jellyfin_checker, crawler):
                              url=url,
                              title=title,
                              poster=poster)
+                             
+    @app.route('/api/sync-jellfin', methods=['POST'])
+    @api_login_required
+    def sync_jellfin():
+        """同步Jellfin数据API"""
+        try:
+            # 在后台线程中执行同步操作
+            def run_sync():
+                try:
+                    app_logger.info("开始同步Jellyfin数据")
+                    
+                    import sqlite3
+                    import re
+                    
+                    # 连接Jellyfin SQLite数据库
+                    jellyfin_db_path = '/server/backup_sehuatang/JellfinData/library.db'
+                    conn = sqlite3.connect(jellyfin_db_path)
+                    cursor = conn.cursor()
+                    
+                    # 查询所有电影记录
+                    cursor.execute("SELECT * FROM TypedBaseItems WHERE type = 'MediaBrowser.Controller.Entities.Movies.Movie' AND TopParentId = '5824037d54700c4dcff7f1255022573b'")
+                    movies = cursor.fetchall()
+                    
+                    # 获取列名
+                    column_names = [description[0] for description in cursor.description]
+                    name_index = column_names.index('Name')
+                    presentation_key_index = column_names.index('PresentationUniqueKey')
+                    
+                    total_movies = len(movies)
+                    updated_count = 0
+                    
+                    app_logger.info(f"从Jellyfin数据库中找到 {total_movies} 部电影")
+                    
+                    # 遍历所有电影记录
+                    for movie in movies:
+                        try:
+                            movie_name = movie[name_index]
+                            presentation_key = movie[presentation_key_index]
+                            
+                            # 从PresentationUniqueKey中提取电影编码
+                            # 例如："BF-519-完全主観 ボクのお义姉さんは波多野结衣" -> "BF-519"
+                            # 修改为截取第二个"-"前面的字符串
+                            parts = movie_name.split('-')
+                            if len(parts) >= 2:
+                                movie_code = parts[0] + '-' + parts[1]
+                                
+                                # 更新MongoDB中的记录
+                                result = db_manager.javbus_data_collection.update_one(
+                                    {'code': movie_code},
+                                    {'$set': {'presentation_key': presentation_key}}
+                                )
+                                
+                                if result.modified_count > 0:
+                                    updated_count += 1
+                                    app_logger.info(f"已更新电影 {movie_code}: {movie_name}")
+                                elif result.matched_count > 0:
+                                    app_logger.info(f"电影 {movie_code} 已存在，无需更新")
+                                else:
+                                    app_logger.info(f"未找到电影 {movie_code} 的记录")
+                            else:
+                                app_logger.warning(f"无法从 '{presentation_key}' 中提取电影编码")
+                        except Exception as e:
+                            app_logger.error(f"处理电影记录时出错: {e}")
+                    
+                    # 关闭数据库连接
+                    conn.close()
+                    
+                    app_logger.info(f"Jellyfin同步完成，共更新 {updated_count}/{total_movies} 部电影")
+                    
+                except Exception as e:
+                    app_logger.error(f"Jellyfin同步过程中出错: {e}")
+            
+            # 启动后台线程
+            import threading
+            thread = threading.Thread(target=run_sync)
+            thread.daemon = True
+            thread.start()
+            
+            return jsonify({
+                'success': True,
+                'message': 'Jellyfin同步任务已开始执行，请查看控制台日志了解进度'
+            })
+            
+        except Exception as e:
+            app_logger.error(f"启动Jellyfin同步错误: {e}")
+            return jsonify({
+                'success': False,
+                'error': f'启动失败: {str(e)}'
+            })

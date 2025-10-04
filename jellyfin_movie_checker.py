@@ -213,6 +213,7 @@ class JellyfinMovieChecker:
                 items = search_data.get("Items", [])
                 
                 for item in items:
+                    print(item)
                     movie_info = {
                         "id": item.get("Id"),
                         "name": item.get("Name"),
